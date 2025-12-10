@@ -1,4 +1,3 @@
-Budget App
-A personal budget planning application.
+# Budget App
 
-Documentation : https://www.notion.so/BudgetApp-2c59381bba8980ff84eaf1c09fd14167
+A personal budget planning application.
