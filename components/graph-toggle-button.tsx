@@ -1,6 +1,5 @@
 import { Switch } from "./ui/switch";
 
-
 interface GraphToggleBtnProps {
     label: string;
     toggleColor: string;
