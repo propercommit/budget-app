@@ -2,11 +2,11 @@
 import { Header } from "@/components/header";
 import { MonthPicker } from "@/components/month-picker";
 import { GraphToggleBtn } from "@/components/graph-toggle-button";
-import { MonthlyIncomeCard } from "@/components/income-card";
+import { MonthlyIncomeCard } from "@/components/monthly-income-card";
 import { DollarSign, ShoppingCart, Home as HomeIcon, Utensils } from "lucide-react";
-import { CategoryChip } from "@/components/category-chip";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
+import { SpendingCard } from "@/components/spending-card";
 
 
 export default function Home() {
@@ -19,7 +19,10 @@ export default function Home() {
     { icon: ShoppingCart, label: "Shopping", color: "#3b82f6" },
     { icon: HomeIcon, label: "Housing", color: "#10b981" },
     { icon: Utensils, label: "Food", color: "#f59e0b" },
-];
+  ];
+
+  const [testBudgeted, setTestBudgeted] = useState(500);
+  const [testSpent, setTestSpent] = useState(350);
 
   return (
 
@@ -46,6 +49,17 @@ export default function Home() {
         categories={testCategories}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
+      />
+
+      <SpendingCard
+          name="Groceries"
+          icon={ShoppingCart}
+          budgeted={testBudgeted}
+          spent={testSpent}
+          category="Food"
+          categoryColor="#f59e0b"
+          onBudgetedChange={setTestBudgeted}
+          onSpentChange={setTestSpent}
       />
     </div>
   );
