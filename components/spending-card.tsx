@@ -16,7 +16,14 @@ interface SpendingCardProps {
 export function SpendingCard({name, icon: Icon, budgeted, spent, category, categoryColor, onBudgetedChange, onSpentChange}: SpendingCardProps) {
     return (
         <Card>
-            <CardHeader>
+            <CardHeader
+                className="border-b-2 border-t-2 py-6"
+                style={{
+                    backgroundColor: `${categoryColor}15`,
+                    borderBottomColor: `${categoryColor}40 `,
+                    borderTopColor: `${categoryColor}40 `
+                }}
+            >
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Icon className="w-5 h-5" />

@@ -17,7 +17,7 @@ export function InputSlider({label, value, onChange, color}: InputSliderProps) {
             <Input 
                 type="number" 
                 placeholder="0" 
-                value={value} 
+                value={value || ""} 
                 onChange={(e) => onChange(Number(e.target.value))} 
                 className="flex-1" 
             />
