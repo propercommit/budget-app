@@ -11,7 +11,10 @@ interface InputSliderProps {
 export function InputSlider({label, value, onChange, color}: InputSliderProps) {
     return (
     <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">{label}</p>
+        <div className="flex justify-between items-center">
+            <p className="text-sm font-medium">{label}</p>
+            <span className="text-sm font-semibold">$ {value}</span>
+        </div>
         <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">$</span>
             <Input 

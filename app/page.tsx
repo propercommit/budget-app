@@ -58,6 +58,7 @@ export default function Home() {
           spent={testSpent}
           category="Food"
           categoryColor="#f59e0b"
+          totalIncome={5000}
           onBudgetedChange={setTestBudgeted}
           onSpentChange={setTestSpent}
       />
