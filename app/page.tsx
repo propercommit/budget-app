@@ -30,7 +30,7 @@ export default function Home() {
       <Header Icon={DollarSign} title="Budget Planner" legendLabel="Take control of your finances with smart insights and personalized advice"/>
       <div className="flex justify-between">
         <MonthPicker label="December 2025" />
-        <GraphToggleBtn label="trends" toggleColor="g"/>
+        <GraphToggleBtn label="trends"/>
       </div>
       
       <MonthlyIncomeCard 
