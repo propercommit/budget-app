@@ -13,6 +13,18 @@ export default function Home() {
 
   //hooks
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [spendingItems, setSpendingItems] = useState([
+    { id: "1", name: "Groceries", icon: ShoppingCart, budgeted: 500, spent: 350, category: "Food" },
+    { id: "2", name: "Rent", icon: HomeIcon, budgeted: 1200, spent: 1200, category: "Housing" },
+  ]);
+
+  const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
+      setSpendingItems(items => 
+          items.map(item => 
+              item.id === id ? { ...item, budgeted, spent } : item
+          )
+      );
+  };
 
   // test data
   const testCategories = [
@@ -20,9 +32,6 @@ export default function Home() {
     { icon: HomeIcon, label: "Housing", color: "#10b981" },
     { icon: Utensils, label: "Food", color: "#f59e0b" },
   ];
-
-  const [testBudgeted, setTestBudgeted] = useState(500);
-  const [testSpent, setTestSpent] = useState(350);
 
   return (
 
@@ -49,18 +58,9 @@ export default function Home() {
         categories={testCategories}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
-      />
-
-      <SpendingCard
-          name="Groceries"
-          icon={ShoppingCart}
-          budgeted={testBudgeted}
-          spent={testSpent}
-          category="Food"
-          categoryColor="#f59e0b"
-          totalIncome={5000}
-          onBudgetedChange={setTestBudgeted}
-          onSpentChange={setTestSpent}
+        spendingItems={spendingItems}
+        totalIncome={5000}
+        onSpendingChange={handleSpendingChange}
       />
     </div>
   );
