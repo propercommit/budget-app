@@ -48,12 +48,16 @@ export function SpendingCard({name, icon: Icon, budgeted, spent, category, categ
                         value={budgeted}
                         onChange={onBudgetedChange}
                         color="blue"
+                        showAmount={true}
+                        showLegend={false}
                     />
                     <InputSlider
                         label="Spent"
                         value={spent}
                         onChange={onSpentChange}
                         color="blue"
+                        showAmount={true}
+                        showLegend={false}
                     />
                     <div className="flex pt-2 justify-between">
                         {spent > budgeted ? (

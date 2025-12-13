@@ -6,17 +6,19 @@ import { MonthlyIncomeCard } from "@/components/monthly-income-card";
 import { DollarSign, ShoppingCart, Home as HomeIcon, Utensils } from "lucide-react";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
-import { SpendingCard } from "@/components/spending-card";
 
 
 export default function Home() {
 
   //hooks
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [spendingItems, setSpendingItems] = useState([
+  const [spendingItems, setSpendingItems] = useState([
     { id: "1", name: "Groceries", icon: ShoppingCart, budgeted: 500, spent: 350, category: "Food" },
     { id: "2", name: "Rent", icon: HomeIcon, budgeted: 1200, spent: 1200, category: "Housing" },
   ]);
+  const [activeIncome, setActiveIncome] = useState(0);
+  const [passiveIncome, setPassiveIncome] = useState(0);
+
 
   const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
       setSpendingItems(items => 
@@ -50,6 +52,10 @@ export default function Home() {
         leftSliderLegend="Salary, wages, freelance" 
         rightSliderTitle="Passive Income"
         rightSliderLegend="Investments, rentals, dividends"
+        activeIncome={activeIncome}
+        passiveIncome={passiveIncome}
+        onActiveIncomeChange={setActiveIncome}
+        onPassiveIncomeChange={setPassiveIncome}
       />
 
       <SpendingCategoriesCard

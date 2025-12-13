@@ -1,4 +1,5 @@
 
+import { InputSlider } from "./input-slider";
 import { LegendChip } from "./legend-chip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -12,9 +13,25 @@ interface MonthlyIncomeCardProps {
     rightSliderTitle: string;
     leftSliderLegend: string;
     rightSliderLegend: string;
+    activeIncome: number;
+    passiveIncome: number;
+    onActiveIncomeChange: (value: number) => void;
+    onPassiveIncomeChange: (value: number) => void;
 }
 
-export function MonthlyIncomeCard({title, legend, progressBarTitle, leftSliderTitle, rightSliderTitle, leftSliderLegend, rightSliderLegend}: MonthlyIncomeCardProps) {
+export function MonthlyIncomeCard({
+    title, 
+    legend, 
+    progressBarTitle, 
+    leftSliderTitle, 
+    rightSliderTitle, 
+    leftSliderLegend, 
+    rightSliderLegend,
+    activeIncome,
+    passiveIncome,
+    onActiveIncomeChange,
+    onPassiveIncomeChange
+}: MonthlyIncomeCardProps) {
     return (
         <Card className="mt-6">
             <CardHeader>
@@ -60,27 +77,27 @@ export function MonthlyIncomeCard({title, legend, progressBarTitle, leftSliderTi
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-6 mt-4">
+               <div className="flex flex-col gap-2">
+                <InputSlider 
+                    label={leftSliderTitle}
+                    value={activeIncome}
+                    onChange={onActiveIncomeChange}
+                    color="blue"
+                    legend={leftSliderLegend}
+                    showAmount={false}
+                    showLegend={true}
+                />
+               </div>
                 <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">{leftSliderTitle}</p>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">$</span>
-                    <Input type="number" placeholder="0" className="flex-1" />
-                </div>
-                <div className="mt-4">
-                    <Slider className="[&_[data-slot=slider-thumb]]:border-blue-500 [&_[data-slot=slider-thumb]]:bg-blue-100 [&_[data-slot=slider-range]]:bg-blue-500 [&_[data-slot=slider-thumb]]:w-10 [&_[data-slot=slider-thumb]]:h-5 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"/>
-                </div>
-                <p className="text-xs text-gray-500">{leftSliderLegend}</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">{rightSliderTitle}</p>
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">$</span>
-                    <Input type="number" placeholder="0" className="flex-1" />
-                </div>
-                <div className="mt-4">
-                    <Slider className="[&_[data-slot=slider-thumb]]:border-purple-500 [&_[data-slot=slider-thumb]]:bg-purple-100 [&_[data-slot=slider-range]]:bg-purple-500 [&_[data-slot=slider-thumb]]:w-10 [&_[data-slot=slider-thumb]]:h-5 [&_[data-slot=slider-track]]:h-3 [&_[data-slot=slider-track]]:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]"/>
-                </div>
-                <p className="text-xs text-gray-500">{rightSliderLegend}</p>
+                    <InputSlider
+                        label={rightSliderTitle}
+                        value={passiveIncome}
+                        onChange={onPassiveIncomeChange}
+                        color="purple"
+                        legend={rightSliderLegend}
+                        showAmount={false}
+                        showLegend={true}
+                    />
                 </div>
             </div>
             </CardContent>
