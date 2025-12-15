@@ -32,7 +32,7 @@ export function InputSlider({label, value, onChange, color, legend, showAmount, 
             <div className="mt-4">
                 <Slider 
                     value={[value]}
-                    onValueChange={(vals) => onChange(vals[0])}
+                    onValueChange={(vals: number[]) => onChange(vals[0])}
                     className={`
                         [&_[data-slot=slider-thumb]]:border-${color}-500 
                         [&_[data-slot=slider-thumb]]:bg-${color}-100 
