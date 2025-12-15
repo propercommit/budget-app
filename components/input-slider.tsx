@@ -6,12 +6,13 @@ interface InputSliderProps {
     value: number;
     onChange: (value: number) => void;
     color: string;
+    colorLight: string;
     legend?: string;
     showAmount: boolean;
     showLegend: boolean;
 };
 
-export function InputSlider({label, value, onChange, color, legend, showAmount, showLegend}: InputSliderProps) {
+export function InputSlider({label, value, onChange, color, colorLight, legend, showAmount, showLegend}: InputSliderProps) {
     return (
     <div>
         <div className="flex flex-col gap-2">
@@ -33,10 +34,14 @@ export function InputSlider({label, value, onChange, color, legend, showAmount, 
                 <Slider 
                     value={[value]}
                     onValueChange={(vals: number[]) => onChange(vals[0])}
+                    style={{
+                        '--slider-color': color,
+                        '--slider-color-light': colorLight,
+                    } as React.CSSProperties}
                     className={`
-                        [&_[data-slot=slider-thumb]]:border-${color}-500 
-                        [&_[data-slot=slider-thumb]]:bg-${color}-100 
-                        [&_[data-slot=slider-range]]:bg-${color}-500 
+                        [&_[data-slot=slider-thumb]]:border-[var(--slider-color)] 
+                        [&_[data-slot=slider-thumb]]:bg-[var(--slider-color-light)] 
+                        [&_[data-slot=slider-range]]:bg-[var(--slider-color)] 
                         [&_[data-slot=slider-thumb]]:w-10 [&_[data-slot=slider-thumb]]:h-5 
                         [&_[data-slot=slider-track]]:h-3 
                         [&_[data-slot=slider-track]]:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)]

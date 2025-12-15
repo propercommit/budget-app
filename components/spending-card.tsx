@@ -2,6 +2,7 @@ import { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { InputSlider } from "./input-slider";
 import { Chip } from "./Chip";
+import { hexToLightColor } from "@/lib/color-utils";
 
 interface SpendingCardProps {
     name: string;
@@ -47,7 +48,8 @@ export function SpendingCard({name, icon: Icon, budgeted, spent, category, categ
                         label="Budgeted"
                         value={budgeted}
                         onChange={onBudgetedChange}
-                        color="blue"
+                        color={categoryColor}
+                        colorLight={hexToLightColor(categoryColor)}
                         showAmount={true}
                         showLegend={false}
                     />
@@ -55,7 +57,8 @@ export function SpendingCard({name, icon: Icon, budgeted, spent, category, categ
                         label="Spent"
                         value={spent}
                         onChange={onSpentChange}
-                        color="blue"
+                        color={categoryColor}
+                        colorLight={hexToLightColor(categoryColor)}
                         showAmount={true}
                         showLegend={false}
                     />

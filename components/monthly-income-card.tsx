@@ -82,7 +82,8 @@ export function MonthlyIncomeCard({
                     label={leftSliderTitle}
                     value={activeIncome}
                     onChange={onActiveIncomeChange}
-                    color="blue"
+                    color="hsl(217,91%,60%)"
+                    colorLight="hsl(217,91%,95%)"
                     legend={leftSliderLegend}
                     showAmount={false}
                     showLegend={true}
@@ -93,7 +94,8 @@ export function MonthlyIncomeCard({
                         label={rightSliderTitle}
                         value={passiveIncome}
                         onChange={onPassiveIncomeChange}
-                        color="purple"
+                        color="hsl(271,81%,56%)"
+                        colorLight="hsl(271,81%,95%)"
                         legend={rightSliderLegend}
                         showAmount={false}
                         showLegend={true}
