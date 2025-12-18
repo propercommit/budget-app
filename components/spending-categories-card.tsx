@@ -1,7 +1,8 @@
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { CategoryChip } from "./category-chip";
 import { SpendingCard } from "./spending-card";
+import { Button } from "./ui/button";
 
 interface Category {
     icon?: LucideIcon;
@@ -54,8 +55,12 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                         selected={selectedCategory === c.label}
                         onClick={() => onSelectCategory(c.label)}
                     />
-                ))} 
+                ))}
                 </div>
+                <Button variant="outline" size="sm" className="gap-2 w-full mt-3">
+                    <Plus className="w-4 h-4"/>
+                    Add Custom
+                </Button>
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
                         .filter(item => selectedCategory === null || item.category === selectedCategory)
