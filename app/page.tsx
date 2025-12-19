@@ -28,6 +28,18 @@ export default function Home() {
       );
   };
 
+  const handleAddSpending = (name: string, category: string) => {
+    const newItem = {
+      id: Date.now().toString(), // unique id
+      name: name,
+      icon: ShoppingCart, // default Icon
+      budgeted: 0,
+      spent: 0,
+      category: category
+    };
+    setSpendingItems([...spendingItems, newItem]);
+  }
+
   // test data
   const testCategories = [
     { icon: ShoppingCart, label: "Shopping", color: "#3b82f6" },
@@ -67,6 +79,7 @@ export default function Home() {
         spendingItems={spendingItems}
         totalIncome={5000}
         onSpendingChange={handleSpendingChange}
+        onAddSpending={handleAddSpending}
       />
     </div>
   );

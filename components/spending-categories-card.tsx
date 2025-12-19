@@ -1,8 +1,15 @@
+"use client"
 import { LucideIcon, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { CategoryChip } from "./category-chip";
 import { SpendingCard } from "./spending-card";
 import { Button } from "./ui/button";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface Category {
     icon?: LucideIcon;
@@ -29,9 +36,32 @@ interface SpendingCategoriesCardProps {
     spendingItems: SpendingItem[];
     totalIncome: number;
     onSpendingChange: (id: string, budgeted: number, spent: number) => void;
+    onAddSpending: (name: string, category: string) => void;
 };
 
-export function SpendingCategoriesCard({title, legend, categories, selectedCategory, onSelectCategory, spendingItems, totalIncome, onSpendingChange}: SpendingCategoriesCardProps) {
+export function SpendingCategoriesCard({title, legend, categories, selectedCategory, onSelectCategory, spendingItems, totalIncome, onSpendingChange, onAddSpending}: SpendingCategoriesCardProps) {
+
+    const [isPopinOpen, setIsPopinOpen] = useState(false);
+    const [spendingCardName, setSpendingCardName] = useState("");
+    const [spendingCategory, setSpendingCategory] = useState("");
+
+    const handleAddClick = () => {
+        const valid = validation();
+
+        if(valid == false) {
+         // display validation message
+        } else {
+            onAddSpending(spendingCardName, spendingCategory);
+            setSpendingCardName("");
+            setSpendingCategory("");
+            setIsPopinOpen(false);
+        }
+    };
+
+    const validation = () => {
+        if(spendingCardName == "" || spendingCategory == "") return false;
+    }
+    
     return (
         <Card className="mt-6">
             <CardHeader>
@@ -57,10 +87,55 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                     />
                 ))}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 w-full mt-3">
-                    <Plus className="w-4 h-4"/>
-                    Add Custom
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 w-full mt-3"
+                    onClick={() => setIsPopinOpen(true)}
+                    >
+                        <Plus className="w-4 h-4"/>
+                        Add Custom
                 </Button>
+
+               <Dialog open={isPopinOpen} onOpenChange={setIsPopinOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Custom Spending Card</DialogTitle>
+                        <DialogDescription>Create a new spending item</DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Name</Label>
+                            <Input 
+                                type="text"
+                                placeholder="e.g. Gym Membership"
+                                value={spendingCardName}
+                                onChange={(e) => setSpendingCardName(e.target.value)}
+                            />
+                        </div>    
+
+                        <div className="space-y-2 w-full">
+                            <Label>Category</Label>
+                            <Select value={spendingCategory} onValueChange={(v) => setSpendingCategory(v)}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select a category"/>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories.map((c) => (
+                                        <SelectItem key={c.label} value={c.label}>
+                                            {c.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        <Button className="w-full" onClick={handleAddClick}>Add Spending</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
                         .filter(item => selectedCategory === null || item.category === selectedCategory)
