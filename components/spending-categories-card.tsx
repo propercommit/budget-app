@@ -44,13 +44,15 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
     const [isPopinOpen, setIsPopinOpen] = useState(false);
     const [spendingCardName, setSpendingCardName] = useState("");
     const [spendingCategory, setSpendingCategory] = useState("");
+    const [showValidationMessage, setShowValidationMessage] = useState(false);
 
     const handleAddClick = () => {
         const valid = validation();
 
         if(valid == false) {
-         // display validation message
+         setShowValidationMessage(true);
         } else {
+            setShowValidationMessage(false);
             onAddSpending(spendingCardName, spendingCategory);
             setSpendingCardName("");
             setSpendingCategory("");
@@ -60,6 +62,7 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
 
     const validation = () => {
         if(spendingCardName == "" || spendingCategory == "") return false;
+        return true;
     }
     
     return (
@@ -97,7 +100,10 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                         Add Custom
                 </Button>
 
-               <Dialog open={isPopinOpen} onOpenChange={setIsPopinOpen}>
+               <Dialog open={isPopinOpen} onOpenChange={(open) => {
+                    setIsPopinOpen(open);
+                    if(!open) setShowValidationMessage(false);    
+                }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Add Custom Spending Card</DialogTitle>
@@ -130,7 +136,9 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                                 </SelectContent>
                             </Select>
                         </div>
-                        
+                        {showValidationMessage === true && (
+                            <p className="text-red-500 text-sm">Please fill in all fields</p>
+                        )}
                         <Button className="w-full" onClick={handleAddClick}>Add Spending</Button>
                     </div>
                 </DialogContent>
