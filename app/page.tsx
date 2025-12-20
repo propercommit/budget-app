@@ -28,11 +28,11 @@ export default function Home() {
       );
   };
 
-  const handleAddSpending = (name: string, category: string) => {
+  const handleAddSpending = (name: string, category: string, icon: string | null) => {
     const newItem = {
       id: Date.now().toString(), // unique id
       name: name,
-      icon: ShoppingCart, // default Icon
+      icon: icon || "shopping-cart",
       budgeted: 0,
       spent: 0,
       category: category
