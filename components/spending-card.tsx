@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { InputSlider } from "./input-slider";
 import { Chip } from "./Chip";
 import { hexToLightColor } from "@/lib/color-utils";
+import { iconMap, availableIcons } from "@/lib/icon-map";
 
 interface SpendingCardProps {
     name: string;
-    icon: LucideIcon;
+    icon: string;
     budgeted: number;
     spent: number;
     category: string;
@@ -16,7 +17,7 @@ interface SpendingCardProps {
     onSpentChange: (value: number) => void;
 };
 
-export function SpendingCard({name, icon: Icon, budgeted, spent, category, categoryColor, totalIncome, onBudgetedChange, onSpentChange}: SpendingCardProps) {
+export function SpendingCard({name, icon, budgeted, spent, category, categoryColor, totalIncome, onBudgetedChange, onSpentChange}: SpendingCardProps) {
     return (
         <Card>
             <CardHeader
@@ -29,7 +30,12 @@ export function SpendingCard({name, icon: Icon, budgeted, spent, category, categ
             >
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <Icon className="w-5 h-5" />
+                        {icon.startsWith("data:") ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={icon} alt="" className="w-5 h-5 object-contain" />
+                        ) : (
+                            iconMap[icon] || iconMap["shopping-cart"]
+                        )}
                         <p className="font-medium">{name}</p>
                     </div>
                     <span className="absolute top-0 right-0 px-4 py-2 text-sm font-medium text-white" 

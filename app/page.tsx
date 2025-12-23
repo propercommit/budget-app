@@ -13,8 +13,8 @@ export default function Home() {
   //hooks
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [spendingItems, setSpendingItems] = useState([
-    { id: "1", name: "Groceries", icon: ShoppingCart, budgeted: 500, spent: 350, category: "Food" },
-    { id: "2", name: "Rent", icon: HomeIcon, budgeted: 1200, spent: 1200, category: "Housing" },
+    { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 350, category: "Food" },
+    { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
   ]);
   const [activeIncome, setActiveIncome] = useState(0);
   const [passiveIncome, setPassiveIncome] = useState(0);
