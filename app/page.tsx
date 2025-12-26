@@ -42,9 +42,9 @@ export default function Home() {
 
   // test data
   const testCategories = [
-    { icon: ShoppingCart, label: "Shopping", color: "#3b82f6" },
-    { icon: HomeIcon, label: "Housing", color: "#10b981" },
-    { icon: Utensils, label: "Food", color: "#f59e0b" },
+    { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
+    { icon: "home", label: "Housing", color: "#10b981" },
+    { icon: "utensils", label: "Food", color: "#f59e0b" },
   ];
 
   return (

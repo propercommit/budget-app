@@ -1,7 +1,8 @@
+import { iconMap } from "@/lib/icon-map";
 import { LucideIcon } from "lucide-react";
 
 interface CategoryChipProps {
-    icon?: LucideIcon;
+    icon?: string;
     label: string;
     color: string;
     selected: boolean;
@@ -17,7 +18,7 @@ export function CategoryChip({icon: Icon, label, color, selected, onClick}: Cate
                 backgroundColor: selected ? color : "transparent", 
                 color: selected ? "white" : "gray"
             }}>
-            {Icon && <Icon className="w-4 h-4" />}
+            {Icon && iconMap[Icon]}
             <span>{label}</span>
         </button>
     );

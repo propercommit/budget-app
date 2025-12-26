@@ -1,5 +1,5 @@
 "use client"
-import { LucideIcon, Plus, Upload } from "lucide-react";
+import { LucideIcon, Plus, ShoppingBagIcon, Upload } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { CategoryChip } from "./category-chip";
 import { SpendingCard } from "./spending-card";
@@ -10,14 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { ShoppingCart, Fuel, HeartPulse, Lightbulb, Film, PiggyBank, Home, Car, CreditCard, Phone, Utensils, Plane } from "lucide-react";
 import { iconMap, availableIcons } from "@/lib/icon-map";
 
 interface Category {
-    icon?: LucideIcon;
+    icon?: string;
     label: string;
     color: string;
-
 }
 
 interface SpendingItem {
@@ -103,7 +101,7 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                 {categories.map((c) => (
                     <CategoryChip 
                         key={c.label}
-                        icon={c.icon}
+                        icon= {c.icon}
                         label={c.label}
                         color={c.color}
                         selected={selectedCategory === c.label}
