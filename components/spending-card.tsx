@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { InputSlider } from "./input-slider";
 import { hexToLightColor } from "@/lib/color-utils";
 import { iconMap } from "@/lib/icon-map";
-import { Chip } from "./chip";
+import { Chip } from "./Chip";
 
 interface SpendingCardProps {
     name: string;
@@ -73,7 +73,7 @@ export function SpendingCard({name, icon, budgeted, spent, category, categoryCol
                         ) : (
                             <Chip textSize="sm" backgroundColor="#dcfce7" textColor="#15803d" label={`$${budgeted - spent} left`} />
                         )}
-                        <Chip 
+                        <Chip
                             textSize="sm" 
                             backgroundColor="#dbeafe" 
                             textColor="#1d4ed8" 

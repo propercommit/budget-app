@@ -1,16 +1,11 @@
 "use client"
-import { LucideIcon, Plus, ShoppingBagIcon, Upload } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { CategoryChip } from "./category-chip";
 import { SpendingCard } from "./spending-card";
 import { Button } from "./ui/button";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { iconMap, availableIcons } from "@/lib/icon-map";
+import { SpendingCardPopin } from "./spending-card-popin";
 
 interface Category {
     icon?: string;
@@ -42,47 +37,6 @@ interface SpendingCategoriesCardProps {
 export function SpendingCategoriesCard({title, legend, categories, selectedCategory, onSelectCategory, spendingItems, totalIncome, onSpendingChange, onAddSpending}: SpendingCategoriesCardProps) {
 
     const [isPopinOpen, setIsPopinOpen] = useState(false);
-    const [spendingCardName, setSpendingCardName] = useState("");
-    const [spendingCategory, setSpendingCategory] = useState("");
-    const [showValidationMessage, setShowValidationMessage] = useState(false);
-    const [iconSource, setIconSource] = useState<"preset" | "upload">("preset");
-    const [selectedIcon, setSelectedIcon] = useState("shopping-cart");
-    const [customIconUrl, setCustomIconUrl] = useState<string | null>(null);
-
-    const handleAddClick = () => {
-        const valid = validation();
-
-        if(valid == false) {
-            setShowValidationMessage(true);
-        } else {
-            const iconToUse = iconSource === "preset" ? selectedIcon : customIconUrl;
-            
-            setShowValidationMessage(false);
-            onAddSpending(spendingCardName, spendingCategory, iconToUse);
-            setSpendingCardName("");
-            setSpendingCategory("");
-            setSelectedIcon("shopping-cart");
-            setCustomIconUrl(null);
-            setIconSource("preset");
-            setIsPopinOpen(false);
-        }
-    };
-
-    const validation = () => {
-        if(spendingCardName == "" || spendingCategory == "") return false;
-        return true;
-    }
-
-    const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                setCustomIconUrl(event.target?.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
     
     return (
         <Card className="mt-6">
@@ -109,18 +63,12 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                     />
                 ))}
                 </div>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2 w-full mt-3"
-                    onClick={() => setIsPopinOpen(true)}
-                    >
-                        <Plus className="w-4 h-4"/>
-                        Add Custom
-                </Button>
-
-
-
+                <SpendingCardPopin
+                    isOpen={isPopinOpen}
+                    onOpenChange={setIsPopinOpen}
+                    onAddSpending={onAddSpending}
+                    categories={categories}
+                />
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
                         .filter(item => selectedCategory === null || item.category === selectedCategory)
@@ -140,6 +88,15 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                         ))
                     }                    
                 </div>
+            <Button 
+                variant="outline" 
+                size="sm" 
+                className="!bg-blue-500 hover:!bg-blue-600 gap-2 w-full mt-3"
+                onClick={() => setIsPopinOpen(true)}
+                >
+                    <Plus className="w-4 h-4"/>
+                Add Custom
+             </Button>
             </CardContent>
         </Card>
     );
