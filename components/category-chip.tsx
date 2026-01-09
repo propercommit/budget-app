@@ -1,5 +1,4 @@
 import { iconMap } from "@/lib/icon-map";
-import { LucideIcon } from "lucide-react";
 
 interface CategoryChipProps {
     icon?: string;

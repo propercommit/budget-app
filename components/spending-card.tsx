@@ -1,9 +1,8 @@
-import { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { InputSlider } from "./input-slider";
-import { Chip } from "./Chip";
 import { hexToLightColor } from "@/lib/color-utils";
-import { iconMap, availableIcons } from "@/lib/icon-map";
+import { iconMap } from "@/lib/icon-map";
+import { Chip } from "./chip";
 
 interface SpendingCardProps {
     name: string;

@@ -119,7 +119,7 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                         Add Custom
                 </Button>
 
-                // put spending card popin here
+
 
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
