@@ -38,7 +38,7 @@ export function CategoryPopin({ isOpen, onOpenChange, onAddCategory }: CategoryP
             onOpenChange(open);
             if (!open) setShowValidationMessage(false);
         }}>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Create New Category</DialogTitle>
                     <DialogDescription>Add a custom category with name, icon, and color</DialogDescription>
