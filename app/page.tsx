@@ -6,6 +6,7 @@ import { MonthlyIncomeCard } from "@/components/monthly-income-card";
 import { DollarSign } from "lucide-react";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
+import { BudgetOverviewCard } from "@/components/budget-overview";
 
 export default function Home() {
 
@@ -85,6 +86,12 @@ export default function Home() {
         onAddSpending={handleAddSpending}
         onAddCategory={handleAddCategory}
       />
+      <BudgetOverviewCard 
+          totalIncome={activeIncome + passiveIncome}
+          categories={categories}
+          spendingItems={spendingItems}
+        >
+      </BudgetOverviewCard>
     </div>
   );
 }

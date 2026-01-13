@@ -13,7 +13,7 @@ interface Category {
     color: string;
 }
 
-interface SpendingItem {
+export interface SpendingItem {
     id: string;
     name: string;
     icon: string;
