@@ -3,10 +3,9 @@ import { Header } from "@/components/header";
 import { MonthPicker } from "@/components/month-picker";
 import { GraphToggleBtn } from "@/components/graph-toggle-button";
 import { MonthlyIncomeCard } from "@/components/monthly-income-card";
-import { DollarSign, ShoppingCart, Home as HomeIcon, Utensils } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
-
 
 export default function Home() {
 
@@ -40,12 +39,16 @@ export default function Home() {
     setSpendingItems([...spendingItems, newItem]);
   }
 
+  const handleAddCategory = (name: string, icon: string, color: string) => {
+    setCategories([...categories, { label: name, icon, color }]);
+  };
+
   // test data
-  const testCategories = [
-    { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
-    { icon: "home", label: "Housing", color: "#10b981" },
-    { icon: "utensils", label: "Food", color: "#f59e0b" },
-  ];
+  const [categories, setCategories] = useState([
+      { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
+      { icon: "home", label: "Housing", color: "#10b981" },
+      { icon: "utensils", label: "Food", color: "#f59e0b" },
+  ]);
 
   return (
 
@@ -73,13 +76,14 @@ export default function Home() {
       <SpendingCategoriesCard
         title="Spending Categories"
         legend="Track budgeted vs actual spending"
-        categories={testCategories}
+        categories={categories}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         spendingItems={spendingItems}
         totalIncome={5000}
         onSpendingChange={handleSpendingChange}
         onAddSpending={handleAddSpending}
+        onAddCategory={handleAddCategory}
       />
     </div>
   );

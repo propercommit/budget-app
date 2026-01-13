@@ -32,9 +32,10 @@ interface SpendingCategoriesCardProps {
     totalIncome: number;
     onSpendingChange: (id: string, budgeted: number, spent: number) => void;
     onAddSpending: (name: string, category: string, icon: string | null) => void;
+    onAddCategory: (name: string, icon: string, color: string) => void;
 };
 
-export function SpendingCategoriesCard({title, legend, categories, selectedCategory, onSelectCategory, spendingItems, totalIncome, onSpendingChange, onAddSpending}: SpendingCategoriesCardProps) {
+export function SpendingCategoriesCard({title, legend, categories, selectedCategory, onSelectCategory, spendingItems, totalIncome, onSpendingChange, onAddSpending, onAddCategory}: SpendingCategoriesCardProps) {
 
     const [isPopinOpen, setIsPopinOpen] = useState(false);
     
@@ -67,7 +68,9 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                     isOpen={isPopinOpen}
                     onOpenChange={setIsPopinOpen}
                     onAddSpending={onAddSpending}
+                    onAddCategory={onAddCategory}
                     categories={categories}
+                    
                 />
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
