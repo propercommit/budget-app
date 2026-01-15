@@ -1,4 +1,3 @@
-
 import { InputSlider } from "./input-slider";
 import { LegendChip } from "./legend-chip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -32,10 +31,13 @@ export function MonthlyIncomeCard({
     onPassiveIncomeChange
 }: MonthlyIncomeCardProps) {
 
-
     const totalIncome = activeIncome + passiveIncome;
     const activePercentage = totalIncome > 0 ? Math.round((activeIncome / totalIncome) * 100) : 0;
     const passivePercentage = totalIncome > 0 ? Math.round((passiveIncome / totalIncome) * 100) : 0;
+
+    const arcLength = 345.4;
+    const activeArcLength = (activePercentage / 100) * arcLength;
+    const passiveArcLength = (passivePercentage / 100) * arcLength;
 
     return (
         <Card className="mt-6">
@@ -48,29 +50,41 @@ export function MonthlyIncomeCard({
                 <p className="text-sm text-gray-500 text-center">{progressBarTitle}</p>
                 <div className="relative">
                 <svg width="280" height="150" viewBox="0 0 280 150" className="overflow-visible">
-                    {/* Active income arc (blue) only render if passive > 0 */}
-                    {activePercentage > 0 && (
-                        <path
+                    {/* Background arc (always visible) */}
+                    <path
+                        d="M 30 130 A 110 110 0 0 1 250 130"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        strokeWidth="28"
+                        strokeLinecap="round"
+                    />
+                    {/* Active income arc (blue) */}
+                    <path
                         d="M 30 130 A 110 110 0 0 1 250 130"
                         fill="none"
                         stroke="#3b82f6"
                         strokeWidth="28"
                         strokeLinecap="round"
-                        strokeDasharray={`${(activePercentage / 100) * 345.4} 345.4`}
-                        />
-                    )}
-                    {/* Passive income arc (purple) only render if active > 0 */}
-                    {passivePercentage > 0 && (
-                        <path
+                        strokeDasharray={`${activeArcLength} ${arcLength}`}
+                        style={{
+                            transition: "stroke-dasharray 500ms ease-out, opacity 300ms ease-out",
+                            opacity: activePercentage > 0 ? 1 : 0,
+                        }}
+                    />
+                    {/* Passive income arc (purple) */}
+                    <path
                         d="M 30 130 A 110 110 0 0 1 250 130"
                         fill="none"
                         stroke="#a855f7"
                         strokeWidth="28"
                         strokeLinecap="round"
-                        strokeDasharray={`${(passivePercentage / 100) * 345.4} 345.4`}
-                        strokeDashoffset={-((activePercentage / 100) * 345.4)}
-                        />
-                    )}
+                        strokeDasharray={`${passiveArcLength} ${arcLength}`}
+                        strokeDashoffset={-activeArcLength}
+                        style={{
+                            transition: "stroke-dasharray 500ms ease-out, stroke-dashoffset 500ms ease-out, opacity 300ms ease-out",
+                            opacity: passivePercentage > 0 ? 1 : 0,
+                        }}
+                    />
                     {/* Center text */}
                     <text x="140" y="105" textAnchor="middle" className="text-4xl font-bold fill-foreground">
                     {activePercentage}%
