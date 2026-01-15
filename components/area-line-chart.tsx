@@ -12,6 +12,7 @@ interface AreaLineChartProps {
     color: string;
     height?: number;
     graphId: string;
+    increaseIsPositive?: boolean;
 }
 
 const LINE_ANIMATION_DURATION = 1.5;
@@ -23,6 +24,7 @@ export function AreaLineChart({
     color,
     height: chartHeight = 180,
     graphId,
+    increaseIsPositive = false,
 }: AreaLineChartProps) {
     const [showValues, setShowValues] = useState(false);
     const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
@@ -65,6 +67,7 @@ export function AreaLineChart({
                 previousValue={previousValue}
                 showValues={showValues}
                 onToggleValues={() => setShowValues(!showValues)}
+                increaseIsPositive={increaseIsPositive}
             />
 
             <div className="relative w-full overflow-x-auto">

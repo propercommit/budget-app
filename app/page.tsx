@@ -19,15 +19,27 @@ interface SpendingItem {
 }
 
 type SpendingData = Record<string, SpendingItem[]>;
+type IncomeData = Record<string, { active: number; passive: number }>;
 
 export default function Home() {
-
-  //hooks
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [activeIncome, setActiveIncome] = useState(0);
-  const [passiveIncome, setPassiveIncome] = useState(0);
-  const [showTrends, setShowTrends] = useState(false);
+  // State
   const [selectedMonth, setSelectedMonth] = useState("2025-12");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showTrends, setShowTrends] = useState(false);
+  
+  const [categories, setCategories] = useState([
+    { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
+    { icon: "home", label: "Housing", color: "#10b981" },
+    { icon: "utensils", label: "Food", color: "#f59e0b" },
+  ]);
+
+  const [incomeData, setIncomeData] = useState<IncomeData>({
+    "2025-09": { active: 3500, passive: 400 },
+    "2025-10": { active: 3500, passive: 450 },
+    "2025-11": { active: 3800, passive: 450 },
+    "2025-12": { active: 4000, passive: 500 },
+  });
+
   const [spendingData, setSpendingData] = useState<SpendingData>({
     "2025-09": [
       { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 320, category: "Food" },
@@ -47,7 +59,73 @@ export default function Home() {
     ],
   });
 
+  // Derived values
   const currentSpendingItems = spendingData[selectedMonth] || [];
+  const currentIncome = incomeData[selectedMonth] || { active: 0, passive: 0 };
+
+  // Handlers
+  const handleMonthChange = (newMonth: string) => {
+    setSelectedMonth(newMonth);
+    
+    setSpendingData(currentData => {
+      if (currentData[newMonth]) return currentData;
+      
+      const sortedMonths = Object.keys(currentData).sort();
+      const previousMonths = sortedMonths.filter(m => m < newMonth);
+      
+      if (previousMonths.length === 0) return currentData;
+      
+      const closestMonth = previousMonths[previousMonths.length - 1];
+      const previousData = currentData[closestMonth];
+      
+      const newMonthData = previousData.map(item => ({
+        ...item,
+        id: Date.now().toString() + Math.random().toString().slice(2, 8),
+        spent: 0,
+      }));
+      
+      return {
+        ...currentData,
+        [newMonth]: newMonthData,
+      };
+    });
+
+    setIncomeData(currentData => {
+      if (currentData[newMonth]) return currentData;
+      
+      const sortedMonths = Object.keys(currentData).sort();
+      const previousMonths = sortedMonths.filter(m => m < newMonth);
+      
+      if (previousMonths.length === 0) return currentData;
+      
+      const closestMonth = previousMonths[previousMonths.length - 1];
+      
+      return {
+        ...currentData,
+        [newMonth]: { ...currentData[closestMonth] },
+      };
+    });
+  };
+
+  const handleActiveIncomeChange = (value: number) => {
+    setIncomeData(data => ({
+      ...data,
+      [selectedMonth]: { 
+        ...data[selectedMonth], 
+        active: value 
+      },
+    }));
+  };
+
+  const handlePassiveIncomeChange = (value: number) => {
+    setIncomeData(data => ({
+      ...data,
+      [selectedMonth]: { 
+        ...data[selectedMonth], 
+        passive: value 
+      },
+    }));
+  };
 
   const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
     setSpendingData(data => ({
@@ -77,47 +155,19 @@ export default function Home() {
     setCategories([...categories, { label: name, icon, color }]);
   };
 
-  const [categories, setCategories] = useState([
-      { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
-      { icon: "home", label: "Housing", color: "#10b981" },
-      { icon: "utensils", label: "Food", color: "#f59e0b" },
-  ]);
-
-  const handleMonthChange = (newMonth: string) => {
-    setSelectedMonth(newMonth);
-    
-    setSpendingData(currentData => {
-      if (currentData[newMonth]) return currentData;
-      
-      const sortedMonths = Object.keys(currentData).sort();
-      const previousMonths = sortedMonths.filter(m => m < newMonth);
-      
-      if (previousMonths.length === 0) return currentData;
-      
-      const closestMonth = previousMonths[previousMonths.length - 1];
-      const previousData = currentData[closestMonth];
-      
-      const newMonthData = previousData.map(item => ({
-        ...item,
-        id: Date.now().toString() + Math.random().toString().slice(2, 8),
-        spent: 0,
-      }));
-      
-      return {
-        ...currentData,
-        [newMonth]: newMonthData,
-      };
-    });
-  };
-
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <Header Icon={DollarSign} title="Budget Planner" legendLabel="Take control of your finances with smart insights and personalized advice"/>
-      <div className="flex justify-between">
-      <MonthPicker 
-        selectedMonth={selectedMonth} 
-        onMonthChange={handleMonthChange} 
+      <Header 
+        Icon={DollarSign} 
+        title="Budget Planner" 
+        legendLabel="Take control of your finances with smart insights and personalized advice"
       />
+      
+      <div className="flex justify-between">
+        <MonthPicker 
+          selectedMonth={selectedMonth} 
+          onMonthChange={handleMonthChange} 
+        />
         <GraphToggleBtn 
           label="trends"
           isActive={showTrends}
@@ -133,6 +183,12 @@ export default function Home() {
               month,
               spending,
             }))}
+          incomeData={Object.entries(incomeData)
+            .filter(([month]) => month <= selectedMonth)
+            .map(([month, income]) => ({
+              month,
+              income,
+            }))}
           categories={categories}
           onClose={() => setShowTrends(false)}
         />
@@ -146,10 +202,10 @@ export default function Home() {
         leftSliderLegend="Salary, wages, freelance" 
         rightSliderTitle="Passive Income"
         rightSliderLegend="Investments, rentals, dividends"
-        activeIncome={activeIncome}
-        passiveIncome={passiveIncome}
-        onActiveIncomeChange={setActiveIncome}
-        onPassiveIncomeChange={setPassiveIncome}
+        activeIncome={currentIncome.active}
+        passiveIncome={currentIncome.passive}
+        onActiveIncomeChange={handleActiveIncomeChange}
+        onPassiveIncomeChange={handlePassiveIncomeChange}
       />
 
       <SpendingCategoriesCard
@@ -159,14 +215,14 @@ export default function Home() {
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         spendingItems={currentSpendingItems}
-        totalIncome={5000}
+        totalIncome={currentIncome.active + currentIncome.passive}
         onSpendingChange={handleSpendingChange}
         onAddSpending={handleAddSpending}
         onAddCategory={handleAddCategory}
       />
 
       <BudgetOverviewCard 
-        totalIncome={activeIncome + passiveIncome}
+        totalIncome={currentIncome.active + currentIncome.passive}
         categories={categories}
         spendingItems={currentSpendingItems}
       />
