@@ -43,7 +43,7 @@ export function SpendingCard({
     return (
         <Card>
             <CardHeader
-                className="relative rounded-t-lg border-b-2 border-t-2 py-6"
+                className="relative border-b-2 py-6"
                 style={{
                     backgroundColor: `${categoryColor}15`,
                     borderBottomColor: `${categoryColor}40`,
