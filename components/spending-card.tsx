@@ -14,35 +14,57 @@ interface SpendingCardProps {
     totalIncome: number;
     onBudgetedChange: (value: number) => void;
     onSpentChange: (value: number) => void;
-};
+    onEdit: () => void;
+}
 
-export function SpendingCard({name, icon, budgeted, spent, category, categoryColor, totalIncome, onBudgetedChange, onSpentChange}: SpendingCardProps) {
+export function SpendingCard({
+    name,
+    icon,
+    budgeted,
+    spent,
+    category,
+    categoryColor,
+    totalIncome,
+    onBudgetedChange,
+    onSpentChange,
+    onEdit,
+}: SpendingCardProps) {
     return (
         <Card>
             <CardHeader
                 className="relative rounded-t-lg border-b-2 border-t-2 py-6"
                 style={{
                     backgroundColor: `${categoryColor}15`,
-                    borderBottomColor: `${categoryColor}40 `,
-                    borderTopColor: `${categoryColor}40 `
+                    borderBottomColor: `${categoryColor}40`,
+                    borderTopColor: `${categoryColor}40`
                 }}
             >
                 <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        {icon.startsWith("data:") ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={icon} alt="" className="w-5 h-5 object-contain" />
-                        ) : (
-                            iconMap[icon] || iconMap["shopping-cart"]
-                        )}
+                    <button
+                        onClick={onEdit}
+                        className="flex items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-105 origin-left"
+                    >
+                        <div 
+                            className="p-2 rounded-lg transition-all duration-200 hover:rotate-6 hover:scale-110"
+                            style={{ backgroundColor: `${categoryColor}30` }}
+                        >
+                            {icon.startsWith("data:") ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={icon} alt="" className="w-5 h-5 object-contain" />
+                            ) : (
+                                iconMap[icon] || iconMap["shopping-cart"]
+                            )}
+                        </div>
                         <p className="font-medium">{name}</p>
-                    </div>
-                    <span className="absolute top-0 right-0 px-4 py-2 text-sm font-medium text-white" 
+                    </button>
+                    <span 
+                        className="absolute top-0 right-0 px-4 py-2 text-sm font-medium text-white" 
                         style={{ 
                             backgroundColor: categoryColor,
                             clipPath: "polygon(0 0, 100% 0, 100% 100%, 15% 100%)",
                             borderBottomLeftRadius: "0.5rem",
-                        }}>
+                        }}
+                    >
                         {category}
                     </span>
                 </div>
@@ -69,7 +91,7 @@ export function SpendingCard({name, icon, budgeted, spent, category, categoryCol
                     />
                     <div className="flex pt-2 justify-between">
                         {spent > budgeted ? (
-                            <Chip textSize="sm" backgroundColor="#fee2e2" textColor="#b91c1c"label={`$${spent - budgeted} over`} />
+                            <Chip textSize="sm" backgroundColor="#fee2e2" textColor="#b91c1c" label={`$${spent - budgeted} over`} />
                         ) : (
                             <Chip textSize="sm" backgroundColor="#dcfce7" textColor="#15803d" label={`$${budgeted - spent} left`} />
                         )}

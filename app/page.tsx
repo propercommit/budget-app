@@ -8,6 +8,7 @@ import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
 import { BudgetOverviewCard } from "@/components/budget-overview";
 import { SpendingTrendsCard } from "@/components/spending-trends-card";
+import { SpendingCardPopin } from "@/components/spending-card-popin";
 
 interface SpendingItem {
   id: string;
@@ -26,6 +27,8 @@ export default function Home() {
   const [selectedMonth, setSelectedMonth] = useState("2025-12");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showTrends, setShowTrends] = useState(false);
+  const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
+  const [editingSpendingItem, setEditingSpendingItem] = useState<SpendingItem | null>(null);
   
   const [categories, setCategories] = useState([
     { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
@@ -63,7 +66,25 @@ export default function Home() {
   const currentSpendingItems = spendingData[selectedMonth] || [];
   const currentIncome = incomeData[selectedMonth] || { active: 0, passive: 0 };
 
-  // Handlers
+  // Spending Popin Handlers
+  const handleOpenCreateSpending = () => {
+    setEditingSpendingItem(null);
+    setIsSpendingPopinOpen(true);
+  };
+
+  const handleOpenEditSpending = (item: SpendingItem) => {
+    setEditingSpendingItem(item);
+    setIsSpendingPopinOpen(true);
+  };
+
+  const handleCloseSpendingPopin = (open: boolean) => {
+    setIsSpendingPopinOpen(open);
+    if (!open) {
+      setEditingSpendingItem(null);
+    }
+  };
+
+  // Month Handlers
   const handleMonthChange = (newMonth: string) => {
     setSelectedMonth(newMonth);
     
@@ -107,6 +128,7 @@ export default function Home() {
     });
   };
 
+  // Income Handlers
   const handleActiveIncomeChange = (value: number) => {
     setIncomeData(data => ({
       ...data,
@@ -127,6 +149,7 @@ export default function Home() {
     }));
   };
 
+  // Spending Handlers
   const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
     setSpendingData(data => ({
       ...data,
@@ -151,6 +174,23 @@ export default function Home() {
     }));
   };
 
+  const handleEditSpending = (id: string, name: string, category: string, icon: string) => {
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item =>
+        item.id === id ? { ...item, name, category, icon } : item
+      ),
+    }));
+  };
+
+  const handleDeleteSpending = (id: string) => {
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].filter(item => item.id !== id)
+    }));
+  };
+
+  // Category Handlers
   const handleAddCategory = (name: string, icon: string, color: string) => {
     setCategories([...categories, { label: name, icon, color }]);
   };
@@ -217,9 +257,23 @@ export default function Home() {
         spendingItems={currentSpendingItems}
         totalIncome={currentIncome.active + currentIncome.passive}
         onSpendingChange={handleSpendingChange}
-        onAddSpending={handleAddSpending}
+        onOpenCreateSpending={handleOpenCreateSpending}
+        onEditSpendingItem={handleOpenEditSpending}
         onAddCategory={handleAddCategory}
       />
+
+    <SpendingCardPopin
+        key={editingSpendingItem?.id ?? "create"}
+        isOpen={isSpendingPopinOpen}
+        onOpenChange={handleCloseSpendingPopin}
+        onAddSpending={handleAddSpending}
+        onEditSpending={handleEditSpending}
+        onDeleteSpending={handleDeleteSpending}
+        onAddCategory={handleAddCategory}
+        categories={categories}
+        mode={editingSpendingItem ? "edit" : "create"}
+        editingItem={editingSpendingItem}
+    />
 
       <BudgetOverviewCard 
         totalIncome={currentIncome.active + currentIncome.passive}
