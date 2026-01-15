@@ -49,7 +49,7 @@ export function SegmentedCircularProgress({
 
     return (
         <div className="flex flex-col items-center gap-3">
-            <div className="relative inline-flex items-center justify-center p-2 rounded-full bg-muted/30 shadow-inner">
+            <div className="relative inline-flex items-center justify-center p-2 rounded-full">
                 <svg width={size} height={size} className="transform -rotate-90 overflow-visible">
                     <circle
                         cx={size / 2}
