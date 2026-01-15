@@ -93,12 +93,12 @@ export function SpendingCategoriesCard({title, legend, categories, selectedCateg
                 </div>
             <Button 
                 variant="outline" 
-                size="sm" 
-                className="!bg-blue-500 hover:!bg-blue-600 gap-2 w-full mt-3"
+                size="lg" 
+                className="!bg-green-500 hover:!bg-green-600 gap-2 w-full mt-3"
                 onClick={() => setIsPopinOpen(true)}
                 >
                     <Plus className="w-4 h-4"/>
-                Add Custom
+                    Add Custom
              </Button>
             </CardContent>
         </Card>

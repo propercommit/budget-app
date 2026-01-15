@@ -7,6 +7,7 @@ import { DollarSign } from "lucide-react";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
 import { BudgetOverviewCard } from "@/components/budget-overview";
+import { SpendingTrendsCard } from "@/components/spending-trends-card";
 
 export default function Home() {
 
@@ -18,7 +19,36 @@ export default function Home() {
   ]);
   const [activeIncome, setActiveIncome] = useState(0);
   const [passiveIncome, setPassiveIncome] = useState(0);
+  const [showTrends, setShowTrends] = useState(false);
 
+  // Mock historical data for trends
+  const historicalData = [
+    {
+      month: "2025-09",
+      spending: [
+        { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 320, category: "Food" },
+        { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+      ]
+    },
+    {
+      month: "2025-10",
+      spending: [
+        { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 380, category: "Food" },
+        { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+      ]
+    },
+    {
+      month: "2025-11",
+      spending: [
+        { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 410, category: "Food" },
+        { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+      ]
+    },
+    {
+      month: "2025-12",
+      spending: spendingItems, // Current month uses live data
+    },
+  ];
 
   const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
       setSpendingItems(items => 
@@ -30,7 +60,7 @@ export default function Home() {
 
   const handleAddSpending = (name: string, category: string, icon: string | null) => {
     const newItem = {
-      id: Date.now().toString(), // unique id
+      id: Date.now().toString(),
       name: name,
       icon: icon || "shopping-cart",
       budgeted: 0,
@@ -44,7 +74,6 @@ export default function Home() {
     setCategories([...categories, { label: name, icon, color }]);
   };
 
-  // test data
   const [categories, setCategories] = useState([
       { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
       { icon: "home", label: "Housing", color: "#10b981" },
@@ -52,13 +81,24 @@ export default function Home() {
   ]);
 
   return (
-
     <div className="p-6 max-w-5xl mx-auto">
       <Header Icon={DollarSign} title="Budget Planner" legendLabel="Take control of your finances with smart insights and personalized advice"/>
       <div className="flex justify-between">
         <MonthPicker label="December 2025" />
-        <GraphToggleBtn label="trends"/>
+        <GraphToggleBtn 
+          label="trends"
+          isActive={showTrends}
+          onToggle={() => setShowTrends(!showTrends)}
+        />
       </div>
+
+      {showTrends && (
+        <SpendingTrendsCard
+          historicalData={historicalData}
+          categories={categories}
+          onClose={() => setShowTrends(false)}
+        />
+      )}
       
       <MonthlyIncomeCard 
         title="Monthly Income"
@@ -86,12 +126,12 @@ export default function Home() {
         onAddSpending={handleAddSpending}
         onAddCategory={handleAddCategory}
       />
+
       <BudgetOverviewCard 
-          totalIncome={activeIncome + passiveIncome}
-          categories={categories}
-          spendingItems={spendingItems}
-        >
-      </BudgetOverviewCard>
+        totalIncome={activeIncome + passiveIncome}
+        categories={categories}
+        spendingItems={spendingItems}
+      />
     </div>
   );
 }

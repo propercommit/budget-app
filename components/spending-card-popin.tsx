@@ -99,7 +99,7 @@ export function SpendingCardPopin({isOpen, onOpenChange, onAddSpending, onAddCat
                         <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
 
                         {showValidationMessage && (
-                            <p className="text-red-500 text-sm">Please fill in all fields</p>
+                            <p className="text-red-500 text-lg">Please fill in all fields</p>
                         )}
                         <Button className="w-full" onClick={handleAddClick}>Add Spending</Button>
                     </div>

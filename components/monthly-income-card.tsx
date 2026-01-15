@@ -2,8 +2,6 @@
 import { InputSlider } from "./input-slider";
 import { LegendChip } from "./legend-chip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Input } from "./ui/input";
-import { Slider } from "./ui/slider";
 
 
 interface MonthlyIncomeCardProps {
