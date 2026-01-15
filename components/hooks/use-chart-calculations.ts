@@ -23,7 +23,8 @@ export function useChartCalculations({
     lineAnimationDuration = 1.5,
 }: UseChartCalculationsProps) {
     return useMemo(() => {
-        if (data.length === 0 || data.every(d => d.value === 0)) {
+        // Need at least 2 points to draw a line
+        if (data.length < 2 || data.every(d => d.value === 0)) {
             return null;
         }
 
@@ -55,7 +56,7 @@ export function useChartCalculations({
         }
 
         const pointDelays = cumulativeDistances.map(dist => 
-            (dist / totalLineLength) * lineAnimationDuration
+            totalLineLength > 0 ? (dist / totalLineLength) * lineAnimationDuration : 0
         );
 
         return {
