@@ -11,10 +11,12 @@ interface SpendingCardProps {
     spent: number;
     category: string;
     categoryColor: string;
+    categoryIcon?: string;
     totalIncome: number;
     onBudgetedChange: (value: number) => void;
     onSpentChange: (value: number) => void;
     onEdit: () => void;
+    onEditCategory?: () => void;
 }
 
 export function SpendingCard({
@@ -24,11 +26,20 @@ export function SpendingCard({
     spent,
     category,
     categoryColor,
+    categoryIcon,
     totalIncome,
     onBudgetedChange,
     onSpentChange,
     onEdit,
+    onEditCategory,
 }: SpendingCardProps) {
+    const handleCategoryClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onEditCategory) {
+            onEditCategory();
+        }
+    };
+
     return (
         <Card>
             <CardHeader
@@ -57,16 +68,27 @@ export function SpendingCard({
                         </div>
                         <p className="font-medium">{name}</p>
                     </button>
-                    <span 
-                        className="absolute top-0 right-0 px-4 py-2 text-sm font-medium text-white" 
+                    <button
+                        onClick={handleCategoryClick}
+                        className="absolute top-0 right-0 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-80 flex items-center gap-1.5"
                         style={{ 
                             backgroundColor: categoryColor,
                             clipPath: "polygon(0 0, 100% 0, 100% 100%, 15% 100%)",
                             borderBottomLeftRadius: "0.5rem",
                         }}
                     >
+                        {categoryIcon && (
+                            <span className="transition-transform duration-200 hover:rotate-6 hover:scale-110">
+                                {categoryIcon.startsWith("data:") ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={categoryIcon} alt="" className="w-4 h-4 object-contain" />
+                                ) : (
+                                    iconMap[categoryIcon]
+                                )}
+                            </span>
+                        )}
                         {category}
-                    </span>
+                    </button>
                 </div>
             </CardHeader>
             <CardContent>

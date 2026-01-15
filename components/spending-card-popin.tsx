@@ -78,11 +78,20 @@ export function SpendingCardPopin({
         setSpendingCategory(name);
     };
 
+    const handleOpenChange = (open: boolean) => {
+        if (!open && showDeleteConfirm) {
+            // If trying to close while in delete confirmation, just go back to edit form
+            setShowDeleteConfirm(false);
+            return;
+        }
+        onOpenChange(open);
+    };
+
     const isEditMode = mode === "edit";
 
     return (
         <>
-            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <Dialog open={isOpen} onOpenChange={handleOpenChange}>
                 <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
@@ -105,7 +114,10 @@ export function SpendingCardPopin({
                                 <Button
                                     variant="outline"
                                     className="flex-1"
-                                    onClick={() => setShowDeleteConfirm(false)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowDeleteConfirm(false);
+                                    }}
                                 >
                                     Cancel
                                 </Button>
@@ -195,7 +207,7 @@ export function SpendingCardPopin({
                                 <p className="text-red-500 text-lg">Please fill in all fields</p>
                             )}
 
-                            <Button className="w-full bg-green-500 hover:!bg-green-600" onClick={handleSubmit}>
+                            <Button className="w-full" onClick={handleSubmit}>
                                 {isEditMode ? "Save Changes" : "Add Spending"}
                             </Button>
 

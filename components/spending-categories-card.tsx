@@ -6,7 +6,7 @@ import { SpendingCard } from "./spending-card";
 import { Button } from "./ui/button";
 
 interface Category {
-    icon?: string;
+    icon: string;
     label: string;
     color: string;
 }
@@ -31,7 +31,7 @@ interface SpendingCategoriesCardProps {
     onSpendingChange: (id: string, budgeted: number, spent: number) => void;
     onOpenCreateSpending: () => void;
     onEditSpendingItem: (item: SpendingItem) => void;
-    onAddCategory: (name: string, icon: string, color: string) => void;
+    onEditCategory: (category: Category) => void;
 }
 
 export function SpendingCategoriesCard({
@@ -45,6 +45,7 @@ export function SpendingCategoriesCard({
     onSpendingChange,
     onOpenCreateSpending,
     onEditSpendingItem,
+    onEditCategory,
 }: SpendingCategoriesCardProps) {
     return (
         <Card className="mt-6">
@@ -75,21 +76,26 @@ export function SpendingCategoriesCard({
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
                         .filter(item => selectedCategory === null || item.category === selectedCategory)
-                        .map(item => (
-                            <SpendingCard
-                                key={item.id}
-                                name={item.name}
-                                icon={item.icon}
-                                budgeted={item.budgeted}
-                                spent={item.spent}
-                                category={item.category}
-                                categoryColor={categories.find(c => c.label === item.category)?.color || "#6b7280"}
-                                totalIncome={totalIncome}
-                                onBudgetedChange={(value) => onSpendingChange(item.id, value, item.spent)}
-                                onSpentChange={(value) => onSpendingChange(item.id, item.budgeted, value)}
-                                onEdit={() => onEditSpendingItem(item)}
-                            />
-                        ))
+                        .map(item => {
+                            const categoryData = categories.find(c => c.label === item.category);
+                            return (
+                                <SpendingCard
+                                    key={item.id}
+                                    name={item.name}
+                                    icon={item.icon}
+                                    budgeted={item.budgeted}
+                                    spent={item.spent}
+                                    category={item.category}
+                                    categoryColor={categoryData?.color || "#6b7280"}
+                                    categoryIcon={categoryData?.icon}
+                                    totalIncome={totalIncome}
+                                    onBudgetedChange={(value) => onSpendingChange(item.id, value, item.spent)}
+                                    onSpentChange={(value) => onSpendingChange(item.id, item.budgeted, value)}
+                                    onEdit={() => onEditSpendingItem(item)}
+                                    onEditCategory={() => categoryData && onEditCategory(categoryData)}
+                                />
+                            );
+                        })
                     }                    
                 </div>
 
