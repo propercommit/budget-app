@@ -1,0 +1,398 @@
+"use client"
+
+import * as React from "react"
+import { cn } from "@/lib/utils"
+
+interface ColorPickerProps {
+  value: string
+  onChange: (color: string) => void
+  className?: string
+}
+
+const PRESET_COLORS = [
+  "#10b981", // green
+  "#3b82f6", // blue
+  "#a855f7", // purple
+  "#ef4444", // red
+  "#f59e0b", // orange
+  "#64748b", // slate
+]
+
+export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
+  const [hue, setHue] = React.useState(0)
+  const [saturation, setSaturation] = React.useState(100)
+  const [lightness, setLightness] = React.useState(50)
+  const [opacity, setOpacity] = React.useState(100)
+  const [format, setFormat] = React.useState<"hex" | "rgba">("hex")
+  const [isGradientActive, setIsGradientActive] = React.useState(false)
+  const [isHueActive, setIsHueActive] = React.useState(false)
+  const [isOpacityActive, setIsOpacityActive] = React.useState(false)
+
+  const gradientRef = React.useRef<HTMLDivElement>(null)
+  const hueRef = React.useRef<HTMLDivElement>(null)
+  const opacityRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const parseColor = (color: string) => {
+      if (color.startsWith("rgba")) {
+        const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d*\.?\d+))?\)/)
+        if (match) {
+          const r = Number.parseInt(match[1]) / 255
+          const g = Number.parseInt(match[2]) / 255
+          const b = Number.parseInt(match[3]) / 255
+          const a = match[4] ? Number.parseFloat(match[4]) * 100 : 100
+
+          const max = Math.max(r, g, b)
+          const min = Math.min(r, g, b)
+          const l = (max + min) / 2
+          let h = 0
+          let s = 0
+
+          if (max !== min) {
+            const d = max - min
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+
+            switch (max) {
+              case r:
+                h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+                break
+              case g:
+                h = ((b - r) / d + 2) / 6
+                break
+              case b:
+                h = ((r - g) / d + 4) / 6
+                break
+            }
+          }
+
+          setHue(Math.round(h * 360))
+          setSaturation(Math.round(s * 100))
+          setLightness(Math.round(l * 100))
+          setOpacity(Math.round(a))
+          return
+        }
+      }
+
+      if (color.startsWith("#")) {
+        const hex = color.slice(1)
+        const r = Number.parseInt(hex.slice(0, 2), 16) / 255
+        const g = Number.parseInt(hex.slice(2, 4), 16) / 255
+        const b = Number.parseInt(hex.slice(4, 6), 16) / 255
+
+        const max = Math.max(r, g, b)
+        const min = Math.min(r, g, b)
+        const l = (max + min) / 2
+        let h = 0
+        let s = 0
+
+        if (max !== min) {
+          const d = max - min
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+
+          switch (max) {
+            case r:
+              h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+              break
+            case g:
+              h = ((b - r) / d + 2) / 6
+              break
+            case b:
+              h = ((r - g) / d + 4) / 6
+              break
+          }
+        }
+
+        setHue(Math.round(h * 360))
+        setSaturation(Math.round(s * 100))
+        setLightness(Math.round(l * 100))
+        setOpacity(100)
+      }
+    }
+
+    parseColor(value)
+  }, [value])
+
+  const hslToHex = (h: number, s: number, l: number) => {
+    s /= 100
+    l /= 100
+
+    const c = (1 - Math.abs(2 * l - 1)) * s
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+    const m = l - c / 2
+    let r = 0,
+      g = 0,
+      b = 0
+
+    if (h >= 0 && h < 60) {
+      r = c; g = x; b = 0
+    } else if (h >= 60 && h < 120) {
+      r = x; g = c; b = 0
+    } else if (h >= 120 && h < 180) {
+      r = 0; g = c; b = x
+    } else if (h >= 180 && h < 240) {
+      r = 0; g = x; b = c
+    } else if (h >= 240 && h < 300) {
+      r = x; g = 0; b = c
+    } else {
+      r = c; g = 0; b = x
+    }
+
+    const toHex = (n: number) => {
+      const hex = Math.round((n + m) * 255).toString(16)
+      return hex.length === 1 ? "0" + hex : hex
+    }
+
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+  }
+
+  const updateColor = React.useCallback((h: number, s: number, l: number, a?: number) => {
+    const newOpacity = a ?? opacity
+
+    setHue(h)
+    setSaturation(s)
+    setLightness(l)
+    if (a !== undefined) setOpacity(newOpacity)
+
+    const hexColor = hslToHex(h, s, l)
+
+    if (newOpacity < 100) {
+      const r = Number.parseInt(hexColor.slice(1, 3), 16)
+      const g = Number.parseInt(hexColor.slice(3, 5), 16)
+      const b = Number.parseInt(hexColor.slice(5, 7), 16)
+      onChange(`rgba(${r}, ${g}, ${b}, ${newOpacity / 100})`)
+    } else {
+      onChange(hexColor)
+    }
+  }, [opacity, onChange])
+
+  const handleGradientClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!gradientRef.current) return
+
+    const rect = gradientRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const s = Math.round((x / rect.width) * 100)
+    const l = Math.round(100 - (y / rect.height) * 100)
+
+    updateColor(hue, s, l)
+  }
+
+  const handleGradientMouseMove = React.useCallback(
+    (e: MouseEvent) => {
+      if (!gradientRef.current) return
+
+      const rect = gradientRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+
+      const s = Math.max(0, Math.min(100, Math.round((x / rect.width) * 100)))
+      const l = Math.max(0, Math.min(100, Math.round(100 - (y / rect.height) * 100)))
+
+      updateColor(hue, s, l)
+    },
+    [hue, updateColor]
+  )
+
+  const handleHueClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!hueRef.current) return
+
+    const rect = hueRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const h = Math.round((x / rect.width) * 360)
+
+    updateColor(h, saturation, lightness)
+  }
+
+  const handleHueMouseMove = React.useCallback(
+    (e: MouseEvent) => {
+      if (!hueRef.current) return
+
+      const rect = hueRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const h = Math.max(0, Math.min(360, Math.round((x / rect.width) * 360)))
+
+      updateColor(h, saturation, lightness)
+    },
+    [saturation, lightness, updateColor]
+  )
+
+  const handleOpacityClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!opacityRef.current) return
+
+    const rect = opacityRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const a = Math.round((x / rect.width) * 100)
+
+    updateColor(hue, saturation, lightness, a)
+  }
+
+  const handleOpacityMouseMove = React.useCallback(
+    (e: MouseEvent) => {
+      if (!opacityRef.current) return
+
+      const rect = opacityRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const a = Math.max(0, Math.min(100, Math.round((x / rect.width) * 100)))
+
+      updateColor(hue, saturation, lightness, a)
+    },
+    [hue, saturation, lightness, updateColor]
+  )
+
+  React.useEffect(() => {
+    const handleMouseUp = () => {
+      setIsGradientActive(false)
+      setIsHueActive(false)
+      setIsOpacityActive(false)
+    }
+
+    if (isGradientActive) {
+      document.addEventListener("mousemove", handleGradientMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+    }
+    if (isHueActive) {
+      document.addEventListener("mousemove", handleHueMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+    }
+    if (isOpacityActive) {
+      document.addEventListener("mousemove", handleOpacityMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleGradientMouseMove)
+      document.removeEventListener("mousemove", handleHueMouseMove)
+      document.removeEventListener("mousemove", handleOpacityMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [
+    isGradientActive,
+    isHueActive,
+    isOpacityActive,
+    handleGradientMouseMove,
+    handleHueMouseMove,
+    handleOpacityMouseMove,
+  ])
+
+  const currentColor = hslToHex(hue, saturation, lightness)
+  const gradientX = (saturation / 100) * 100
+  const gradientY = 100 - lightness
+
+  return (
+    <div className={cn("space-y-3 p-4 bg-muted/50 rounded-lg border", className)}>
+      <div
+        ref={gradientRef}
+        className="relative w-full h-48 rounded-lg cursor-crosshair overflow-hidden"
+        style={{
+          background: `
+            linear-gradient(to bottom, transparent, black),
+            linear-gradient(to right, white, hsl(${hue}, 100%, 50%))
+          `,
+        }}
+        onClick={handleGradientClick}
+        onMouseDown={(e) => {
+          setIsGradientActive(true)
+          handleGradientClick(e)
+        }}
+      >
+        <div
+          className="absolute w-4 h-4 border-2 border-white rounded-full shadow-lg pointer-events-none transition-transform duration-150"
+          style={{
+            left: `${gradientX}%`,
+            top: `${gradientY}%`,
+            transform: `translate(-50%, -50%) scale(${isGradientActive ? 1.25 : 1})`,
+          }}
+        />
+      </div>
+
+      <div
+        ref={hueRef}
+        className="relative w-full h-3 rounded-full cursor-pointer overflow-hidden"
+        style={{
+          background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
+        }}
+        onClick={handleHueClick}
+        onMouseDown={(e) => {
+          setIsHueActive(true)
+          handleHueClick(e)
+        }}
+      >
+        <div
+          className="absolute w-4 h-4 border-2 border-white rounded-full shadow-lg pointer-events-none top-1/2 transition-transform duration-150"
+          style={{
+            left: `${(hue / 360) * 100}%`,
+            transform: `translate(-50%, -50%) scale(${isHueActive ? 1.25 : 1})`,
+          }}
+        />
+      </div>
+
+      <div
+        ref={opacityRef}
+        className="relative w-full h-3 rounded-full cursor-pointer overflow-hidden"
+        style={{
+          background: `linear-gradient(to right, transparent, ${currentColor})`,
+          backgroundImage: `
+            linear-gradient(to right, transparent, ${currentColor}),
+            repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px
+          `,
+        }}
+        onClick={handleOpacityClick}
+        onMouseDown={(e) => {
+          setIsOpacityActive(true)
+          handleOpacityClick(e)
+        }}
+      >
+        <div
+          className="absolute w-4 h-4 border-2 border-white rounded-full shadow-lg pointer-events-none top-1/2 transition-transform duration-150"
+          style={{
+            left: `${opacity}%`,
+            transform: `translate(-50%, -50%) scale(${isOpacityActive ? 1.25 : 1})`,
+          }}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        {PRESET_COLORS.map((preset) => (
+          <button
+            key={preset}
+            className="w-8 h-8 rounded-full border-2 border-background shadow-sm hover:scale-110 transition-transform"
+            style={{ backgroundColor: preset }}
+            onClick={() => onChange(preset)}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t">
+        <div className="flex gap-2 text-xs">
+          <button
+            className={cn(
+              "px-2 py-1 rounded",
+              format === "hex" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            )}
+            onClick={() => setFormat("hex")}
+          >
+            HEX
+          </button>
+          <button
+            className={cn(
+              "px-2 py-1 rounded",
+              format === "rgba" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+            )}
+            onClick={() => setFormat("rgba")}
+          >
+            RGBA
+          </button>
+        </div>
+        <div className="text-xs text-muted-foreground font-mono">
+          {format === "hex"
+            ? currentColor.toUpperCase()
+            : `rgba(${Number.parseInt(currentColor.slice(1, 3), 16)}, ${Number.parseInt(
+                currentColor.slice(3, 5),
+                16
+              )}, ${Number.parseInt(currentColor.slice(5, 7), 16)}, ${opacity / 100})`}
+        </div>
+      </div>
+    </div>
+  )
+}
