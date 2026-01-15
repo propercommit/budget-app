@@ -9,53 +9,53 @@ import { SpendingCategoriesCard } from "@/components/spending-categories-card";
 import { BudgetOverviewCard } from "@/components/budget-overview";
 import { SpendingTrendsCard } from "@/components/spending-trends-card";
 
+interface SpendingItem {
+  id: string;
+  name: string;
+  icon: string;
+  budgeted: number;
+  spent: number;
+  category: string;
+}
+
+type SpendingData = Record<string, SpendingItem[]>;
+
 export default function Home() {
 
   //hooks
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [spendingItems, setSpendingItems] = useState([
-    { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 350, category: "Food" },
-    { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-  ]);
   const [activeIncome, setActiveIncome] = useState(0);
   const [passiveIncome, setPassiveIncome] = useState(0);
   const [showTrends, setShowTrends] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState("2025-12");
+  const [spendingData, setSpendingData] = useState<SpendingData>({
+    "2025-09": [
+      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 320, category: "Food" },
+      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+    ],
+    "2025-10": [
+      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 380, category: "Food" },
+      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+    ],
+    "2025-11": [
+      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 410, category: "Food" },
+      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+    ],
+    "2025-12": [
+      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 350, category: "Food" },
+      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
+    ],
+  });
 
-  // Mock historical data for trends
-  const historicalData = [
-    {
-      month: "2025-09",
-      spending: [
-        { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 320, category: "Food" },
-        { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-      ]
-    },
-    {
-      month: "2025-10",
-      spending: [
-        { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 380, category: "Food" },
-        { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-      ]
-    },
-    {
-      month: "2025-11",
-      spending: [
-        { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 410, category: "Food" },
-        { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-      ]
-    },
-    {
-      month: "2025-12",
-      spending: spendingItems, // Current month uses live data
-    },
-  ];
+  const currentSpendingItems = spendingData[selectedMonth] || [];
 
   const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
-      setSpendingItems(items => 
-          items.map(item => 
-              item.id === id ? { ...item, budgeted, spent } : item
-          )
-      );
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item =>
+        item.id === id ? { ...item, budgeted, spent } : item
+      ),
+    }));
   };
 
   const handleAddSpending = (name: string, category: string, icon: string | null) => {
@@ -67,8 +67,11 @@ export default function Home() {
       spent: 0,
       category: category
     };
-    setSpendingItems([...spendingItems, newItem]);
-  }
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: [...data[selectedMonth], newItem],
+    }));
+  };
 
   const handleAddCategory = (name: string, icon: string, color: string) => {
     setCategories([...categories, { label: name, icon, color }]);
@@ -80,11 +83,41 @@ export default function Home() {
       { icon: "utensils", label: "Food", color: "#f59e0b" },
   ]);
 
+  const handleMonthChange = (newMonth: string) => {
+    setSelectedMonth(newMonth);
+    
+    setSpendingData(currentData => {
+      if (currentData[newMonth]) return currentData;
+      
+      const sortedMonths = Object.keys(currentData).sort();
+      const previousMonths = sortedMonths.filter(m => m < newMonth);
+      
+      if (previousMonths.length === 0) return currentData;
+      
+      const closestMonth = previousMonths[previousMonths.length - 1];
+      const previousData = currentData[closestMonth];
+      
+      const newMonthData = previousData.map(item => ({
+        ...item,
+        id: Date.now().toString() + Math.random().toString().slice(2, 8),
+        spent: 0,
+      }));
+      
+      return {
+        ...currentData,
+        [newMonth]: newMonthData,
+      };
+    });
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <Header Icon={DollarSign} title="Budget Planner" legendLabel="Take control of your finances with smart insights and personalized advice"/>
       <div className="flex justify-between">
-        <MonthPicker label="December 2025" />
+      <MonthPicker 
+        selectedMonth={selectedMonth} 
+        onMonthChange={handleMonthChange} 
+      />
         <GraphToggleBtn 
           label="trends"
           isActive={showTrends}
@@ -94,7 +127,12 @@ export default function Home() {
 
       {showTrends && (
         <SpendingTrendsCard
-          historicalData={historicalData}
+          historicalData={Object.entries(spendingData)
+            .filter(([month]) => month <= selectedMonth)
+            .map(([month, spending]) => ({
+              month,
+              spending,
+            }))}
           categories={categories}
           onClose={() => setShowTrends(false)}
         />
@@ -120,7 +158,7 @@ export default function Home() {
         categories={categories}
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
-        spendingItems={spendingItems}
+        spendingItems={currentSpendingItems}
         totalIncome={5000}
         onSpendingChange={handleSpendingChange}
         onAddSpending={handleAddSpending}
@@ -130,7 +168,7 @@ export default function Home() {
       <BudgetOverviewCard 
         totalIncome={activeIncome + passiveIncome}
         categories={categories}
-        spendingItems={spendingItems}
+        spendingItems={currentSpendingItems}
       />
     </div>
   );
