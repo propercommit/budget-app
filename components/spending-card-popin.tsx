@@ -4,23 +4,16 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Category } from "@/lib/category";
+import { Category, SpendingItem } from "@/lib/types";
 import { IconPicker } from "./icon-picker";
 import { CategoryPopin } from "./category-creation-popin";
 import { iconMap } from "@/lib/icon-map";
 
-interface SpendingItem {
-    id: string;
-    name: string;
-    icon: string;
-    category: string;
-}
-
 interface SpendingCardPopinProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    onAddSpending: (name: string, category: string, icon: string | null) => void;
-    onEditSpending?: (id: string, name: string, category: string, icon: string) => void;
+    onAddSpending: (name: string, categoryId: string, icon: string | null) => void;
+    onEditSpending?: (id: string, name: string, categoryId: string, icon: string) => void;
     onDeleteSpending?: (id: string) => void;
     onAddCategory: (name: string, icon: string, color: string) => void;
     categories: Category[];
@@ -40,16 +33,18 @@ export function SpendingCardPopin({
     editingItem = null,
 }: SpendingCardPopinProps) {
     const [spendingCardName, setSpendingCardName] = useState(editingItem?.name ?? "");
-    const [spendingCategory, setSpendingCategory] = useState(editingItem?.category ?? "");
+    const [selectedCategoryId, setSelectedCategoryId] = useState(editingItem?.categoryId ?? "");
     const [selectedIcon, setSelectedIcon] = useState(editingItem?.icon ?? "shopping-cart");
     const [showValidationMessage, setShowValidationMessage] = useState(false);
     const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const selectedCategoryColor = categories.find(c => c.label === spendingCategory)?.color ?? "#6b7280";
+    const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+    const selectedCategoryColor = selectedCategory?.color ?? "#6b7280";
+    const selectedCategoryLabel = selectedCategory?.label ?? "";
 
     const handleSubmit = () => {
-        if (spendingCardName === "" || spendingCategory === "") {
+        if (spendingCardName === "" || selectedCategoryId === "") {
             setShowValidationMessage(true);
             return;
         }
@@ -57,9 +52,9 @@ export function SpendingCardPopin({
         setShowValidationMessage(false);
 
         if (mode === "edit" && editingItem && onEditSpending) {
-            onEditSpending(editingItem.id, spendingCardName, spendingCategory, selectedIcon);
+            onEditSpending(editingItem.id, spendingCardName, selectedCategoryId, selectedIcon);
         } else {
-            onAddSpending(spendingCardName, spendingCategory, selectedIcon);
+            onAddSpending(spendingCardName, selectedCategoryId, selectedIcon);
         }
 
         onOpenChange(false);
@@ -75,12 +70,12 @@ export function SpendingCardPopin({
 
     const handleAddCategory = (name: string, icon: string, color: string) => {
         onAddCategory(name, icon, color);
-        setSpendingCategory(name);
+        // Note: We can't set the new category ID here because we don't have it yet
+        // The category needs to be created in the database first
     };
 
     const handleOpenChange = (open: boolean) => {
         if (!open && showDeleteConfirm) {
-            // If trying to close while in delete confirmation, just go back to edit form
             setShowDeleteConfirm(false);
             return;
         }
@@ -155,12 +150,12 @@ export function SpendingCardPopin({
                                     <span className="font-medium">
                                         {spendingCardName || "Spending Item"}
                                     </span>
-                                    {spendingCategory && (
+                                    {selectedCategoryLabel && (
                                         <span 
                                             className="px-2 py-0.5 rounded-full text-xs font-medium text-white ml-2"
                                             style={{ backgroundColor: selectedCategoryColor }}
                                         >
-                                            {spendingCategory}
+                                            {selectedCategoryLabel}
                                         </span>
                                     )}
                                 </div>
@@ -178,11 +173,11 @@ export function SpendingCardPopin({
 
                             <div className="space-y-2 w-full">
                                 <Label>Category</Label>
-                                <Select value={spendingCategory} onValueChange={(value) => {
+                                <Select value={selectedCategoryId} onValueChange={(value) => {
                                     if (value === "create-new") {
                                         setIsCategoryPopinOpen(true);
                                     } else {
-                                        setSpendingCategory(value);
+                                        setSelectedCategoryId(value);
                                     }
                                 }}>
                                     <SelectTrigger className="w-full">
@@ -190,7 +185,7 @@ export function SpendingCardPopin({
                                     </SelectTrigger>
                                     <SelectContent>
                                         {categories.map((c) => (
-                                            <SelectItem key={c.label} value={c.label}>
+                                            <SelectItem key={c.id} value={c.id}>
                                                 {c.label}
                                             </SelectItem>
                                         ))}

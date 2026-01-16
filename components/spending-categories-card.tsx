@@ -4,21 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { CategoryChip } from "./category-chip";
 import { SpendingCard } from "./spending-card";
 import { Button } from "./ui/button";
-
-interface Category {
-    icon: string;
-    label: string;
-    color: string;
-}
-
-export interface SpendingItem {
-    id: string;
-    name: string;
-    icon: string;
-    budgeted: number;
-    spent: number;
-    category: string;
-}
+import { Category, SpendingItem } from "@/lib/types";
 
 interface SpendingCategoriesCardProps {
     title: string;
@@ -75,9 +61,9 @@ export function SpendingCategoriesCard({
 
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
-                        .filter(item => selectedCategory === null || item.category === selectedCategory)
+                        .filter(item => selectedCategory === null || item.category?.label === selectedCategory)
                         .map(item => {
-                            const categoryData = categories.find(c => c.label === item.category);
+                            const categoryData = categories.find(c => c.label === item.category?.label);
                             return (
                                 <SpendingCard
                                     key={item.id}
@@ -85,7 +71,7 @@ export function SpendingCategoriesCard({
                                     icon={item.icon}
                                     budgeted={item.budgeted}
                                     spent={item.spent}
-                                    category={item.category}
+                                    category={item.category?.label ?? "Uncategorized"}
                                     categoryColor={categoryData?.color || "#6b7280"}
                                     categoryIcon={categoryData?.icon}
                                     totalIncome={totalIncome}

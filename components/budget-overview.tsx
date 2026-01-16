@@ -1,7 +1,7 @@
 import { Category } from "@/lib/category";
-import { SpendingItem } from "./spending-categories-card";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { SegmentedCircularProgress } from "./segmented-circular-progress";
+import { SpendingItem } from "@/lib/types";
 
 interface BudgetOverviewCardProps {
     totalIncome: number;
@@ -20,7 +20,7 @@ export function BudgetOverviewCard({ totalIncome, categories, spendingItems }: B
     // Group spending by category for the charts
     const budgetedByCategory = categories.map(cat => {
         const total = spendingItems
-            .filter(item => item.category === cat.label)
+            .filter(item => item.category?.label === cat.label)
             .reduce((sum, item) => sum + item.budgeted, 0);
         return {
             category: cat.label,
@@ -31,7 +31,7 @@ export function BudgetOverviewCard({ totalIncome, categories, spendingItems }: B
 
     const spentByCategory = categories.map(cat => {
         const total = spendingItems
-            .filter(item => item.category === cat.label)
+            .filter(item => item.category?.label === cat.label)
             .reduce((sum, item) => sum + item.spent, 0);
         return {
             category: cat.label,

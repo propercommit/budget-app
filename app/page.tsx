@@ -10,21 +10,9 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-
-interface SpendingItem {
-  id: string;
-  name: string;
-  icon: string;
-  budgeted: number;
-  spent: number;
-  category: string;
-}
-
-interface Category {
-  icon: string;
-  label: string;
-  color: string;
-}
+import { createCategory, deleteCategory, getCategories } from "@/lib/api";
+import { useEffect } from "react";
+import { Category, SpendingItem } from "@/lib/types";
 
 type SpendingData = Record<string, SpendingItem[]>;
 type IncomeData = Record<string, { active: number; passive: number }>;
@@ -43,11 +31,19 @@ export default function Home() {
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   
-  const [categories, setCategories] = useState<Category[]>([
-    { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
-    { icon: "home", label: "Housing", color: "#10b981" },
-    { icon: "utensils", label: "Food", color: "#f59e0b" },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    }
+    loadCategories();
+  }, []);
 
   const [incomeData, setIncomeData] = useState<IncomeData>({
     "2025-09": { active: 3500, passive: 400 },
@@ -217,8 +213,13 @@ export default function Home() {
   };
 
   // Category Handlers
-  const handleAddCategory = (name: string, icon: string, color: string) => {
-    setCategories([...categories, { label: name, icon, color }]);
+  const handleAddCategory = async (name: string, icon: string, color: string) => {
+    try {
+      const newCategory = await createCategory({ label: name, icon, color });
+      setCategories([...categories, newCategory]);
+    } catch (error) {
+      console.error("Failed to create category:", error);
+    }
   };
 
   const handleEditCategory = (oldLabel: string, name: string, icon: string, color: string) => {
@@ -241,22 +242,15 @@ export default function Home() {
     }
   };
 
-  const handleDeleteCategory = (label: string) => {
-    // Remove the category
-    setCategories(categories.filter(cat => cat.label !== label));
-    
-    // Remove all spending items that use this category
-    setSpendingData(data => {
-      const updatedData: SpendingData = {};
-      for (const month in data) {
-        updatedData[month] = data[month].filter(item => item.category !== label);
+  const handleDeleteCategory = async (id: string) => {
+    try{
+      await deleteCategory(id);
+      setCategories(categories.filter(c => c.id !== id));
+      if (selectedCategory === id) {
+        setSelectedCategory(null);
       }
-      return updatedData;
-    });
-
-    // Reset selected category if it was the deleted one
-    if (selectedCategory === label) {
-      setSelectedCategory(null);
+    } catch (error) {
+      console.error("Failed to delete category:", error);
     }
   };
 

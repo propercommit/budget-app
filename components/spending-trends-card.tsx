@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { X } from "lucide-react";
 import { Category } from "@/lib/category";
-import { SpendingItem } from "./spending-categories-card";
 import { AreaLineChart } from "./area-line-chart";
+import { SpendingItem } from "@/lib/types";
 
 interface MonthData {
     month: string;
@@ -38,7 +38,7 @@ export function SpendingTrendsCard({ historicalData, incomeData, categories, onC
     const categoryData = categories.map(category => {
         const data = historicalData.map(monthData => {
             const categorySpent = monthData.spending
-                .filter(item => item.category === category.label)
+                .filter(item => item.category?.label === category.label)
                 .reduce((sum, item) => sum + item.spent, 0);
             const date = new Date(monthData.month + "-01");
             return {
