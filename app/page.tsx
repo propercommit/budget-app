@@ -3,13 +3,13 @@ import { Header } from "@/components/header";
 import { MonthPicker } from "@/components/month-picker";
 import { GraphToggleBtn } from "@/components/graph-toggle-button";
 import { MonthlyIncomeCard } from "@/components/monthly-income-card";
-import { DollarSign } from "lucide-react";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
 import { BudgetOverviewCard } from "@/components/budget-overview";
 import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
+import { StickyBudgetBar } from "@/components/sticky-budget-bar";
 
 interface SpendingItem {
   id: string;
@@ -97,6 +97,7 @@ export default function Home() {
     }
   };
 
+  // Category Popin Handlers
   const handleOpenEditCategory = (category: Category) => {
     setEditingCategory(category);
     setIsCategoryPopinOpen(true);
@@ -260,9 +261,8 @@ export default function Home() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto pb-24">
       <Header 
-        Icon={DollarSign} 
         title="Budget Planner" 
         legendLabel="Take control of your finances with smart insights and personalized advice"
       />
@@ -312,19 +312,21 @@ export default function Home() {
         onPassiveIncomeChange={handlePassiveIncomeChange}
       />
 
-      <SpendingCategoriesCard
-        title="Spending Categories"
-        legend="Track budgeted vs actual spending"
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        spendingItems={currentSpendingItems}
-        totalIncome={currentIncome.active + currentIncome.passive}
-        onSpendingChange={handleSpendingChange}
-        onOpenCreateSpending={handleOpenCreateSpending}
-        onEditSpendingItem={handleOpenEditSpending}
-        onEditCategory={handleOpenEditCategory}
-      />
+      <div data-spending-section>
+        <SpendingCategoriesCard
+          title="Spending Categories"
+          legend="Track budgeted vs actual spending"
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          spendingItems={currentSpendingItems}
+          totalIncome={currentIncome.active + currentIncome.passive}
+          onSpendingChange={handleSpendingChange}
+          onOpenCreateSpending={handleOpenCreateSpending}
+          onEditSpendingItem={handleOpenEditSpending}
+          onEditCategory={handleOpenEditCategory}
+        />
+      </div>
 
       <SpendingCardPopin
         key={`spending-${editingSpendingItem?.id ?? "create"}`}
@@ -350,10 +352,18 @@ export default function Home() {
         editingCategory={editingCategory}
       />
 
-      <BudgetOverviewCard 
-        totalIncome={currentIncome.active + currentIncome.passive}
-        categories={categories}
-        spendingItems={currentSpendingItems}
+      <div data-budget-overview>
+        <BudgetOverviewCard 
+          totalIncome={currentIncome.active + currentIncome.passive}
+          categories={categories}
+          spendingItems={currentSpendingItems}
+        />
+      </div>
+
+      <StickyBudgetBar
+          totalIncome={currentIncome.active + currentIncome.passive}
+          totalBudgeted={currentSpendingItems.reduce((sum, item) => sum + item.budgeted, 0)}
+          totalSpent={currentSpendingItems.reduce((sum, item) => sum + item.spent, 0)}
       />
     </div>
   );
