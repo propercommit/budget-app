@@ -34,6 +34,7 @@ export function InputSlider({label, value, onChange, color, colorLight, legend, 
                 <Slider 
                     value={[value]}
                     onValueChange={(vals: number[]) => onChange(vals[0])}
+                    max={5000}
                     style={{
                         '--slider-color': color,
                         '--slider-color-light': colorLight,
