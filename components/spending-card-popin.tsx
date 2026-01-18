@@ -12,7 +12,7 @@ import { iconMap } from "@/lib/icon-map";
 interface SpendingCardPopinProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    onAddSpending: (name: string, categoryId: string, icon: string | null) => void;
+    onAddSpending: (name: string, categoryId: string, icon: string) => void;
     onEditSpending?: (id: string, name: string, categoryId: string, icon: string) => void;
     onDeleteSpending?: (id: string) => void;
     onAddCategory: (name: string, icon: string, color: string) => void;

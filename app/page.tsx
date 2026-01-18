@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, deleteCategory, getCategories } from "@/lib/api";
+import { createCategory, createSpending, deleteCategory, getCategories, getSpending, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 
@@ -52,24 +52,15 @@ export default function Home() {
     "2025-12": { active: 4000, passive: 500 },
   });
 
-  const [spendingData, setSpendingData] = useState<SpendingData>({
-    "2025-09": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 320, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-    "2025-10": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 380, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-    "2025-11": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 410, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-    "2025-12": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 350, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-  });
+  const [spendingData, setSpendingData] = useState<SpendingData[]>([]);
+
+  useEffect(() => {
+    async function loadSpendingData() {
+      const data = await getSpending();
+      setSpendingData(data);
+    }
+    loadSpendingData();
+  }, []);
 
   // Derived values
   const currentSpendingItems = spendingData[selectedMonth] || [];
@@ -181,28 +172,42 @@ export default function Home() {
     }));
   };
 
-  const handleAddSpending = (name: string, category: string, icon: string | null) => {
-    const newItem = {
-      id: Date.now().toString(),
-      name: name,
-      icon: icon || "shopping-cart",
-      budgeted: 0,
-      spent: 0,
-      category: category
-    };
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: [...data[selectedMonth], newItem],
-    }));
-  };
+  const handleAddSpending = async (name: string, categoryId: string, icon: string) => {
+    try {
+      // query the api
+      const spending = await createSpending({name, icon, categoryId, month: selectedMonth});
 
-  const handleEditSpending = (id: string, name: string, category: string, icon: string) => {
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item =>
-        item.id === id ? { ...item, name, category, icon } : item
-      ),
-    }));
+      // update the state
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]:  [...(data[selectedMonth] || []), spending]
+      }));
+
+    } catch (error) {
+      console.log('Error creating a spending card: ', error);
+    }
+  }
+
+  const handleEditSpending = async (id: string, name: string, categoryId: string, icon: string) => {
+    try {
+      console.log('1. Starting edit:', { id, name, categoryId, icon });
+      
+      const spending = await updateSpending(id, { name, icon, categoryId });
+      console.log('2. API response:', spending);
+
+      setSpendingData(data => {
+        console.log('3. Current data for month:', data[selectedMonth]);
+        return {
+          ...data,
+          [selectedMonth]: data[selectedMonth].map(item =>
+            item.id === id ? spending : item
+          )
+        };
+      });
+
+    } catch (error) {
+      console.log('Error editing a spending card', error);
+    }
   };
 
   const handleDeleteSpending = (id: string) => {
