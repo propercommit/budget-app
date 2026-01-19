@@ -15,6 +15,8 @@ interface MonthlyIncomeCardProps {
     passiveIncome: number;
     onActiveIncomeChange: (value: number) => void;
     onPassiveIncomeChange: (value: number) => void;
+    onActiveIncomeCommit: (value: number) => void;
+    onPassiveIncomeCommit: (value: number) => void;
 }
 
 export function MonthlyIncomeCard({
@@ -28,7 +30,9 @@ export function MonthlyIncomeCard({
     activeIncome,
     passiveIncome,
     onActiveIncomeChange,
-    onPassiveIncomeChange
+    onPassiveIncomeChange,
+    onActiveIncomeCommit,
+    onPassiveIncomeCommit
 }: MonthlyIncomeCardProps) {
 
     const totalIncome = activeIncome + passiveIncome;
@@ -105,6 +109,7 @@ export function MonthlyIncomeCard({
                     label={leftSliderTitle}
                     value={activeIncome}
                     onChange={onActiveIncomeChange}
+                    onCommit={onActiveIncomeCommit}
                     color="hsl(217,91%,60%)"
                     colorLight="hsl(217,91%,95%)"
                     legend={leftSliderLegend}
@@ -117,6 +122,7 @@ export function MonthlyIncomeCard({
                         label={rightSliderTitle}
                         value={passiveIncome}
                         onChange={onPassiveIncomeChange}
+                        onCommit={onPassiveIncomeCommit}
                         color="hsl(271,81%,56%)"
                         colorLight="hsl(271,81%,95%)"
                         legend={rightSliderLegend}

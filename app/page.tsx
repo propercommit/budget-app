@@ -146,11 +146,7 @@ export default function Home() {
   };
 
   // Income Handlers
-  const handleActiveIncomeChange = async(active: number) => {
-
-    // update database
-    await saveIncome({month: selectedMonth, active});
-
+  const handleActiveIncomeChange = (active: number) => {
     // update state
     setIncomeData(data => ({
       ...data,
@@ -161,11 +157,12 @@ export default function Home() {
     }));
   };
 
-  const handlePassiveIncomeChange = async(passive: number) => {
-
+  const handleActiveIncomeCommit = async(active: number) => {
     // update database
-    await saveIncome({month: selectedMonth, passive});
+    await saveIncome({month: selectedMonth, active});
+  };
 
+  const handlePassiveIncomeChange = (passive: number) => {
     // update state
     setIncomeData(data => ({
       ...data,
@@ -176,12 +173,13 @@ export default function Home() {
     }));
   };
 
-  // Spending Handlers
-  const handleSpendingChange = async(id: string, budgeted: number, spent: number) => {
-
+  const handlePassiveIncomeCommit = async(passive: number) => {
     // update database
-    await updateSpending(id, {budgeted, spent});
+    await saveIncome({month: selectedMonth, passive});
+  };
 
+  // Spending Handlers
+  const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
     // update state
     setSpendingData(data => ({
       ...data,
@@ -189,6 +187,11 @@ export default function Home() {
         item.id === id ? { ...item, budgeted, spent } : item
       ),
     }));
+  };
+
+  const handleSpendingCommit = async (id: string, budgeted: number, spent: number) => {
+    // update database
+    await updateSpending(id, {budgeted, spent});
   };
 
   const handleAddSpending = async (name: string, categoryId: string, icon: string) => {
@@ -327,7 +330,9 @@ export default function Home() {
         activeIncome={currentIncome.active}
         passiveIncome={currentIncome.passive}
         onActiveIncomeChange={handleActiveIncomeChange}
+        onActiveIncomeCommit={handleActiveIncomeCommit}
         onPassiveIncomeChange={handlePassiveIncomeChange}
+        onPassiveIncomeCommit={handlePassiveIncomeCommit}
       />
 
       <div data-spending-section>
@@ -340,6 +345,7 @@ export default function Home() {
           spendingItems={currentSpendingItems}
           totalIncome={currentIncome.active + currentIncome.passive}
           onSpendingChange={handleSpendingChange}
+          onSpendingCommit={handleSpendingCommit}
           onOpenCreateSpending={handleOpenCreateSpending}
           onEditSpendingItem={handleOpenEditSpending}
           onEditCategory={handleOpenEditCategory}

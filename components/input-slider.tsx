@@ -5,6 +5,7 @@ interface InputSliderProps {
     label: string;
     value: number;
     onChange: (value: number) => void;
+    onCommit?: (value: number) => void;
     color: string;
     colorLight: string;
     legend?: string;
@@ -12,7 +13,7 @@ interface InputSliderProps {
     showLegend: boolean;
 };
 
-export function InputSlider({label, value, onChange, color, colorLight, legend, showAmount, showLegend}: InputSliderProps) {
+export function InputSlider({label, value, onChange, onCommit, color, colorLight, legend, showAmount, showLegend}: InputSliderProps) {
     return (
     <div>
         <div className="flex flex-col gap-2">
@@ -34,6 +35,7 @@ export function InputSlider({label, value, onChange, color, colorLight, legend, 
                 <Slider 
                     value={[value]}
                     onValueChange={(vals: number[]) => onChange(vals[0])}
+                    onValueCommit={(vals: number[]) => onCommit?.(vals[0])}
                     max={5000}
                     style={{
                         '--slider-color': color,

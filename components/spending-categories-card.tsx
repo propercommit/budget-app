@@ -15,6 +15,7 @@ interface SpendingCategoriesCardProps {
     spendingItems: SpendingItem[];
     totalIncome: number;
     onSpendingChange: (id: string, budgeted: number, spent: number) => void;
+    onSpendingCommit: (id: string, budgeted: number, spent: number) => void;    
     onOpenCreateSpending: () => void;
     onEditSpendingItem: (item: SpendingItem) => void;
     onEditCategory: (category: Category) => void;
@@ -29,6 +30,7 @@ export function SpendingCategoriesCard({
     spendingItems,
     totalIncome,
     onSpendingChange,
+    onSpendingCommit,
     onOpenCreateSpending,
     onEditSpendingItem,
     onEditCategory,
@@ -77,6 +79,8 @@ export function SpendingCategoriesCard({
                                     totalIncome={totalIncome}
                                     onBudgetedChange={(value) => onSpendingChange(item.id, value, item.spent)}
                                     onSpentChange={(value) => onSpendingChange(item.id, item.budgeted, value)}
+                                    onBudgetedCommit={(value) => onSpendingCommit(item.id, value, item.spent)}
+                                    onSpentCommit={(value) => onSpendingCommit(item.id, item.budgeted, value)}
                                     onEdit={() => onEditSpendingItem(item)}
                                     onEditCategory={() => categoryData && onEditCategory(categoryData)}
                                 />
