@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createSpending, deleteCategory, getCategories, getIncome, getSpending, saveIncome, updateSpending } from "@/lib/api";
+import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 
@@ -232,11 +232,20 @@ export default function Home() {
     }
   };
 
-  const handleDeleteSpending = (id: string) => {
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].filter(item => item.id !== id)
-    }));
+  const handleDeleteSpending = async(id: string) => {
+    try {
+      // delete in database
+      await deleteSpending(id);
+      
+      // delete in the state
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]: data[selectedMonth].filter(item => item.id !== id)
+      }));
+
+    } catch (error) {
+      console.log('Error trying to delete spending from database : ', error);
+    }
   };
 
   // Category Handlers
@@ -250,22 +259,13 @@ export default function Home() {
   };
 
   const handleEditCategory = (oldLabel: string, name: string, icon: string, color: string) => {
-    // Update the category
-    setCategories(categories.map(cat =>
-      cat.label === oldLabel ? { label: name, icon, color } : cat
-    ));
     
-    // Update all spending items that use this category
-    if (oldLabel !== name) {
-      setSpendingData(data => {
-        const updatedData: SpendingData = {};
-        for (const month in data) {
-          updatedData[month] = data[month].map(item =>
-            item.category === oldLabel ? { ...item, category: name } : item
-          );
-        }
-        return updatedData;
-      });
+    try {
+      // update the database
+
+      // update the state
+    } catch (error) {
+      console.log('Error trying to update database : ', error);
     }
   };
 
