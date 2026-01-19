@@ -27,7 +27,8 @@ export function InputSlider({label, value, onChange, onCommit, color, colorLight
                     type="number" 
                     placeholder="0" 
                     value={value || ""} 
-                    onChange={(e) => onChange(Number(e.target.value))} 
+                    onChange={(e) => onChange(Number(e.target.value))}
+                    onBlur={() => onCommit?.(value)}
                     className="flex-1" 
                 />
             </div>
