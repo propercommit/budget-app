@@ -19,7 +19,18 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json(spendingItems);
+    const grouped: Record<string, typeof spendingItems> = {};
+    
+    for (const item of spendingItems) {
+      const month = item.month;
+
+      if(grouped[month] === undefined) grouped[month] = [];
+      
+
+      grouped[month].push(item);
+    }
+
+    return NextResponse.json(grouped);
   } catch (error) {
     console.error("Failed to fetch spending items:", error);
     return NextResponse.json(

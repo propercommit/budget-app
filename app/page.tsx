@@ -52,11 +52,12 @@ export default function Home() {
     "2025-12": { active: 4000, passive: 500 },
   });
 
-  const [spendingData, setSpendingData] = useState<SpendingData[]>([]);
+  const [spendingData, setSpendingData] = useState<SpendingData>({});
 
   useEffect(() => {
     async function loadSpendingData() {
       const data = await getSpending();
+      console.log('Spending data from API:', data);
       setSpendingData(data);
     }
     loadSpendingData();
