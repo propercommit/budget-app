@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createSpending, deleteCategory, getCategories, getSpending, updateSpending } from "@/lib/api";
+import { createCategory, createSpending, deleteCategory, getCategories, getIncome, getSpending, saveIncome, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 
@@ -45,19 +45,22 @@ export default function Home() {
     loadCategories();
   }, []);
 
-  const [incomeData, setIncomeData] = useState<IncomeData>({
-    "2025-09": { active: 3500, passive: 400 },
-    "2025-10": { active: 3500, passive: 450 },
-    "2025-11": { active: 3800, passive: 450 },
-    "2025-12": { active: 4000, passive: 500 },
-  });
+  const [incomeData, setIncomeData] = useState<IncomeData>({});
+
+  useEffect(() => {
+    async function loadIncomeData() {
+      const data = await getIncome();
+      console.log('income received from db:', data);
+      setIncomeData(data);
+    }
+    loadIncomeData();
+  }, []);
 
   const [spendingData, setSpendingData] = useState<SpendingData>({});
 
   useEffect(() => {
     async function loadSpendingData() {
       const data = await getSpending();
-      console.log('Spending data from API:', data);
       setSpendingData(data);
     }
     loadSpendingData();
@@ -143,28 +146,43 @@ export default function Home() {
   };
 
   // Income Handlers
-  const handleActiveIncomeChange = (value: number) => {
+  const handleActiveIncomeChange = async(active: number) => {
+
+    // update database
+    await saveIncome({month: selectedMonth, active});
+
+    // update state
     setIncomeData(data => ({
       ...data,
-      [selectedMonth]: { 
-        ...data[selectedMonth], 
-        active: value 
+      [selectedMonth]: {
+        ...data[selectedMonth],
+        active: active
       },
     }));
   };
 
-  const handlePassiveIncomeChange = (value: number) => {
+  const handlePassiveIncomeChange = async(passive: number) => {
+
+    // update database
+    await saveIncome({month: selectedMonth, passive});
+
+    // update state
     setIncomeData(data => ({
       ...data,
-      [selectedMonth]: { 
-        ...data[selectedMonth], 
-        passive: value 
-      },
+      [selectedMonth]: {
+        ...data[selectedMonth],
+        passive: passive
+      }
     }));
   };
 
   // Spending Handlers
-  const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
+  const handleSpendingChange = async(id: string, budgeted: number, spent: number) => {
+
+    // update database
+    await updateSpending(id, {budgeted, spent});
+
+    // update state
     setSpendingData(data => ({
       ...data,
       [selectedMonth]: data[selectedMonth].map(item =>

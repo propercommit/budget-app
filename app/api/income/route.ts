@@ -24,7 +24,13 @@ export async function GET(request: NextRequest) {
         orderBy: { month: "asc" },
       });
 
-      return NextResponse.json(incomes);
+      const grouped: Record<string, typeof incomes[number]> = {};
+
+      for (const item of incomes) {
+        grouped[item.month] = item;
+      }
+
+      return NextResponse.json(grouped);
     }
   } catch (error) {
     console.error("Failed to fetch income:", error);
