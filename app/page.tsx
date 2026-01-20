@@ -13,12 +13,14 @@ import { StickyBudgetBar } from "@/components/sticky-budget-bar";
 import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type SpendingData = Record<string, SpendingItem[]>;
 type IncomeData = Record<string, { active: number; passive: number }>;
 
 export default function Home() {
   // State
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(
     `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   );
@@ -31,41 +33,30 @@ export default function Home() {
   
   // Category Popin State
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null); 
   const [categories, setCategories] = useState<Category[]>([]);
-
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const data = await getCategories();
-        setCategories(data);
-      } catch (error) {
-        console.error("Failed to load categories:", error);
-      }
-    }
-    loadCategories();
-  }, []);
-
   const [incomeData, setIncomeData] = useState<IncomeData>({});
-
-  useEffect(() => {
-    async function loadIncomeData() {
-      const data = await getIncome();
-      console.log('income received from db:', data);
-      setIncomeData(data);
-    }
-    loadIncomeData();
-  }, []);
-
   const [spendingData, setSpendingData] = useState<SpendingData>({});
 
   useEffect(() => {
-    async function loadSpendingData() {
-      const data = await getSpending();
-      setSpendingData(data);
+    async function loadAllData() {
+      try {
+        const [categoriesData, incomeDataResult, spendingDataResult] = await Promise.all([
+          getCategories(),
+          getIncome(),
+          getSpending()
+        ]);
+        
+        setCategories(categoriesData);
+        setIncomeData(incomeDataResult);
+        setSpendingData(spendingDataResult);
+      } catch (error) {
+        console.error("Failed to load data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    loadSpendingData();
+    loadAllData();
   }, []);
 
   // Derived values
@@ -310,6 +301,14 @@ export default function Home() {
       console.error("Failed to delete category:", error);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto pb-24">
