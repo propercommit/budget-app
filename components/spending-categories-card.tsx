@@ -57,6 +57,7 @@ export function SpendingCategoriesCard({
                             color={c.color}
                             selected={selectedCategory === c.label}
                             onClick={() => onSelectCategory(c.label)}
+                            onLongPress={() => onEditCategory(c)}
                         />
                     ))}
                 </div>

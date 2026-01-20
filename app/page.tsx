@@ -19,7 +19,9 @@ type IncomeData = Record<string, { active: number; passive: number }>;
 
 export default function Home() {
   // State
-  const [selectedMonth, setSelectedMonth] = useState("2025-12");
+  const [selectedMonth, setSelectedMonth] = useState(
+    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showTrends, setShowTrends] = useState(false);
   
@@ -274,10 +276,13 @@ export default function Home() {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    try{
+    try {
+      const categoryToDelete = categories.find(c => c.id === id);
+      
       await deleteCategory(id);
       setCategories(categories.filter(c => c.id !== id));
-      if (selectedCategory === id) {
+      
+      if (categoryToDelete && selectedCategory === categoryToDelete.label) {
         setSelectedCategory(null);
       }
     } catch (error) {
