@@ -65,7 +65,11 @@ export function SpendingCategoriesCard({
 
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
-                        .filter(item => selectedCategory === null || item.category?.label === selectedCategory)
+                        .filter(item => {
+                            if (selectedCategory === null) return true;
+                            const categoryData = categories.find(c => c.id === item.categoryId);
+                            return categoryData?.label === selectedCategory;
+                        })
                         .map(item => {
                         const categoryData = categories.find(c => c.id === item.categoryId);                            
                         return (

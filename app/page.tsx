@@ -105,48 +105,67 @@ export default function Home() {
   };
 
   // Month Handlers
-  const handleMonthChange = (newMonth: string) => {
-    setSelectedMonth(newMonth);
+  const handleMonthChange = async (newMonth: string) => {
+  setSelectedMonth(newMonth);
+  
+  // Handle income
+  if (!incomeData[newMonth]) {
+    const sortedMonths = Object.keys(incomeData).sort();
+    const previousMonths = sortedMonths.filter(m => m < newMonth);
     
-    setSpendingData(currentData => {
-      if (currentData[newMonth]) return currentData;
-      
-      const sortedMonths = Object.keys(currentData).sort();
-      const previousMonths = sortedMonths.filter(m => m < newMonth);
-      
-      if (previousMonths.length === 0) return currentData;
-      
+    if (previousMonths.length > 0) {
       const closestMonth = previousMonths[previousMonths.length - 1];
-      const previousData = currentData[closestMonth];
+      const previousIncome = incomeData[closestMonth];
       
-      const newMonthData = previousData.map(item => ({
-        ...item,
-        id: Date.now().toString() + Math.random().toString().slice(2, 8),
-        spent: 0,
-      }));
-      
-      return {
-        ...currentData,
-        [newMonth]: newMonthData,
-      };
-    });
-
-    setIncomeData(currentData => {
-      if (currentData[newMonth]) return currentData;
-      
-      const sortedMonths = Object.keys(currentData).sort();
-      const previousMonths = sortedMonths.filter(m => m < newMonth);
-      
-      if (previousMonths.length === 0) return currentData;
-      
+      try {
+        await saveIncome({ 
+          month: newMonth, 
+          active: previousIncome.active, 
+          passive: previousIncome.passive 
+        });
+        
+        setIncomeData(data => ({
+          ...data,
+          [newMonth]: { ...previousIncome }
+        }));
+      } catch (error) {
+        console.error('Failed to copy income:', error);
+      }
+    }
+  }
+  
+  // Handle spending
+  if (!spendingData[newMonth]) {
+    const sortedMonths = Object.keys(spendingData).sort();
+    const previousMonths = sortedMonths.filter(m => m < newMonth);
+    
+    if (previousMonths.length > 0) {
       const closestMonth = previousMonths[previousMonths.length - 1];
+      const previousData = spendingData[closestMonth];
       
-      return {
-        ...currentData,
-        [newMonth]: { ...currentData[closestMonth] },
-      };
-    });
-  };
+      try {
+        // Create each spending item in the database
+        const newItems = await Promise.all(
+          previousData.map(item => 
+            createSpending({
+              name: item.name,
+              icon: item.icon,
+              categoryId: item.categoryId,
+              month: newMonth,
+            })
+          )
+        );
+        
+        setSpendingData(data => ({
+          ...data,
+          [newMonth]: newItems
+        }));
+      } catch (error) {
+        console.error('Failed to copy spending:', error);
+      }
+    }
+  }
+};
 
   // Income Handlers
   const handleActiveIncomeChange = (active: number) => {
@@ -256,8 +275,10 @@ export default function Home() {
     try {
       const newCategory = await createCategory({ label: name, icon, color });
       setCategories([...categories, newCategory]);
+      return newCategory;
     } catch (error) {
       console.error("Failed to create category:", error);
+      return undefined;
     }
   };
 
