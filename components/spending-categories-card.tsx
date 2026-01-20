@@ -45,6 +45,7 @@ export function SpendingCategoriesCard({
                 <div className="flex gap-2 flex-wrap">
                     <CategoryChip
                         label="All"
+                        icon="all"
                         color="#6b7280"
                         selected={selectedCategory === null}
                         onClick={() => onSelectCategory(null)}

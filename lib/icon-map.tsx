@@ -1,4 +1,4 @@
-import { ShoppingCart, Fuel, HeartPulse, Lightbulb, Film, PiggyBank, Home, Car, CreditCard, Phone, Utensils, Plane } from "lucide-react";
+import { ShoppingCart, Fuel, HeartPulse, Lightbulb, Film, PiggyBank, Home, Car, CreditCard, Phone, Utensils, Plane, Grid2X2 } from "lucide-react";
 
 export const iconMap: Record<string, React.ReactNode> = {
     "shopping-cart": <ShoppingCart className="w-5 h-5" />,
@@ -13,6 +13,7 @@ export const iconMap: Record<string, React.ReactNode> = {
     "phone": <Phone className="w-5 h-5" />,
     "utensils": <Utensils className="w-5 h-5" />,
     "plane": <Plane className="w-5 h-5" />,
+    "all": <Grid2X2 className="w-5 h-5"></Grid2X2>
 };
 
 export const availableIcons = [
