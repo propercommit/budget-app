@@ -65,15 +65,15 @@ export function SpendingCategoriesCard({
                     {spendingItems
                         .filter(item => selectedCategory === null || item.category?.label === selectedCategory)
                         .map(item => {
-                            const categoryData = categories.find(c => c.label === item.category?.label);
-                            return (
+                        const categoryData = categories.find(c => c.id === item.categoryId);                            
+                        return (
                                 <SpendingCard
                                     key={item.id}
                                     name={item.name}
                                     icon={item.icon}
                                     budgeted={item.budgeted}
                                     spent={item.spent}
-                                    category={item.category?.label ?? "Uncategorized"}
+                                    category={categoryData?.label ?? "Uncategorized"}
                                     categoryColor={categoryData?.color || "#6b7280"}
                                     categoryIcon={categoryData?.icon}
                                     totalIncome={totalIncome}

@@ -40,13 +40,15 @@ export function CategoryPopin({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const handleSubmit = () => {
+        console.log('handleSubmit - editingCategory:', editingCategory);
+        console.log('handleSubmit - editingCategory?.id:', editingCategory?.id);
         if (categoryName === "") {
             setShowValidationMessage(true);
             return;
         }
 
         if (mode === "edit" && editingCategory && onEditCategory) {
-            onEditCategory(editingCategory.label, categoryName, selectedIcon, selectedColor);
+            onEditCategory(editingCategory.id, categoryName, selectedIcon, selectedColor);
         } else {
             onAddCategory(categoryName, selectedIcon, selectedColor);
         }
@@ -57,7 +59,7 @@ export function CategoryPopin({
 
     const handleDelete = () => {
         if (editingCategory && onDeleteCategory) {
-            onDeleteCategory(editingCategory.label);
+            onDeleteCategory(editingCategory.id);
             setShowDeleteConfirm(false);
             onOpenChange(false);
         }

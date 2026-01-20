@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateSpending } from "@/lib/api";
+import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 
@@ -90,6 +90,7 @@ export default function Home() {
 
   // Category Popin Handlers
   const handleOpenEditCategory = (category: Category) => {
+    console.log('Opening edit for category:', category);
     setEditingCategory(category);
     setIsCategoryPopinOpen(true);
   };
@@ -258,12 +259,15 @@ export default function Home() {
     }
   };
 
-  const handleEditCategory = (oldLabel: string, name: string, icon: string, color: string) => {
-    
+  const handleEditCategory = async(id: string, name: string, icon: string, color: string) => {
     try {
       // update the database
+      await updateCategory(id, {label: name, icon, color});
 
       // update the state
+      setCategories(categories.map(c => 
+        c.id === id ? {...c, label: name, icon, color} : c
+      ))
     } catch (error) {
       console.log('Error trying to update database : ', error);
     }
