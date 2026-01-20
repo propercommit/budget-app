@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PASSWORD = process.env.SITE_PASSWORD;
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Skip password check for API routes
   if (request.nextUrl.pathname.startsWith('/api')) {
     return NextResponse.next();
