@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PASSWORD = process.env.SITE_PASSWORD;
 
 export function middleware(request: NextRequest) {
