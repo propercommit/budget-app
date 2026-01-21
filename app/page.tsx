@@ -51,7 +51,7 @@ export default function Home() {
         setIncomeData(incomeDataResult);
         setSpendingData(spendingDataResult);
       } catch (error) {
-        console.error("Failed to load data:", error);
+        console.error("Failed to load data, error :", error);
       } finally {
         setIsLoading(false);
       }
