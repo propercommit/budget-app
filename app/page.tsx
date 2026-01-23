@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
+import { createCategory, createEntry, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -301,6 +301,82 @@ export default function Home() {
       console.error("Failed to delete category:", error);
     }
   };
+
+  // Entry handlers
+  const handleAddEntry = async (
+    spendingItemId: string,
+    entry: { name: string, amount: number, receiptUrl?: string, link?: string}
+  ) => {
+    try {
+      const newEntry = await createEntry({
+        spendingItemId,
+        name: entry.name,
+        amount: entry.amount,
+        receiptUrl: entry.receiptUrl,
+        link: entry.link
+      });
+
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]: data[selectedMonth].map(item => {
+          if(item.id === spendingItemId) {
+            const updatedEntries = [...(item.entries || []), newEntry];
+            const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0)
+            return { ...item, entries: updatedEntries, spent: newSpent };
+          }
+          return item;
+        })
+      }));
+    } catch (error) {
+      console.error('Error adding entry:', error);
+    }
+  };
+
+  const handleUpdateEntry = async (
+  spendingItemId: string,
+  entryId: string,
+  updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string }
+) => {
+  try {
+    const updatedEntry = await updateEntry(entryId, updatedData);
+
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = (item.entries || []).map(e =>
+            e.id === entryId ? updatedEntry : e
+          );
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+  } catch (error) {
+    console.error('Error updating entry:', error);
+  }
+};
+
+const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
+  try {
+    await deleteEntry(entryId);
+
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+  } catch (error) {
+    console.error('Error deleting entry:', error);
+  }
+};
 
   if (isLoading) {
     return (
