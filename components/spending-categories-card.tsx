@@ -4,21 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { CategoryChip } from "./category-chip";
 import { SpendingCard } from "./spending-card";
 import { Button } from "./ui/button";
-
-interface Category {
-    icon: string;
-    label: string;
-    color: string;
-}
-
-export interface SpendingItem {
-    id: string;
-    name: string;
-    icon: string;
-    budgeted: number;
-    spent: number;
-    category: string;
-}
+import { Category, SpendingItem } from "@/lib/types";
 
 interface SpendingCategoriesCardProps {
     title: string;
@@ -29,6 +15,7 @@ interface SpendingCategoriesCardProps {
     spendingItems: SpendingItem[];
     totalIncome: number;
     onSpendingChange: (id: string, budgeted: number, spent: number) => void;
+    onSpendingCommit: (id: string, budgeted: number, spent: number) => void;    
     onOpenCreateSpending: () => void;
     onEditSpendingItem: (item: SpendingItem) => void;
     onEditCategory: (category: Category) => void;
@@ -43,6 +30,7 @@ export function SpendingCategoriesCard({
     spendingItems,
     totalIncome,
     onSpendingChange,
+    onSpendingCommit,
     onOpenCreateSpending,
     onEditSpendingItem,
     onEditCategory,
@@ -57,6 +45,7 @@ export function SpendingCategoriesCard({
                 <div className="flex gap-2 flex-wrap">
                     <CategoryChip
                         label="All"
+                        icon="all"
                         color="#6b7280"
                         selected={selectedCategory === null}
                         onClick={() => onSelectCategory(null)}
@@ -69,28 +58,35 @@ export function SpendingCategoriesCard({
                             color={c.color}
                             selected={selectedCategory === c.label}
                             onClick={() => onSelectCategory(c.label)}
+                            onLongPress={() => onEditCategory(c)}
                         />
                     ))}
                 </div>
 
                 <div className="flex flex-col gap-4 mt-4">
                     {spendingItems
-                        .filter(item => selectedCategory === null || item.category === selectedCategory)
+                        .filter(item => {
+                            if (selectedCategory === null) return true;
+                            const categoryData = categories.find(c => c.id === item.categoryId);
+                            return categoryData?.label === selectedCategory;
+                        })
                         .map(item => {
-                            const categoryData = categories.find(c => c.label === item.category);
-                            return (
+                        const categoryData = categories.find(c => c.id === item.categoryId);                            
+                        return (
                                 <SpendingCard
                                     key={item.id}
                                     name={item.name}
                                     icon={item.icon}
                                     budgeted={item.budgeted}
                                     spent={item.spent}
-                                    category={item.category}
+                                    category={categoryData?.label ?? "Uncategorized"}
                                     categoryColor={categoryData?.color || "#6b7280"}
                                     categoryIcon={categoryData?.icon}
                                     totalIncome={totalIncome}
                                     onBudgetedChange={(value) => onSpendingChange(item.id, value, item.spent)}
                                     onSpentChange={(value) => onSpendingChange(item.id, item.budgeted, value)}
+                                    onBudgetedCommit={(value) => onSpendingCommit(item.id, value, item.spent)}
+                                    onSpentCommit={(value) => onSpendingCommit(item.id, item.budgeted, value)}
                                     onEdit={() => onEditSpendingItem(item)}
                                     onEditCategory={() => categoryData && onEditCategory(categoryData)}
                                 />

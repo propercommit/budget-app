@@ -10,28 +10,20 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-
-interface SpendingItem {
-  id: string;
-  name: string;
-  icon: string;
-  budgeted: number;
-  spent: number;
-  category: string;
-}
-
-interface Category {
-  icon: string;
-  label: string;
-  color: string;
-}
+import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
+import { useEffect } from "react";
+import { Category, SpendingItem } from "@/lib/types";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type SpendingData = Record<string, SpendingItem[]>;
 type IncomeData = Record<string, { active: number; passive: number }>;
 
 export default function Home() {
   // State
-  const [selectedMonth, setSelectedMonth] = useState("2025-12");
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(
+    `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showTrends, setShowTrends] = useState(false);
   
@@ -41,39 +33,31 @@ export default function Home() {
   
   // Category Popin State
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  
-  const [categories, setCategories] = useState<Category[]>([
-    { icon: "shopping-cart", label: "Shopping", color: "#3b82f6" },
-    { icon: "home", label: "Housing", color: "#10b981" },
-    { icon: "utensils", label: "Food", color: "#f59e0b" },
-  ]);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null); 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [incomeData, setIncomeData] = useState<IncomeData>({});
+  const [spendingData, setSpendingData] = useState<SpendingData>({});
 
-  const [incomeData, setIncomeData] = useState<IncomeData>({
-    "2025-09": { active: 3500, passive: 400 },
-    "2025-10": { active: 3500, passive: 450 },
-    "2025-11": { active: 3800, passive: 450 },
-    "2025-12": { active: 4000, passive: 500 },
-  });
-
-  const [spendingData, setSpendingData] = useState<SpendingData>({
-    "2025-09": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 320, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-    "2025-10": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 380, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-    "2025-11": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 410, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-    "2025-12": [
-      { id: "1", name: "Groceries", icon: "shopping-cart", budgeted: 500, spent: 350, category: "Food" },
-      { id: "2", name: "Rent", icon: "home", budgeted: 1200, spent: 1200, category: "Housing" },
-    ],
-  });
+  useEffect(() => {
+    async function loadAllData() {
+      try {
+        const [categoriesData, incomeDataResult, spendingDataResult] = await Promise.all([
+          getCategories(),
+          getIncome(),
+          getSpending()
+        ]);
+        
+        setCategories(categoriesData);
+        setIncomeData(incomeDataResult);
+        setSpendingData(spendingDataResult);
+      } catch (error) {
+        console.error("Failed to load data, error :", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadAllData();
+  }, []);
 
   // Derived values
   const currentSpendingItems = spendingData[selectedMonth] || [];
@@ -99,6 +83,7 @@ export default function Home() {
 
   // Category Popin Handlers
   const handleOpenEditCategory = (category: Category) => {
+    console.log('Opening edit for category:', category);
     setEditingCategory(category);
     setIsCategoryPopinOpen(true);
   };
@@ -111,72 +96,104 @@ export default function Home() {
   };
 
   // Month Handlers
-  const handleMonthChange = (newMonth: string) => {
-    setSelectedMonth(newMonth);
+  const handleMonthChange = async (newMonth: string) => {
+  setSelectedMonth(newMonth);
+  
+  // Handle income
+  if (!incomeData[newMonth]) {
+    const sortedMonths = Object.keys(incomeData).sort();
+    const previousMonths = sortedMonths.filter(m => m < newMonth);
     
-    setSpendingData(currentData => {
-      if (currentData[newMonth]) return currentData;
-      
-      const sortedMonths = Object.keys(currentData).sort();
-      const previousMonths = sortedMonths.filter(m => m < newMonth);
-      
-      if (previousMonths.length === 0) return currentData;
-      
+    if (previousMonths.length > 0) {
       const closestMonth = previousMonths[previousMonths.length - 1];
-      const previousData = currentData[closestMonth];
+      const previousIncome = incomeData[closestMonth];
       
-      const newMonthData = previousData.map(item => ({
-        ...item,
-        id: Date.now().toString() + Math.random().toString().slice(2, 8),
-        spent: 0,
-      }));
-      
-      return {
-        ...currentData,
-        [newMonth]: newMonthData,
-      };
-    });
-
-    setIncomeData(currentData => {
-      if (currentData[newMonth]) return currentData;
-      
-      const sortedMonths = Object.keys(currentData).sort();
-      const previousMonths = sortedMonths.filter(m => m < newMonth);
-      
-      if (previousMonths.length === 0) return currentData;
-      
+      try {
+        await saveIncome({ 
+          month: newMonth, 
+          active: previousIncome.active, 
+          passive: previousIncome.passive 
+        });
+        
+        setIncomeData(data => ({
+          ...data,
+          [newMonth]: { ...previousIncome }
+        }));
+      } catch (error) {
+        console.error('Failed to copy income:', error);
+      }
+    }
+  }
+  
+  // Handle spending
+  if (!spendingData[newMonth]) {
+    const sortedMonths = Object.keys(spendingData).sort();
+    const previousMonths = sortedMonths.filter(m => m < newMonth);
+    
+    if (previousMonths.length > 0) {
       const closestMonth = previousMonths[previousMonths.length - 1];
+      const previousData = spendingData[closestMonth];
       
-      return {
-        ...currentData,
-        [newMonth]: { ...currentData[closestMonth] },
-      };
-    });
-  };
+      try {
+        // Create each spending item in the database
+        const newItems = await Promise.all(
+          previousData.map(item => 
+            createSpending({
+              name: item.name,
+              icon: item.icon,
+              categoryId: item.categoryId,
+              month: newMonth,
+            })
+          )
+        );
+        
+        setSpendingData(data => ({
+          ...data,
+          [newMonth]: newItems
+        }));
+      } catch (error) {
+        console.error('Failed to copy spending:', error);
+      }
+    }
+  }
+};
 
   // Income Handlers
-  const handleActiveIncomeChange = (value: number) => {
+  const handleActiveIncomeChange = (active: number) => {
+    // update state
     setIncomeData(data => ({
       ...data,
-      [selectedMonth]: { 
-        ...data[selectedMonth], 
-        active: value 
+      [selectedMonth]: {
+        ...data[selectedMonth],
+        active: active
       },
     }));
   };
 
-  const handlePassiveIncomeChange = (value: number) => {
+  const handleActiveIncomeCommit = async(active: number) => {
+    // update database
+    await saveIncome({month: selectedMonth, active});
+  };
+
+  const handlePassiveIncomeChange = (passive: number) => {
+    // update state
     setIncomeData(data => ({
       ...data,
-      [selectedMonth]: { 
-        ...data[selectedMonth], 
-        passive: value 
-      },
+      [selectedMonth]: {
+        ...data[selectedMonth],
+        passive: passive
+      }
     }));
+  };
+
+  const handlePassiveIncomeCommit = async(passive: number) => {
+    // update database
+    await saveIncome({month: selectedMonth, passive});
   };
 
   // Spending Handlers
   const handleSpendingChange = (id: string, budgeted: number, spent: number) => {
+    // update state
     setSpendingData(data => ({
       ...data,
       [selectedMonth]: data[selectedMonth].map(item =>
@@ -185,80 +202,113 @@ export default function Home() {
     }));
   };
 
-  const handleAddSpending = (name: string, category: string, icon: string | null) => {
-    const newItem = {
-      id: Date.now().toString(),
-      name: name,
-      icon: icon || "shopping-cart",
-      budgeted: 0,
-      spent: 0,
-      category: category
-    };
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: [...data[selectedMonth], newItem],
-    }));
+  const handleSpendingCommit = async (id: string, budgeted: number, spent: number) => {
+    // update database
+    await updateSpending(id, {budgeted, spent});
   };
 
-  const handleEditSpending = (id: string, name: string, category: string, icon: string) => {
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item =>
-        item.id === id ? { ...item, name, category, icon } : item
-      ),
-    }));
+  const handleAddSpending = async (name: string, categoryId: string, icon: string) => {
+    try {
+      // query the api
+      const spending = await createSpending({name, icon, categoryId, month: selectedMonth});
+
+      // update the state
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]:  [...(data[selectedMonth] || []), spending]
+      }));
+
+    } catch (error) {
+      console.log('Error creating a spending card: ', error);
+    }
+  }
+
+  const handleEditSpending = async (id: string, name: string, categoryId: string, icon: string) => {
+    try {
+      console.log('1. Starting edit:', { id, name, categoryId, icon });
+      
+      const spending = await updateSpending(id, { name, icon, categoryId });
+      console.log('2. API response:', spending);
+
+      setSpendingData(data => {
+        console.log('3. Current data for month:', data[selectedMonth]);
+        return {
+          ...data,
+          [selectedMonth]: data[selectedMonth].map(item =>
+            item.id === id ? spending : item
+          )
+        };
+      });
+
+    } catch (error) {
+      console.log('Error editing a spending card', error);
+    }
   };
 
-  const handleDeleteSpending = (id: string) => {
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].filter(item => item.id !== id)
-    }));
+  const handleDeleteSpending = async(id: string) => {
+    try {
+      // delete in database
+      await deleteSpending(id);
+      
+      // delete in the state
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]: data[selectedMonth].filter(item => item.id !== id)
+      }));
+
+    } catch (error) {
+      console.log('Error trying to delete spending from database : ', error);
+    }
   };
 
   // Category Handlers
-  const handleAddCategory = (name: string, icon: string, color: string) => {
-    setCategories([...categories, { label: name, icon, color }]);
-  };
-
-  const handleEditCategory = (oldLabel: string, name: string, icon: string, color: string) => {
-    // Update the category
-    setCategories(categories.map(cat =>
-      cat.label === oldLabel ? { label: name, icon, color } : cat
-    ));
-    
-    // Update all spending items that use this category
-    if (oldLabel !== name) {
-      setSpendingData(data => {
-        const updatedData: SpendingData = {};
-        for (const month in data) {
-          updatedData[month] = data[month].map(item =>
-            item.category === oldLabel ? { ...item, category: name } : item
-          );
-        }
-        return updatedData;
-      });
+  const handleAddCategory = async (name: string, icon: string, color: string) => {
+    try {
+      const newCategory = await createCategory({ label: name, icon, color });
+      setCategories([...categories, newCategory]);
+      return newCategory;
+    } catch (error) {
+      console.error("Failed to create category:", error);
+      return undefined;
     }
   };
 
-  const handleDeleteCategory = (label: string) => {
-    // Remove the category
-    setCategories(categories.filter(cat => cat.label !== label));
-    
-    // Remove all spending items that use this category
-    setSpendingData(data => {
-      const updatedData: SpendingData = {};
-      for (const month in data) {
-        updatedData[month] = data[month].filter(item => item.category !== label);
+  const handleEditCategory = async(id: string, name: string, icon: string, color: string) => {
+    try {
+      // update the database
+      await updateCategory(id, {label: name, icon, color});
+
+      // update the state
+      setCategories(categories.map(c => 
+        c.id === id ? {...c, label: name, icon, color} : c
+      ))
+    } catch (error) {
+      console.log('Error trying to update database : ', error);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      const categoryToDelete = categories.find(c => c.id === id);
+      
+      await deleteCategory(id);
+      setCategories(categories.filter(c => c.id !== id));
+      
+      if (categoryToDelete && selectedCategory === categoryToDelete.label) {
+        setSelectedCategory(null);
       }
-      return updatedData;
-    });
-
-    // Reset selected category if it was the deleted one
-    if (selectedCategory === label) {
-      setSelectedCategory(null);
+    } catch (error) {
+      console.error("Failed to delete category:", error);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto pb-24">
@@ -309,7 +359,9 @@ export default function Home() {
         activeIncome={currentIncome.active}
         passiveIncome={currentIncome.passive}
         onActiveIncomeChange={handleActiveIncomeChange}
+        onActiveIncomeCommit={handleActiveIncomeCommit}
         onPassiveIncomeChange={handlePassiveIncomeChange}
+        onPassiveIncomeCommit={handlePassiveIncomeCommit}
       />
 
       <div data-spending-section>
@@ -322,6 +374,7 @@ export default function Home() {
           spendingItems={currentSpendingItems}
           totalIncome={currentIncome.active + currentIncome.passive}
           onSpendingChange={handleSpendingChange}
+          onSpendingCommit={handleSpendingCommit}
           onOpenCreateSpending={handleOpenCreateSpending}
           onEditSpendingItem={handleOpenEditSpending}
           onEditCategory={handleOpenEditCategory}

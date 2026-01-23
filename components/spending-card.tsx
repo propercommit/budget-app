@@ -15,6 +15,8 @@ interface SpendingCardProps {
     totalIncome: number;
     onBudgetedChange: (value: number) => void;
     onSpentChange: (value: number) => void;
+    onBudgetedCommit: (value: number) => void;
+    onSpentCommit: (value: number) => void;
     onEdit: () => void;
     onEditCategory?: () => void;
 }
@@ -30,6 +32,8 @@ export function SpendingCard({
     totalIncome,
     onBudgetedChange,
     onSpentChange,
+    onBudgetedCommit,
+    onSpentCommit,
     onEdit,
     onEditCategory,
 }: SpendingCardProps) {
@@ -97,6 +101,7 @@ export function SpendingCard({
                         label="Budgeted"
                         value={budgeted}
                         onChange={onBudgetedChange}
+                        onCommit={onBudgetedCommit}
                         color={categoryColor}
                         colorLight={hexToLightColor(categoryColor)}
                         showAmount={true}
@@ -106,6 +111,7 @@ export function SpendingCard({
                         label="Spent"
                         value={spent}
                         onChange={onSpentChange}
+                        onCommit={onSpentCommit}
                         color={categoryColor}
                         colorLight={hexToLightColor(categoryColor)}
                         showAmount={true}

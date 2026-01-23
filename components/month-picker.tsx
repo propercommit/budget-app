@@ -8,6 +8,11 @@ interface MonthPickerProps {
 
 export function MonthPicker({ selectedMonth, onMonthChange }: MonthPickerProps) {
     
+    const getCurrentMonth = (): string => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    };
+
     const formatMonthLabel = (monthString: string): string => {
         const [year, month] = monthString.split("-");
         const date = new Date(parseInt(year), parseInt(month) - 1);
@@ -29,6 +34,12 @@ export function MonthPicker({ selectedMonth, onMonthChange }: MonthPickerProps) 
         onMonthChange(`${newYear}-${newMonth}`);
     };
 
+    const goToToday = () => {
+        onMonthChange(getCurrentMonth());
+    };
+
+    const isCurrentMonth = selectedMonth === getCurrentMonth();
+
     return (
         <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" onClick={() => navigateMonth("prev")}>
@@ -39,6 +50,14 @@ export function MonthPicker({ selectedMonth, onMonthChange }: MonthPickerProps) 
             </p>
             <Button variant="outline" size="icon" onClick={() => navigateMonth("next")}>
                 <ChevronRight />
+            </Button>
+            <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToToday}
+                disabled={isCurrentMonth}
+            >
+                Today
             </Button>
         </div>
     );
