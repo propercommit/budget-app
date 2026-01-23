@@ -44,10 +44,10 @@ model SpendingItem {
   month     String   // Format: "2025-01"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  spendingEntries SpendingEntry[]
   
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
@@ -66,4 +66,15 @@ model MonthlyIncome {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([userId, month])
+}
+
+model SpendingEntry {
+  id              String    @id             @default(cuid())
+  name            String
+  amount          Float     @default(0)
+  receiptUrl      String?
+  link            String?
+  date            DateTime  @default(now())
+  spendingItemId  String
+  spendingItem    SpendingItem  @relation(fields: [spendingItemId], references: [id], onDelete: Cascade)
 }
