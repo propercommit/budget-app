@@ -1,3 +1,13 @@
+export interface SpendingEntry {
+  id: string;
+  name: string;
+  amount: number;
+  receiptUrl: string | null;
+  link: string | null;
+  date: string;
+  spendingItemId: string;
+}
+
 export interface Category {
   id: string;
   icon: string;
@@ -14,6 +24,7 @@ export interface SpendingItem {
   month: string;
   categoryId: string;
   category?: Category;
+  entries?: SpendingEntry[];
 }
 
 export interface MonthlyIncome {

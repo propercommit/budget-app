@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/spending?month=2025-01 - Fetch spending items for a month
+// GET /api/spending?month=2025-01 - Fetch spending items for a month
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get("x-user-id") || "temp-user";
@@ -14,19 +15,26 @@ export async function GET(request: NextRequest) {
         ...(month && { month }),
       },
       include: {
-        category: true, // Include category data with each item
+        category: true,
+        spendingEntries: true,
       },
       orderBy: { createdAt: "asc" },
     });
 
-    const grouped: Record<string, typeof spendingItems> = {};
+    // Transform spendingEntries to entries for frontend compatibility
+    const transformedItems = spendingItems.map(item => ({
+      ...item,
+      entries: item.spendingEntries,
+      spendingEntries: undefined,
+    }));
+
+    const grouped: Record<string, typeof transformedItems> = {};
     
-    for (const item of spendingItems) {
+    for (const item of transformedItems) {
       const month = item.month;
 
       if(grouped[month] === undefined) grouped[month] = [];
       
-
       grouped[month].push(item);
     }
 

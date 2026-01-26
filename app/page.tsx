@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
+import { createCategory, createEntry, createSpending, deleteCategory, deleteEntry, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateEntry, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -30,6 +30,7 @@ export default function Home() {
   // Spending Popin State
   const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
   const [editingSpendingItem, setEditingSpendingItem] = useState<SpendingItem | null>(null);
+  const [spendingPopinKey, setSpendingPopinKey] = useState(0);
   
   // Category Popin State
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
@@ -66,6 +67,7 @@ export default function Home() {
   // Spending Popin Handlers
   const handleOpenCreateSpending = () => {
     setEditingSpendingItem(null);
+    setSpendingPopinKey(prev => prev + 1);
     setIsSpendingPopinOpen(true);
   };
 
@@ -133,6 +135,10 @@ export default function Home() {
     if (previousMonths.length > 0) {
       const closestMonth = previousMonths[previousMonths.length - 1];
       const previousData = spendingData[closestMonth];
+
+      console.log('Copying spending from', closestMonth);
+      console.log('Previous data:', previousData);
+      console.log('Number of items to copy:', previousData.length);
       
       try {
         // Create each spending item in the database
@@ -302,6 +308,126 @@ export default function Home() {
     }
   };
 
+  // Entry handlers
+  const handleAddEntry = async (
+    spendingItemId: string,
+    entry: { name: string; amount: number; receiptUrl?: string; link?: string, date?: string }
+  ) => {
+    // Create temporary entry for optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const tempEntry = {
+      id: tempId,
+      name: entry.name,
+      amount: entry.amount,
+      receiptUrl: entry.receiptUrl || null,
+      link: entry.link || null,
+      date: entry.date || new Date().toISOString(),
+      spendingItemId,
+    };
+
+    // Save current state for rollback
+    const previousData = { ...spendingData };
+
+    // Optimistic update
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = [...(item.entries || []), tempEntry];
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+
+    try {
+      const newEntry = await createEntry({
+        spendingItemId,
+        name: entry.name,
+        amount: entry.amount,
+        receiptUrl: entry.receiptUrl,
+        link: entry.link,
+        date: entry.date,
+      });
+
+      // Replace temp entry with real entry from server
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]: data[selectedMonth].map(item => {
+          if (item.id === spendingItemId) {
+            const updatedEntries = (item.entries || []).map(e =>
+              e.id === tempId ? newEntry : e
+            );
+            return { ...item, entries: updatedEntries };
+          }
+          return item;
+        })
+      }));
+    } catch (error) {
+      console.error('Error adding entry:', error);
+      setSpendingData(previousData);
+    }
+  };
+
+  const handleUpdateEntry = async (
+    spendingItemId: string,
+    entryId: string,
+    updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string, date?: string }
+  ) => {
+    // Save current state for rollback
+    const previousData = { ...spendingData };
+
+    // Optimistic update - update UI immediately
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = (item.entries || []).map(e =>
+            e.id === entryId ? { ...e, ...updatedData } : e
+          );
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+
+    // Then sync with database
+    try {
+      await updateEntry(entryId, updatedData);
+    } catch (error) {
+      console.error('Error updating entry:', error);
+      // Revert to previous state on error
+      setSpendingData(previousData);
+    }
+  };
+
+  const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
+    // Save current state for rollback
+    const previousData = { ...spendingData };
+
+    // Optimistic update
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+
+    try {
+      await deleteEntry(entryId);
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      setSpendingData(previousData);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 max-w-5xl mx-auto flex items-center justify-center min-h-screen">
@@ -378,11 +504,14 @@ export default function Home() {
           onOpenCreateSpending={handleOpenCreateSpending}
           onEditSpendingItem={handleOpenEditSpending}
           onEditCategory={handleOpenEditCategory}
+          onAddEntry={handleAddEntry}
+          onUpdateEntry={handleUpdateEntry}
+          onDeleteEntry={handleDeleteEntry}
         />
       </div>
 
       <SpendingCardPopin
-        key={`spending-${editingSpendingItem?.id ?? "create"}`}
+        key={editingSpendingItem?.id ?? `create-${spendingPopinKey}`}
         isOpen={isSpendingPopinOpen}
         onOpenChange={handleCloseSpendingPopin}
         onAddSpending={handleAddSpending}

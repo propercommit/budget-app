@@ -11,9 +11,10 @@ interface InputSliderProps {
     legend?: string;
     showAmount: boolean;
     showLegend: boolean;
+    min?: number;
 };
 
-export function InputSlider({label, value, onChange, onCommit, color, colorLight, legend, showAmount, showLegend}: InputSliderProps) {
+export function InputSlider({label, value, onChange, onCommit, color, colorLight, legend, showAmount, showLegend, min = 0}: InputSliderProps) {
     return (
     <div>
         <div className="flex flex-col gap-2">
@@ -26,8 +27,14 @@ export function InputSlider({label, value, onChange, onCommit, color, colorLight
                 <Input 
                     type="number" 
                     placeholder="0" 
+                    min={min}
                     value={value || ""} 
-                    onChange={(e) => onChange(Number(e.target.value))}
+                    onChange={(e) => {
+                        const newValue = Number(e.target.value);
+                        if (newValue >= min) {
+                            onChange(newValue);
+                        }
+                    }}
                     onBlur={() => onCommit?.(value)}
                     className="flex-1" 
                 />
@@ -37,6 +44,7 @@ export function InputSlider({label, value, onChange, onCommit, color, colorLight
                     value={[value]}
                     onValueChange={(vals: number[]) => onChange(vals[0])}
                     onValueCommit={(vals: number[]) => onCommit?.(vals[0])}
+                    min={min}
                     max={5000}
                     style={{
                         '--slider-color': color,
@@ -55,6 +63,6 @@ export function InputSlider({label, value, onChange, onCommit, color, colorLight
         </div>
             {showLegend === true && <p className="text-xs text-gray-500 mt-3">{legend}</p>}
     </div>
-
+    
     );
 }
