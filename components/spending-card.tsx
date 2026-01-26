@@ -64,6 +64,8 @@ export function SpendingCard({
     const [isViewPopinOpen, setIsViewPopinOpen] = useState(false);
     const [viewingEntry, setViewingEntry] = useState<SpendingEntry | null>(null);
 
+    const entriesTotal = entries?.reduce((sum, e) => sum + e.amount, 0) ?? 0;
+
     const handleCategoryClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onEditCategory) {
@@ -343,6 +345,7 @@ export function SpendingCard({
                             colorLight={hexToLightColor(categoryColor)}
                             showAmount={true}
                             showLegend={false}
+                            min={entriesTotal}
                         />
                         <div className="flex pt-2 justify-between">
                             {spent > budgeted ? (
