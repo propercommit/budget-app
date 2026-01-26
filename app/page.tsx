@@ -305,30 +305,61 @@ export default function Home() {
   // Entry handlers
   const handleAddEntry = async (
     spendingItemId: string,
-    entry: { name: string, amount: number, receiptUrl?: string, link?: string}
+    entry: { name: string; amount: number; receiptUrl?: string; link?: string }
   ) => {
+    // Create temporary entry for optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const tempEntry = {
+      id: tempId,
+      name: entry.name,
+      amount: entry.amount,
+      receiptUrl: entry.receiptUrl || null,
+      link: entry.link || null,
+      date: new Date().toISOString(),
+      spendingItemId,
+    };
+
+    // Save current state for rollback
+    const previousData = { ...spendingData };
+
+    // Optimistic update
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = [...(item.entries || []), tempEntry];
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+
     try {
       const newEntry = await createEntry({
         spendingItemId,
         name: entry.name,
         amount: entry.amount,
         receiptUrl: entry.receiptUrl,
-        link: entry.link
+        link: entry.link,
       });
 
+      // Replace temp entry with real entry from server
       setSpendingData(data => ({
         ...data,
         [selectedMonth]: data[selectedMonth].map(item => {
-          if(item.id === spendingItemId) {
-            const updatedEntries = [...(item.entries || []), newEntry];
-            const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0)
-            return { ...item, entries: updatedEntries, spent: newSpent };
+          if (item.id === spendingItemId) {
+            const updatedEntries = (item.entries || []).map(e =>
+              e.id === tempId ? newEntry : e
+            );
+            return { ...item, entries: updatedEntries };
           }
           return item;
         })
       }));
     } catch (error) {
       console.error('Error adding entry:', error);
+      setSpendingData(previousData);
     }
   };
 
@@ -337,44 +368,56 @@ export default function Home() {
     entryId: string,
     updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string }
   ) => {
-    try {
-      const updatedEntry = await updateEntry(entryId, updatedData);
+    // Save current state for rollback
+    const previousData = { ...spendingData };
 
-      setSpendingData(data => ({
-        ...data,
-        [selectedMonth]: data[selectedMonth].map(item => {
-          if (item.id === spendingItemId) {
-            const updatedEntries = (item.entries || []).map(e =>
-              e.id === entryId ? updatedEntry : e
-            );
-            const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
-            return { ...item, entries: updatedEntries, spent: newSpent };
-          }
-          return item;
-        })
-      }));
+    // Optimistic update - update UI immediately
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = (item.entries || []).map(e =>
+            e.id === entryId ? { ...e, ...updatedData } : e
+          );
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+
+    // Then sync with database
+    try {
+      await updateEntry(entryId, updatedData);
     } catch (error) {
       console.error('Error updating entry:', error);
+      // Revert to previous state on error
+      setSpendingData(previousData);
     }
   };
 
   const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
+    // Save current state for rollback
+    const previousData = { ...spendingData };
+
+    // Optimistic update
+    setSpendingData(data => ({
+      ...data,
+      [selectedMonth]: data[selectedMonth].map(item => {
+        if (item.id === spendingItemId) {
+          const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
+          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+          return { ...item, entries: updatedEntries, spent: newSpent };
+        }
+        return item;
+      })
+    }));
+
     try {
       await deleteEntry(entryId);
-
-      setSpendingData(data => ({
-        ...data,
-        [selectedMonth]: data[selectedMonth].map(item => {
-          if (item.id === spendingItemId) {
-            const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
-            const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
-            return { ...item, entries: updatedEntries, spent: newSpent };
-          }
-          return item;
-        })
-      }));
     } catch (error) {
       console.error('Error deleting entry:', error);
+      setSpendingData(previousData);
     }
   };
 

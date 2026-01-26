@@ -5,7 +5,8 @@ import { hexToLightColor } from "@/lib/color-utils";
 import { iconMap } from "@/lib/icon-map";
 import { Chip } from "./Chip";
 import { SpendingEntry } from "@/lib/types";
-import { Plus, ChevronDown, ChevronUp, List, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, List, Pencil, Plus } from "lucide-react";
+import { EntryPopin } from "./entry-popin";
 
 interface SpendingCardProps {
     name: string;
@@ -52,12 +53,24 @@ export function SpendingCard({
 }: SpendingCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showAllEntries, setShowAllEntries] = useState(false);
+    const [isEntryPopinOpen, setIsEntryPopinOpen] = useState(false);
+    const [editingEntry, setEditingEntry] = useState<SpendingEntry | null>(null);
 
     const handleCategoryClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (onEditCategory) {
             onEditCategory();
         }
+    };
+
+    const handleOpenCreateEntry = () => {
+        setEditingEntry(null);
+        setIsEntryPopinOpen(true);
+    };
+
+    const handleOpenEditEntry = (entry: SpendingEntry) => {
+        setEditingEntry(entry);
+        setIsEntryPopinOpen(true);
     };
 
     const displayedEntries = showAllEntries ? entries : entries.slice(0, 4);
@@ -177,7 +190,8 @@ export function SpendingCard({
                                 {displayedEntries.map((entry) => (
                                     <div
                                         key={entry.id}
-                                        className="flex items-center justify-between p-3 rounded-lg bg-gray-50 group"
+                                        className="flex items-center justify-between p-3 rounded-lg bg-gray-50 group cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleOpenEditEntry(entry)}
                                     >
                                         <div className="flex-1">
                                             <div className="font-medium text-sm">{entry.name}</div>
@@ -187,20 +201,7 @@ export function SpendingCard({
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="font-semibold">${entry.amount.toFixed(2)}</span>
-                                            <div className="hidden group-hover:flex items-center gap-1">
-                                                <button
-                                                    onClick={() => onUpdateEntry?.(entry.id, { name: entry.name, amount: entry.amount })}
-                                                    className="p-1 rounded hover:bg-gray-200"
-                                                >
-                                                    <Pencil className="w-4 h-4 text-gray-500" />
-                                                </button>
-                                                <button
-                                                    onClick={() => onDeleteEntry?.(entry.id)}
-                                                    className="p-1 rounded hover:bg-red-100"
-                                                >
-                                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                                </button>
-                                            </div>
+                                            <Pencil className="w-4 h-4 text-gray-400" />
                                         </div>
                                     </div>
                                 ))}
@@ -216,7 +217,7 @@ export function SpendingCard({
 
                                 {/* Add entry button */}
                                 <button
-                                    onClick={() => onAddEntry?.({ name: "New entry", amount: 0 })}
+                                    onClick={handleOpenCreateEntry}
                                     className="w-full p-4 rounded-xl bg-green-50 border-2 border-dashed border-green-300 hover:border-green-400 hover:bg-green-100 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Plus className="w-5 h-5 text-green-600" />
@@ -224,6 +225,18 @@ export function SpendingCard({
                                 </button>
                             </div>
                         )}
+
+                        {/* Entry Popin */}
+                        <EntryPopin
+                            key={`entry-${editingEntry?.id ?? "create"}`}
+                            isOpen={isEntryPopinOpen}
+                            onOpenChange={setIsEntryPopinOpen}
+                            onAddEntry={onAddEntry ?? (() => {})}
+                            onUpdateEntry={onUpdateEntry ?? (() => {})}
+                            onDeleteEntry={onDeleteEntry ?? (() => {})}
+                            mode={editingEntry !== null ? "edit" : "create"}
+                            editingEntry={editingEntry}
+                        />
                     </div>
                 ) : (
                     /* Simple Mode View (Original) */
