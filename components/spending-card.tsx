@@ -5,8 +5,10 @@ import { hexToLightColor } from "@/lib/color-utils";
 import { iconMap } from "@/lib/icon-map";
 import { Chip } from "./Chip";
 import { SpendingEntry } from "@/lib/types";
-import { ChevronDown, ChevronUp, List, Pencil, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, List, Plus, Search } from "lucide-react";
 import { EntryPopin } from "./entry-popin";
+import { Input } from "./ui/input";
+import { EntryViewPopin } from "./entry-view-popin";
 
 interface SpendingCardProps {
     name: string;
@@ -29,6 +31,8 @@ interface SpendingCardProps {
     onUpdateEntry?: (entryId: string, data: { name?: string; amount?: number; receiptUrl?: string; link?: string }) => void;
     onDeleteEntry?: (entryId: string) => void;
 }
+
+type SortOption = "newest" | "oldest" | "highest" | "lowest";
 
 export function SpendingCard({
     name,
@@ -53,8 +57,12 @@ export function SpendingCard({
 }: SpendingCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showAllEntries, setShowAllEntries] = useState(false);
-    const [isEntryPopinOpen, setIsEntryPopinOpen] = useState(false);
+    const [isEntryPopinOpen, setIsEntryEditPopinOpen] = useState(false);
     const [editingEntry, setEditingEntry] = useState<SpendingEntry | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [sortBy, setSortBy] = useState<SortOption>("newest");
+    const [isViewPopinOpen, setIsViewPopinOpen] = useState(false);
+    const [viewingEntry, setViewingEntry] = useState<SpendingEntry | null>(null);
 
     const handleCategoryClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -65,15 +73,52 @@ export function SpendingCard({
 
     const handleOpenCreateEntry = () => {
         setEditingEntry(null);
-        setIsEntryPopinOpen(true);
+        setIsEntryEditPopinOpen(true);
     };
 
     const handleOpenEditEntry = (entry: SpendingEntry) => {
         setEditingEntry(entry);
-        setIsEntryPopinOpen(true);
+        setIsEntryEditPopinOpen(true);
     };
 
-    const displayedEntries = showAllEntries ? entries : entries.slice(0, 4);
+    const handleOpenViewEntry = (entry: SpendingEntry) => {
+        setIsViewPopinOpen(true);
+        setViewingEntry(entry);
+    };
+
+    const handleEditFromView = () => {
+        setIsViewPopinOpen(false);
+        setEditingEntry(viewingEntry);
+        setIsEntryEditPopinOpen(true);
+    };
+
+    const handleDeleteFromView = () => {
+        if (viewingEntry !== null) {
+            onDeleteEntry?.(viewingEntry.id);
+        }
+    };
+    // Filter entries by search query
+    const filteredEntries = entries.filter(entry =>
+        entry.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Sort entries
+    const sortedEntries = [...filteredEntries].sort((a, b) => {
+        switch (sortBy) {
+            case "newest":
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            case "oldest":
+                return new Date(a.date).getTime() - new Date(b.date).getTime();
+            case "highest":
+                return b.amount - a.amount;
+            case "lowest":
+                return a.amount - b.amount;
+            default:
+                return 0;
+        }
+    });
+
+    const displayedEntries = showAllEntries ? sortedEntries : sortedEntries.slice(0, 4);
 
     return (
         <Card>
@@ -187,11 +232,34 @@ export function SpendingCard({
                         {/* Expanded entries list */}
                         {isExpanded && (
                             <div className="space-y-2 pt-2 border-t">
+                                {/* Search and Sort */}
+                                <div className="flex gap-2 pb-2">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                        <Input
+                                            placeholder="Search entries..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                                        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+                                    >
+                                        <option value="newest">Newest first</option>
+                                        <option value="oldest">Oldest first</option>
+                                        <option value="highest">Highest amount</option>
+                                        <option value="lowest">Lowest amount</option>
+                                    </select>
+                                </div>
+
                                 {displayedEntries.map((entry) => (
                                     <div
                                         key={entry.id}
                                         className="flex items-center justify-between p-3 rounded-lg bg-gray-50 group cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleOpenEditEntry(entry)}
+                                        onClick={() => handleOpenViewEntry(entry)}
                                     >
                                         <div className="flex-1">
                                             <div className="font-medium text-sm">{entry.name}</div>
@@ -201,17 +269,22 @@ export function SpendingCard({
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="font-semibold">${entry.amount.toFixed(2)}</span>
-                                            <Pencil className="w-4 h-4 text-gray-400" />
                                         </div>
                                     </div>
                                 ))}
 
-                                {entries.length > 4 && (
+                                {sortedEntries.length === 0 && searchQuery !== "" && (
+                                    <div className="text-center py-4 text-gray-500 text-sm">
+                                        No entries match &quot;{searchQuery}&quot;
+                                    </div>
+                                )}
+
+                                {sortedEntries.length > 4 && (
                                     <button
                                         onClick={() => setShowAllEntries(!showAllEntries)}
                                         className="w-full py-2 text-sm font-medium text-green-600 hover:text-green-700"
                                     >
-                                        {showAllEntries ? "Show less" : `Display all (${entries.length} entries)`}
+                                        {showAllEntries ? "Show less" : `Display all (${sortedEntries.length} entries)`}
                                     </button>
                                 )}
 
@@ -226,16 +299,26 @@ export function SpendingCard({
                             </div>
                         )}
 
-                        {/* Entry Popin */}
+                        {/* Entry Edit Popin */}
                         <EntryPopin
                             key={`entry-${editingEntry?.id ?? "create"}`}
                             isOpen={isEntryPopinOpen}
-                            onOpenChange={setIsEntryPopinOpen}
+                            onOpenChange={setIsEntryEditPopinOpen}
                             onAddEntry={onAddEntry ?? (() => {})}
                             onUpdateEntry={onUpdateEntry ?? (() => {})}
                             onDeleteEntry={onDeleteEntry ?? (() => {})}
                             mode={editingEntry !== null ? "edit" : "create"}
                             editingEntry={editingEntry}
+                        />
+
+                        {/* Entry View Popin*/}
+                        <EntryViewPopin
+                            key={`entry-${editingEntry?.id ?? "none"}`}
+                            isOpen={isViewPopinOpen}
+                            onOpenChange={setIsViewPopinOpen}
+                            entry={viewingEntry}
+                            onEdit={handleEditFromView}
+                            onDelete={handleDeleteFromView}
                         />
                     </div>
                 ) : (

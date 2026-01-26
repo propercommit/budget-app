@@ -24,6 +24,17 @@ interface EntryPopinProps {
     editingEntry: SpendingEntry | null;
 }
 
+interface ValidationErrors {
+    name?: string;
+    amount?: string;
+    link?: string;
+    receipt?: string;
+}
+
+const MAX_NAME_LENGTH = 100;
+const MAX_AMOUNT = 1000000;
+const MAX_RECEIPT_SIZE_MB = 2;
+
 export function EntryPopin({
     isOpen,
     onOpenChange,
@@ -37,10 +48,66 @@ export function EntryPopin({
     const [amount, setAmount] = useState(editingEntry?.amount.toString() ?? "");
     const [link, setLink] = useState(editingEntry?.link ?? "");
     const [receiptUrl, setReceiptUrl] = useState(editingEntry?.receiptUrl ?? "");
+    const [errors, setErrors] = useState<ValidationErrors>({});
+
+    const validateForm = (): boolean => {
+        const newErrors: ValidationErrors = {};
+
+        // Validate name
+        const trimmedName = name.trim();
+        if (trimmedName === "") {
+            newErrors.name = "Name is required";
+        } else if (trimmedName.length > MAX_NAME_LENGTH) {
+            newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or less`;
+        }
+
+        // Validate amount
+        if (amount === "") {
+            newErrors.amount = "Amount is required";
+        } else {
+            const numAmount = parseFloat(amount);
+            if (isNaN(numAmount)) {
+                newErrors.amount = "Amount must be a valid number";
+            } else if (numAmount < 0) {
+                newErrors.amount = "Amount cannot be negative";
+            } else if (numAmount > MAX_AMOUNT) {
+                newErrors.amount = `Amount cannot exceed $${MAX_AMOUNT.toLocaleString()}`;
+            }
+        }
+
+        // Validate link (optional)
+        if (link.trim() !== "") {
+            try {
+                new URL(link.trim());
+            } catch {
+                newErrors.link = "Please enter a valid URL (e.g., https://example.com)";
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleReceiptUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            // Check file size
+            const sizeMB = file.size / (1024 * 1024);
+            if (sizeMB > MAX_RECEIPT_SIZE_MB) {
+                setErrors(prev => ({ 
+                    ...prev, 
+                    receipt: `Receipt must be smaller than ${MAX_RECEIPT_SIZE_MB}MB` 
+                }));
+                return;
+            }
+
+            // Clear any previous receipt error
+            setErrors(prev => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { receipt, ...rest } = prev;
+                return rest;
+            });
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 const result = e.target?.result as string;
@@ -52,10 +119,15 @@ export function EntryPopin({
 
     const handleRemoveReceipt = () => {
         setReceiptUrl("");
+        setErrors(prev => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { receipt, ...rest } = prev;
+            return rest;
+        });
     };
 
     const handleSubmit = () => {
-        if (name.trim() === "" || amount === "") return;
+        if (!validateForm()) return;
 
         const entryData = {
             name: name.trim(),
@@ -77,6 +149,40 @@ export function EntryPopin({
         if (editingEntry !== null) {
             onDeleteEntry(editingEntry.id);
             onOpenChange(false);
+        }
+    };
+
+    // Clear field error when user starts typing
+    const handleNameChange = (value: string) => {
+        setName(value);
+        if (errors.name) {
+            setErrors(prev => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { name, ...rest } = prev;
+                return rest;
+            });
+        }
+    };
+
+    const handleAmountChange = (value: string) => {
+        setAmount(value);
+        if (errors.amount) {
+            setErrors(prev => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { amount, ...rest } = prev;
+                return rest;
+            });
+        }
+    };
+
+    const handleLinkChange = (value: string) => {
+        setLink(value);
+        if (errors.link) {
+            setErrors(prev => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { link, ...rest } = prev;
+                return rest;
+            });
         }
     };
 
@@ -102,8 +208,13 @@ export function EntryPopin({
                             id="entry-name"
                             placeholder="e.g., Weekly grocery shopping"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => handleNameChange(e.target.value)}
+                            maxLength={MAX_NAME_LENGTH}
+                            className={errors.name ? "border-red-500" : ""}
                         />
+                        {errors.name && (
+                            <p className="text-sm text-red-500">{errors.name}</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -114,24 +225,17 @@ export function EntryPopin({
                                 id="entry-amount"
                                 type="number"
                                 min={0}
+                                max={MAX_AMOUNT}
                                 step={0.01}
                                 placeholder="0.00"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                className="pl-7"
+                                onChange={(e) => handleAmountChange(e.target.value)}
+                                className={`pl-7 ${errors.amount ? "border-red-500" : ""}`}
                             />
                         </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                        <Label htmlFor="entry-link">Link (optional)</Label>
-                        <Input
-                            id="entry-link"
-                            type="url"
-                            placeholder="https://..."
-                            value={link}
-                            onChange={(e) => setLink(e.target.value)}
-                        />
+                        {errors.amount && (
+                            <p className="text-sm text-red-500">{errors.amount}</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -151,9 +255,15 @@ export function EntryPopin({
                                 </button>
                             </div>
                         ) : (
-                            <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors">
-                                <Upload className="w-6 h-6 text-gray-400" />
-                                <span className="text-sm text-gray-500 mt-1">Upload receipt</span>
+                            <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                                errors.receipt 
+                                    ? "border-red-500 bg-red-50" 
+                                    : "border-gray-300 hover:border-green-400 hover:bg-green-50"
+                            }`}>
+                                <Upload className={`w-6 h-6 ${errors.receipt ? "text-red-400" : "text-gray-400"}`} />
+                                <span className={`text-sm mt-1 ${errors.receipt ? "text-red-500" : "text-gray-500"}`}>
+                                    Upload receipt (max {MAX_RECEIPT_SIZE_MB}MB)
+                                </span>
                                 <input
                                     type="file"
                                     accept="image/*"
@@ -161,6 +271,24 @@ export function EntryPopin({
                                     className="hidden"
                                 />
                             </label>
+                        )}
+                        {errors.receipt && (
+                            <p className="text-sm text-red-500">{errors.receipt}</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="entry-link">Link (optional)</Label>
+                        <Input
+                            id="entry-link"
+                            type="url"
+                            placeholder="https://..."
+                            value={link}
+                            onChange={(e) => handleLinkChange(e.target.value)}
+                            className={errors.link ? "border-red-500" : ""}
+                        />
+                        {errors.link && (
+                            <p className="text-sm text-red-500">{errors.link}</p>
                         )}
                     </div>
                 </div>
