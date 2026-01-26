@@ -30,6 +30,7 @@ export default function Home() {
   // Spending Popin State
   const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
   const [editingSpendingItem, setEditingSpendingItem] = useState<SpendingItem | null>(null);
+  const [spendingPopinKey, setSpendingPopinKey] = useState(0);
   
   // Category Popin State
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
@@ -66,6 +67,7 @@ export default function Home() {
   // Spending Popin Handlers
   const handleOpenCreateSpending = () => {
     setEditingSpendingItem(null);
+    setSpendingPopinKey(prev => prev + 1);
     setIsSpendingPopinOpen(true);
   };
 
@@ -133,6 +135,10 @@ export default function Home() {
     if (previousMonths.length > 0) {
       const closestMonth = previousMonths[previousMonths.length - 1];
       const previousData = spendingData[closestMonth];
+
+      console.log('Copying spending from', closestMonth);
+      console.log('Previous data:', previousData);
+      console.log('Number of items to copy:', previousData.length);
       
       try {
         // Create each spending item in the database
@@ -305,7 +311,7 @@ export default function Home() {
   // Entry handlers
   const handleAddEntry = async (
     spendingItemId: string,
-    entry: { name: string; amount: number; receiptUrl?: string; link?: string }
+    entry: { name: string; amount: number; receiptUrl?: string; link?: string, date?: string }
   ) => {
     // Create temporary entry for optimistic update
     const tempId = `temp-${Date.now()}`;
@@ -315,7 +321,7 @@ export default function Home() {
       amount: entry.amount,
       receiptUrl: entry.receiptUrl || null,
       link: entry.link || null,
-      date: new Date().toISOString(),
+      date: entry.date || new Date().toISOString(),
       spendingItemId,
     };
 
@@ -342,6 +348,7 @@ export default function Home() {
         amount: entry.amount,
         receiptUrl: entry.receiptUrl,
         link: entry.link,
+        date: entry.date,
       });
 
       // Replace temp entry with real entry from server
@@ -366,7 +373,7 @@ export default function Home() {
   const handleUpdateEntry = async (
     spendingItemId: string,
     entryId: string,
-    updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string }
+    updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string, date?: string }
   ) => {
     // Save current state for rollback
     const previousData = { ...spendingData };
@@ -504,7 +511,7 @@ export default function Home() {
       </div>
 
       <SpendingCardPopin
-        key={`spending-${editingSpendingItem?.id ?? "create"}`}
+        key={editingSpendingItem?.id ?? `create-${spendingPopinKey}`}
         isOpen={isSpendingPopinOpen}
         onOpenChange={handleCloseSpendingPopin}
         onAddSpending={handleAddSpending}

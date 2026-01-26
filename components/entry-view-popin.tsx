@@ -26,19 +26,13 @@ function LargeImageOverlay({
     src: string; 
     onClose: () => void;
 }) {
-    const [mounted, setMounted] = useState(false);
-
     useEffect(() => {
-        setMounted(true);
-        
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
         };
         document.addEventListener("keydown", handleEscape);
         return () => document.removeEventListener("keydown", handleEscape);
     }, [onClose]);
-
-    if (!mounted) return null;
 
     return createPortal(
         <div 
@@ -61,6 +55,7 @@ function LargeImageOverlay({
             >
                 <X className="w-6 h-6" />
             </button>
+            {/*eslint-disable-next-line @next/next/no-img-element*/}
             <img
                 src={src}
                 alt="Receipt"
@@ -117,7 +112,7 @@ export function EntryViewPopin({
                         <div className="flex justify-between items-center p-4 rounded-xl bg-gray-50">
                             <span className="text-gray-600">Date</span>
                             <span className="font-medium">
-                                {new Date(entry.date).toLocaleDateString("en-US", {
+                                {new Date(entry.date).toLocaleDateString("en-GB", {
                                     weekday: "short",
                                     year: "numeric",
                                     month: "short",
@@ -129,6 +124,7 @@ export function EntryViewPopin({
                         {entry.receiptUrl && (
                             <div className="space-y-2">
                                 <span className="text-gray-600">Receipt</span>
+                                {/*eslint-disable-next-line @next/next/no-img-element*/}
                                 <img
                                     src={entry.receiptUrl}
                                     alt="Receipt"

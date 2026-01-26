@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get("x-user-id") || "temp-user";
     const body = await request.json();
-    const { spendingItemId, name, amount, receiptUrl, link } = body;
+    const { spendingItemId, name, amount, receiptUrl, link, date } = body;
 
     // Validate required fields
     if (spendingItemId === undefined || spendingItemId === null || spendingItemId === "") {
@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
         receiptUrl: receiptUrl || null,
         link: link || null,
         spendingItemId,
+        date: date ? new Date(date): new Date(),
       },
     });
 

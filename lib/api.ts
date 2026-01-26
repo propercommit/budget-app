@@ -129,6 +129,7 @@ export async function createEntry(data: {
   amount: number;
   receiptUrl?: string;
   link?: string;
+  date?: string;
 }) {
   return fetchAPI("/api/entries", {
     method: "POST",
@@ -143,6 +144,7 @@ export async function updateEntry(
     amount?: number;
     receiptUrl?: string;
     link?: string;
+    date?: string;
   }
 ) {
   return fetchAPI(`/api/entries/${id}`, {

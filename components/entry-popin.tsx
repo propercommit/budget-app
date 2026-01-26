@@ -17,8 +17,8 @@ import { Upload, X } from "lucide-react";
 interface EntryPopinProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    onAddEntry: (entry: { name: string; amount: number; receiptUrl?: string; link?: string }) => void;
-    onUpdateEntry: (entryId: string, data: { name?: string; amount?: number; receiptUrl?: string; link?: string }) => void;
+    onAddEntry: (entry: { name: string; amount: number; receiptUrl?: string; link?: string, date?: string }) => void;
+    onUpdateEntry: (entryId: string, data: { name?: string; amount?: number; receiptUrl?: string; link?: string, date?: string }) => void;
     onDeleteEntry: (entryId: string) => void;
     mode: "create" | "edit";
     editingEntry: SpendingEntry | null;
@@ -49,6 +49,11 @@ export function EntryPopin({
     const [link, setLink] = useState(editingEntry?.link ?? "");
     const [receiptUrl, setReceiptUrl] = useState(editingEntry?.receiptUrl ?? "");
     const [errors, setErrors] = useState<ValidationErrors>({});
+    const [entryDate, setEntryDate] = useState(
+        editingEntry?.date 
+            ? new Date(editingEntry.date).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0]
+    );
 
     const validateForm = (): boolean => {
         const newErrors: ValidationErrors = {};
@@ -134,6 +139,7 @@ export function EntryPopin({
             amount: parseFloat(amount),
             link: link.trim() || undefined,
             receiptUrl: receiptUrl || undefined,
+            date: entryDate
         };
 
         if (mode === "edit" && editingEntry !== null) {
@@ -239,9 +245,15 @@ export function EntryPopin({
                     </div>
 
                     <div className="space-y-2">
+                        <Label htmlFor="date">Date</Label>
+                        <Input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)}></Input> 
+                    </div>
+
+                    <div className="space-y-2">
                         <Label>Receipt (optional)</Label>
                         {receiptUrl ? (
                             <div className="relative">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img 
                                     src={receiptUrl} 
                                     alt="Receipt" 

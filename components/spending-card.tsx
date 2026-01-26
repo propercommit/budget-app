@@ -301,7 +301,7 @@ export function SpendingCard({
 
                         {/* Entry Edit Popin */}
                         <EntryPopin
-                            key={`entry-${editingEntry?.id ?? "create"}`}
+                            key={`edit-${editingEntry?.id ?? "create"}`}
                             isOpen={isEntryPopinOpen}
                             onOpenChange={setIsEntryEditPopinOpen}
                             onAddEntry={onAddEntry ?? (() => {})}
@@ -313,7 +313,7 @@ export function SpendingCard({
 
                         {/* Entry View Popin*/}
                         <EntryViewPopin
-                            key={`entry-${editingEntry?.id ?? "none"}`}
+                            key={`view-${viewingEntry?.id ?? "none"}`}
                             isOpen={isViewPopinOpen}
                             onOpenChange={setIsViewPopinOpen}
                             entry={viewingEntry}

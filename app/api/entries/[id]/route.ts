@@ -23,7 +23,7 @@ export async function PUT(
     const { id } = await params;
     const userId = request.headers.get("x-user-id") || "temp-user";
     const body = await request.json();
-    const { name, amount, receiptUrl, link } = body;
+    const { name, amount, receiptUrl, link, date } = body;
 
     // Find the entry and verify ownership through spending item
     const existingEntry = await prisma.spendingEntry.findUnique({
@@ -53,6 +53,7 @@ export async function PUT(
         ...(amount !== undefined && { amount }),
         ...(receiptUrl !== undefined && { receiptUrl: receiptUrl || null }),
         ...(link !== undefined && { link: link || null }),
+        ...(date !== undefined && { date: new Date(date) }),
       },
     });
 
