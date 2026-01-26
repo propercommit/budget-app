@@ -11,7 +11,7 @@ async function fetchAPI(url: string, options?: RequestInit) {
     },
   });
 
-  if (!response.ok) {
+  if (response.ok === false) {
     const error = await response.json();
     throw new Error(error.message || "API request failed");
   }
@@ -55,7 +55,9 @@ export async function deleteCategory(id: string) {
 // ============ SPENDING ============
 
 export async function getSpending(month?: string) {
-  const url = month ? `/api/spending?month=${month}` : "/api/spending";
+  const url = month !== undefined && month !== "" 
+    ? `/api/spending?month=${month}` 
+    : "/api/spending";
   return fetchAPI(url);
 }
 
@@ -98,7 +100,9 @@ export async function deleteSpending(id: string) {
 // ============ INCOME ============
 
 export async function getIncome(month?: string) {
-  const url = month ? `/api/income?month=${month}` : "/api/income";
+  const url = month !== undefined && month !== "" 
+    ? `/api/income?month=${month}` 
+    : "/api/income";
   return fetchAPI(url);
 }
 
@@ -110,5 +114,45 @@ export async function saveIncome(data: {
   return fetchAPI("/api/income", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+// ============ ENTRIES ============
+
+export async function getEntries(spendingItemId: string) {
+  return fetchAPI(`/api/entries?spendingItemId=${spendingItemId}`);
+}
+
+export async function createEntry(data: {
+  spendingItemId: string;
+  name: string;
+  amount: number;
+  receiptUrl?: string;
+  link?: string;
+}) {
+  return fetchAPI("/api/entries", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateEntry(
+  id: string,
+  data: {
+    name?: string;
+    amount?: number;
+    receiptUrl?: string;
+    link?: string;
+  }
+) {
+  return fetchAPI(`/api/entries/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteEntry(id: string) {
+  return fetchAPI(`/api/entries/${id}`, {
+    method: "DELETE",
   });
 }

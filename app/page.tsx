@@ -10,7 +10,7 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createEntry, createSpending, deleteCategory, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateSpending } from "@/lib/api";
+import { createCategory, createEntry, createSpending, deleteCategory, deleteEntry, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateEntry, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -333,50 +333,50 @@ export default function Home() {
   };
 
   const handleUpdateEntry = async (
-  spendingItemId: string,
-  entryId: string,
-  updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string }
-) => {
-  try {
-    const updatedEntry = await updateEntry(entryId, updatedData);
+    spendingItemId: string,
+    entryId: string,
+    updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string }
+  ) => {
+    try {
+      const updatedEntry = await updateEntry(entryId, updatedData);
 
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item => {
-        if (item.id === spendingItemId) {
-          const updatedEntries = (item.entries || []).map(e =>
-            e.id === entryId ? updatedEntry : e
-          );
-          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
-          return { ...item, entries: updatedEntries, spent: newSpent };
-        }
-        return item;
-      })
-    }));
-  } catch (error) {
-    console.error('Error updating entry:', error);
-  }
-};
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]: data[selectedMonth].map(item => {
+          if (item.id === spendingItemId) {
+            const updatedEntries = (item.entries || []).map(e =>
+              e.id === entryId ? updatedEntry : e
+            );
+            const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+            return { ...item, entries: updatedEntries, spent: newSpent };
+          }
+          return item;
+        })
+      }));
+    } catch (error) {
+      console.error('Error updating entry:', error);
+    }
+  };
 
-const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
-  try {
-    await deleteEntry(entryId);
+  const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
+    try {
+      await deleteEntry(entryId);
 
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item => {
-        if (item.id === spendingItemId) {
-          const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
-          const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
-          return { ...item, entries: updatedEntries, spent: newSpent };
-        }
-        return item;
-      })
-    }));
-  } catch (error) {
-    console.error('Error deleting entry:', error);
-  }
-};
+      setSpendingData(data => ({
+        ...data,
+        [selectedMonth]: data[selectedMonth].map(item => {
+          if (item.id === spendingItemId) {
+            const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
+            const newSpent = updatedEntries.reduce((sum, e) => sum + e.amount, 0);
+            return { ...item, entries: updatedEntries, spent: newSpent };
+          }
+          return item;
+        })
+      }));
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -454,6 +454,9 @@ const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
           onOpenCreateSpending={handleOpenCreateSpending}
           onEditSpendingItem={handleOpenEditSpending}
           onEditCategory={handleOpenEditCategory}
+          onAddEntry={handleAddEntry}
+          onUpdateEntry={handleUpdateEntry}
+          onDeleteEntry={handleDeleteEntry}
         />
       </div>
 
