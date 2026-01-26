@@ -78,11 +78,6 @@ export function SpendingCard({
         setIsEntryEditPopinOpen(true);
     };
 
-    const handleOpenEditEntry = (entry: SpendingEntry) => {
-        setEditingEntry(entry);
-        setIsEntryEditPopinOpen(true);
-    };
-
     const handleOpenViewEntry = (entry: SpendingEntry) => {
         setIsViewPopinOpen(true);
         setViewingEntry(entry);
