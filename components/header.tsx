@@ -70,15 +70,15 @@ export function Header({ title, legendLabel }: HeaderProps) {
     const displayName = getDisplayName(user);
 
     return (
-        <div className="flex items-center justify-between mb-4">
-            <div>
-                <div className="flex items-center mb-2 w-fit">
-                    <div className="mr-3">
+        <div className="flex items-start justify-between gap-2 mb-4">
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center mb-1 sm:mb-2">
+                    <div className="mr-2 sm:mr-3 flex-shrink-0">
                         <Logo size="md" animated={true} />
                     </div>
-                    <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">{title}</h1>
                 </div>
-                <p className="text-sm text-gray-500">{legendLabel}</p>
+                <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 sm:line-clamp-1">{legendLabel}</p>
             </div>
 
             <Button
@@ -86,7 +86,7 @@ export function Header({ title, legendLabel }: HeaderProps) {
                 size="sm"
                 onClick={handleAccountClick}
                 disabled={isLoading}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 flex-shrink-0"
                 aria-label="Go to account settings"
             >
                 {isLoading ? (

@@ -430,20 +430,21 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-5xl mx-auto flex items-center justify-center min-h-screen">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto flex items-center justify-center min-h-screen">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto pb-24">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-28 sm:pb-24">
       <Header 
         title="Budget Planner" 
         legendLabel="Take control of your finances with smart insights and personalized advice"
       />
       
-      <div className="flex justify-between">
+      {/* Month picker and trends button - stack on mobile */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
         <MonthPicker 
           selectedMonth={selectedMonth} 
           onMonthChange={handleMonthChange} 
