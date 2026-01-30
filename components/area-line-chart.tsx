@@ -17,7 +17,9 @@ interface AreaLineChartProps {
 
 const LINE_ANIMATION_DURATION = 1.5;
 const PADDING = 40;
-const WIDTH = 600;
+const MIN_POINT_SPACING = 60; // Minimum pixels between points
+const MIN_CHART_WIDTH = 300; // Minimum chart width
+const MAX_VISIBLE_POINTS_MOBILE = 6; // Show at most 6 points without scrolling on mobile
 
 export function AreaLineChart({
     data,
@@ -29,11 +31,22 @@ export function AreaLineChart({
     const [showValues, setShowValues] = useState(false);
     const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
 
+    // Calculate dynamic width based on data points
+    const dataPointCount = data.length;
+    const calculatedWidth = Math.max(
+        MIN_CHART_WIDTH,
+        PADDING * 2 + (dataPointCount - 1) * MIN_POINT_SPACING
+    );
+    
+    // Determine if scrolling is needed (more than MAX_VISIBLE_POINTS_MOBILE points)
+    const needsScroll = dataPointCount > MAX_VISIBLE_POINTS_MOBILE;
+    const chartWidth = needsScroll ? calculatedWidth : Math.max(MIN_CHART_WIDTH, calculatedWidth);
+
     const calculations = useChartCalculations({
         data,
         height: chartHeight,
         padding: PADDING,
-        width: WIDTH,
+        width: chartWidth,
         lineAnimationDuration: LINE_ANIMATION_DURATION,
     });
 
@@ -70,11 +83,20 @@ export function AreaLineChart({
                 increaseIsPositive={increaseIsPositive}
             />
 
-            <div className="relative w-full overflow-x-auto">
+            <div 
+                className={`relative w-full ${needsScroll ? 'overflow-x-auto' : 'overflow-hidden'}`}
+                style={{ 
+                    WebkitOverflowScrolling: 'touch' // Smooth scrolling on iOS
+                }}
+            >
                 <svg 
-                    viewBox={`0 0 ${WIDTH} ${chartHeight}`} 
-                    className="w-full" 
-                    style={{ minWidth: "400px" }}
+                    viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
+                    className={needsScroll ? '' : 'w-full'}
+                    style={{ 
+                        minWidth: needsScroll ? `${chartWidth}px` : undefined,
+                        width: needsScroll ? `${chartWidth}px` : '100%',
+                    }}
+                    preserveAspectRatio="xMidYMid meet"
                 >
                     <style>
                         {`
