@@ -15,14 +15,17 @@ interface HeaderProps {
 
 /**
  * Extracts a display name from user data.
- * Priority: full_name metadata > email prefix > fallback
+ * Priority: first_name + last_name > email prefix > fallback
  */
 function getDisplayName(user: User | null): string {
     if (!user) return "Account";
     
-    const fullName = user.user_metadata?.full_name;
-    if (fullName && typeof fullName === "string" && fullName.trim() !== "") {
-        return fullName.trim();
+    const firstName = user.user_metadata?.first_name;
+    const lastName = user.user_metadata?.last_name;
+    
+    if (firstName && typeof firstName === "string" && firstName.trim() !== "") {
+        const fullName = lastName ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim();
+        return fullName;
     }
 
     const email = user.email;

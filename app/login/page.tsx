@@ -9,38 +9,55 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { Logo } from "@/components/logo"
 
+type AuthMode = "login" | "signup"
+
 export default function LoginPage() {
+    // Form state
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
-    const [fullName, setFullName] = useState("")
+    const [firstName, setFirstName] = useState("")
+    const [lastName, setLastName] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [acceptedTerms, setAcceptedTerms] = useState(false)
+    
+    // UI state
     const [isLoading, setIsLoading] = useState(false)
     const [isGoogleLoading, setIsGoogleLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [mode, setMode] = useState<"login" | "signup">("login")
+    const [mode, setMode] = useState<AuthMode>("login")
 
     const supabase = createClient()
+    const isFormDisabled = isLoading || isGoogleLoading
+
+    const validateSignupForm = (): string | null => {
+        if (firstName.trim().length < 1) {
+            return "Please enter your first name"
+        }
+        if (lastName.trim().length < 1) {
+            return "Please enter your last name"
+        }
+        if (password !== confirmPassword) {
+            return "Passwords do not match"
+        }
+        if (password.length < 8) {
+            return "Password must be at least 8 characters"
+        }
+        if (!acceptedTerms) {
+            return "Please accept the Terms of Service and Privacy Policy"
+        }
+        return null
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
         setError(null)
 
-        // Signup validation
+        // Validate signup form
         if (mode === "signup") {
-            if (password !== confirmPassword) {
-                setError("Passwords do not match")
-                setIsLoading(false)
-                return
-            }
-            if (!acceptedTerms) {
-                setError("Please accept the Terms of Service and Privacy Policy")
-                setIsLoading(false)
-                return
-            }
-            if (fullName.trim().length < 2) {
-                setError("Please enter your full name")
+            const validationError = validateSignupForm()
+            if (validationError) {
+                setError(validationError)
                 setIsLoading(false)
                 return
             }
@@ -63,7 +80,8 @@ export default function LoginPage() {
                     password,
                     options: {
                         data: {
-                            full_name: fullName.trim(),
+                            first_name: firstName.trim(),
+                            last_name: lastName.trim(),
                         },
                     },
                 })
@@ -100,25 +118,29 @@ export default function LoginPage() {
     const resetForm = () => {
         setEmail("")
         setPassword("")
-        setFullName("")
+        setFirstName("")
+        setLastName("")
         setConfirmPassword("")
         setAcceptedTerms(false)
         setError(null)
     }
 
-    const isFormDisabled = isLoading || isGoogleLoading
+    const switchMode = (newMode: AuthMode) => {
+        setMode(newMode)
+        resetForm()
+    }
 
     return (
         <main className="min-h-svh flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
-          {/* Header */}
-          <header className="pt-8 pb-4 px-4 text-center sm:pt-12">
-              <div className="inline-flex items-center justify-center mb-4">
-                  <Logo size="lg" animated={false} />
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                    Budget Planner
-                  </h1>
-              </div>
-          </header>
+            {/* Header */}
+            <header className="pt-6 pb-4 px-4 text-center sm:pt-12">
+                <div className="inline-flex items-center justify-center mb-4">
+                    <Logo size="lg" animated={false} />
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                        Budget Planner
+                    </h1>
+                </div>
+            </header>
 
             {/* Main content */}
             <div className="flex-1 flex items-start sm:items-center justify-center px-4 pb-8 sm:pb-12">
@@ -143,7 +165,7 @@ export default function LoginPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full h-11 sm:h-12 text-sm sm:text-base font-medium border-gray-300 hover:bg-gray-50 transition-colors"
+                                className="w-full h-12 text-base font-medium border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
                                 onClick={handleGoogleSignIn}
                                 disabled={isFormDisabled}
                             >
@@ -192,26 +214,47 @@ export default function LoginPage() {
 
                             {/* Email form */}
                             <form onSubmit={handleSubmit} className="space-y-4">
-                                {/* Full name - signup only */}
+                                {/* Name fields - signup only */}
                                 {mode === "signup" && (
-                                    <div className="space-y-1.5">
-                                        <Label 
-                                            htmlFor="fullName" 
-                                            className="text-sm font-medium text-gray-700"
-                                        >
-                                            Full name
-                                        </Label>
-                                        <Input
-                                            id="fullName"
-                                            type="text"
-                                            placeholder="John Doe"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                            required
-                                            disabled={isFormDisabled}
-                                            autoComplete="name"
-                                            className="h-11 sm:h-12 text-base"
-                                        />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label 
+                                                htmlFor="firstName" 
+                                                className="text-sm font-medium text-gray-700"
+                                            >
+                                                First name
+                                            </Label>
+                                            <Input
+                                                id="firstName"
+                                                type="text"
+                                                placeholder="John"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                required
+                                                disabled={isFormDisabled}
+                                                autoComplete="given-name"
+                                                className="h-12 text-base"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label 
+                                                htmlFor="lastName" 
+                                                className="text-sm font-medium text-gray-700"
+                                            >
+                                                Last name
+                                            </Label>
+                                            <Input
+                                                id="lastName"
+                                                type="text"
+                                                placeholder="Doe"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                required
+                                                disabled={isFormDisabled}
+                                                autoComplete="family-name"
+                                                className="h-12 text-base"
+                                            />
+                                        </div>
                                     </div>
                                 )}
 
@@ -231,7 +274,7 @@ export default function LoginPage() {
                                         required
                                         disabled={isFormDisabled}
                                         autoComplete="email"
-                                        className="h-11 sm:h-12 text-base"
+                                        className="h-12 text-base"
                                     />
                                 </div>
 
@@ -246,7 +289,7 @@ export default function LoginPage() {
                                         {mode === "login" && (
                                             <button
                                                 type="button"
-                                                className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium transition-colors"
+                                                className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium transition-colors touch-manipulation"
                                                 onClick={() => {
                                                     // TODO: Implement forgot password
                                                 }}
@@ -263,10 +306,13 @@ export default function LoginPage() {
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
                                         disabled={isFormDisabled}
-                                        minLength={6}
+                                        minLength={8}
                                         autoComplete={mode === "login" ? "current-password" : "new-password"}
-                                        className="h-11 sm:h-12 text-base"
+                                        className="h-12 text-base"
                                     />
+                                    {mode === "signup" && (
+                                        <p className="text-xs text-gray-500">Must be at least 8 characters</p>
+                                    )}
                                 </div>
 
                                 {/* Confirm password - signup only */}
@@ -286,16 +332,16 @@ export default function LoginPage() {
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             required
                                             disabled={isFormDisabled}
-                                            minLength={6}
+                                            minLength={8}
                                             autoComplete="new-password"
-                                            className="h-11 sm:h-12 text-base"
+                                            className="h-12 text-base"
                                         />
                                     </div>
                                 )}
 
                                 {/* Terms checkbox - signup only */}
                                 {mode === "signup" && (
-                                    <div className="flex items-start space-x-3">
+                                    <div className="flex items-start space-x-3 py-2">
                                         <Checkbox
                                             id="terms"
                                             checked={acceptedTerms}
@@ -333,10 +379,10 @@ export default function LoginPage() {
                                 {error && (
                                     <div 
                                         role="alert"
-                                        className={`p-3 rounded-lg text-sm ${
+                                        className={`p-4 rounded-xl text-sm font-medium ${
                                             error.includes("Check your email") 
-                                                ? "bg-green-50 text-green-700" 
-                                                : "bg-red-50 text-red-700"
+                                                ? "bg-green-50 text-green-700 border border-green-200" 
+                                                : "bg-red-50 text-red-700 border border-red-200"
                                         }`}
                                     >
                                         {error}
@@ -345,7 +391,7 @@ export default function LoginPage() {
 
                                 <Button 
                                     type="submit" 
-                                    className="w-full h-11 sm:h-12 text-sm sm:text-base font-medium bg-green-500 hover:bg-green-600 transition-colors"
+                                    className="w-full h-12 text-base font-medium bg-green-500 hover:bg-green-600 active:bg-green-700 transition-colors touch-manipulation"
                                     disabled={isFormDisabled}
                                 >
                                     {isLoading ? (
@@ -365,11 +411,8 @@ export default function LoginPage() {
                                         Don&apos;t have an account?{" "}
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setMode("signup")
-                                                resetForm()
-                                            }}
-                                            className="text-green-600 hover:text-green-700 font-semibold transition-colors"
+                                            onClick={() => switchMode("signup")}
+                                            className="text-green-600 hover:text-green-700 font-semibold transition-colors touch-manipulation"
                                         >
                                             Sign up
                                         </button>
@@ -379,11 +422,8 @@ export default function LoginPage() {
                                         Already have an account?{" "}
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setMode("login")
-                                                resetForm()
-                                            }}
-                                            className="text-green-600 hover:text-green-700 font-semibold transition-colors"
+                                            onClick={() => switchMode("login")}
+                                            className="text-green-600 hover:text-green-700 font-semibold transition-colors touch-manipulation"
                                         >
                                             Sign in
                                         </button>
@@ -393,7 +433,7 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Footer text - only show on login since signup has checkbox */}
+                    {/* Footer text - only show on login */}
                     {mode === "login" && (
                         <p className="mt-6 text-center text-xs text-gray-500 px-4">
                             By continuing, you agree to our{" "}
