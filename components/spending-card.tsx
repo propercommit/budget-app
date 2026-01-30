@@ -3,12 +3,12 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { InputSlider } from "./input-slider";
 import { hexToLightColor } from "@/lib/color-utils";
 import { iconMap } from "@/lib/icon-map";
-import { Chip } from "./Chip";
 import { SpendingEntry } from "@/lib/types";
-import { ChevronDown, ChevronUp, Eye, List, Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, List, Plus, Search } from "lucide-react";
 import { EntryPopin } from "./entry-popin";
 import { Input } from "./ui/input";
 import { EntryViewPopin } from "./entry-view-popin";
+import { Chip } from "./Chip";
 
 interface SpendingCardProps {
     name: string;
