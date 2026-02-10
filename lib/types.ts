@@ -27,9 +27,13 @@ export interface SpendingItem {
   entries?: SpendingEntry[];
 }
 
-export interface MonthlyIncome {
-  id: string;
-  month: string;
-  active: number;
-  passive: number;
-}
+export type IncomeSource = {
+    id: string;
+    name: string;
+    amount: number;
+    icon: string;
+    type: "active" | "passive";
+    startDate: Date;
+    endDate?: Date;
+    note?: string;
+};

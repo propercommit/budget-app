@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(req: NextRequest) {
+  try {
+
+  } catch (e) {
+    console.log(`error :`, e);
+  }
+}
+
 // GET /api/income?month=2025-01 - Fetch income for a month
 export async function GET(request: NextRequest) {
   try {
