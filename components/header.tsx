@@ -1,98 +1,103 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase";
+import { Logo } from "./logo";
+import { Button } from "./ui/button";
+import { User as UserIcon, Loader2 } from "lucide-react";
 
 interface HeaderProps {
     title: string;
     legendLabel: string;
 }
 
-export function Header({ title, legendLabel }: HeaderProps) {
-    const [isHovered, setIsHovered] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
+/**
+ * Extracts a display name from user data.
+ * Priority: first_name + last_name > email prefix > fallback
+ */
+function getDisplayName(user: User | null): string {
+    if (!user) return "Account";
+    
+    const firstName = user.user_metadata?.first_name;
+    const lastName = user.user_metadata?.last_name;
+    
+    if (firstName && typeof firstName === "string" && firstName.trim() !== "") {
+        const fullName = lastName ? `${firstName.trim()} ${lastName.trim()}` : firstName.trim();
+        return fullName;
+    }
 
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoaded(true), 100);
-        return () => clearTimeout(timer);
+    const email = user.email;
+    if (email && typeof email === "string") {
+        return email.split("@")[0];
+    }
+
+    return "Account";
+}
+
+export function Header({ title, legendLabel }: HeaderProps) {
+    const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+
+    const fetchUser = useCallback(async () => {
+        try {
+            const supabase = createClient();
+            const { data: { user }, error } = await supabase.auth.getUser();
+            
+            if (error) {
+                console.error("[Header] Failed to fetch user:", error.message);
+                return;
+            }
+            
+            setUser(user);
+        } catch (error) {
+            console.error("[Header] Unexpected error fetching user:", error);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
-    const maxX = 400;
-    
-    const bars = [
-        { originalWidth: 70, color: "#007AFF", y: 0, delay: 0, id: "blue" },
-        { originalWidth: 55, color: "#34C759", y: 26, delay: 0.1, id: "green" },
-        { originalWidth: 40, color: "#FF9F0A", y: 52, delay: 0.2, id: "orange" },
-    ];
+    useEffect(() => {
+        fetchUser();
+    }, [fetchUser]);
+
+    const handleAccountClick = () => {
+        router.push("/account");
+    };
+
+    const displayName = getDisplayName(user);
 
     return (
-        <div>
-            <div 
-                className="flex items-center mb-2 cursor-pointer w-fit"
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                <svg 
-                    width="40" 
-                    height="40" 
-                    viewBox="0 0 70 70" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="mr-3 overflow-visible"
-                >
-                    <defs>
-                        {bars.map((bar) => (
-                            <linearGradient key={bar.id} id={`gradient-${bar.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor={bar.color} stopOpacity="0" />
-                                <stop offset="70%" stopColor={bar.color} stopOpacity="0.5" />
-                                <stop offset="100%" stopColor={bar.color} stopOpacity="1" />
-                            </linearGradient>
-                        ))}
-                    </defs>
-                    
-                    {bars.map((bar, index) => {
-                        const isExpanded = isHovered && isLoaded;
-                        
-                        const barX = !isLoaded 
-                            ? 0 
-                            : isExpanded 
-                                ? maxX
-                                : 0;
-
-                        const trailWidth = 120;
-
-                        return (
-                            <g key={index}>
-                                {/* Comet trail - follows behind the head */}
-                                <rect
-                                    x={barX - trailWidth + bar.originalWidth}
-                                    y={bar.y}
-                                    width={trailWidth}
-                                    height="18"
-                                    rx="9"
-                                    fill={`url(#gradient-${bar.id})`}
-                                    style={{
-                                        transition: `x 0.6s ease-out ${bar.delay}s`,
-                                        opacity: isExpanded ? 1 : 0,
-                                    }}
-                                />
-                                {/* Head - the main bar */}
-                                <rect
-                                    x={barX}
-                                    y={bar.y}
-                                    width={bar.originalWidth}
-                                    height="18"
-                                    rx="9"
-                                    fill={bar.color}
-                                    style={{
-                                        transition: `x 0.6s ease-out ${bar.delay}s`,
-                                    }}
-                                />
-                            </g>
-                        );
-                    })}
-                </svg>
-                <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+        <div className="flex items-start justify-between gap-2 mb-4">
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center mb-1 sm:mb-2">
+                    <div className="mr-2 sm:mr-3 flex-shrink-0">
+                        <Logo size="md" animated={true} />
+                    </div>
+                    <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">{title}</h1>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 sm:line-clamp-1">{legendLabel}</p>
             </div>
-            <p className="text-sm text-gray-500 mb-4">{legendLabel}</p>
+
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAccountClick}
+                disabled={isLoading}
+                className="flex items-center gap-2 flex-shrink-0"
+                aria-label="Go to account settings"
+            >
+                {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                    <UserIcon className="w-4 h-4" aria-hidden="true" />
+                )}
+                <span className="hidden sm:inline max-w-32 truncate">
+                    {displayName}
+                </span>
+            </Button>
         </div>
     );
 }

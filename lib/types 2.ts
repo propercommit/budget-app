@@ -1,0 +1,35 @@
+export interface SpendingEntry {
+  id: string;
+  name: string;
+  amount: number;
+  receiptUrl: string | null;
+  link: string | null;
+  date: string;
+  spendingItemId: string;
+}
+
+export interface Category {
+  id: string;
+  icon: string;
+  label: string;
+  color: string;
+}
+
+export interface SpendingItem {
+  id: string;
+  name: string;
+  icon: string;
+  budgeted: number;
+  spent: number;
+  month: string;
+  categoryId: string;
+  category?: Category;
+  entries?: SpendingEntry[];
+}
+
+export interface MonthlyIncome {
+  id: string;
+  month: string;
+  active: number;
+  passive: number;
+}
