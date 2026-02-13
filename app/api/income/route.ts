@@ -77,24 +77,18 @@ export async function POST(req: Request) {
         if(!name) return NextResponse.json({ error: 'Required field name is required'}, {status: 400});
         if(amount == undefined || amount == null || amount < 0) return NextResponse.json({ error: 'Amount field value received is not correct'}, {status: 400});
         if(!icon) return NextResponse.json({ error: 'Required field icon is required'}, {status: 400});
-        if(!type || type !== 'active' && type !== 'passive') return NextResponse.json({ error: 'Required field type value received is not correct'}, {status: 400});
-
-
-        if (!startDate) {
-            return NextResponse.json({ error: 'Required field startDate is missing' }, { status: 400 });
+        if(!type || (type !== 'active' && type !== 'passive')) return NextResponse.json({ error: 'Required field type value received is not correct'}, {status: 400});
+        if (!startDate) { return NextResponse.json({ error: 'Required field startDate is missing' }, { status: 400 });
         }
 
         const parsedDate = new Date(startDate);
-        if (isNaN(parsedDate.getTime())) {
-            return NextResponse.json({ error: 'startDate is not a valid date' }, { status: 400 });
-        }
+        if (isNaN(parsedDate.getTime())) { return NextResponse.json({ error: 'startDate is not a valid date' }, { status: 400 }); }
 
         if(name.length > 100) return NextResponse.json({ error: 'name field is too long, maximum 100 characters allowed'}, { status: 400});
-        if(note){
-            if(note.length > 500) return NextResponse.json({ error: 'note field is too long, maximum 500 characters allowed'}, { status: 400});
+        if(note){ 
+            if(note.length > 500) return NextResponse.json({ error: 'note field is too long, maximum 500 characters allowed'}, { status: 400}); 
         }
         if(amount > 1000000000000) return NextResponse.json({ error: 'max amount bound reached'}, { status: 400 });
-
 
         const income = await prisma.incomeSource.create({
             data: {
@@ -114,7 +108,7 @@ export async function POST(req: Request) {
     } catch (e) {
         console.log(e);
         return NextResponse.json(
-            { error: '[income api] - failed to post income' },
+            { error: '[income API] - failed to post income' },
             { status: 500 }
         )
     }
@@ -141,12 +135,22 @@ export async function PUT(req: Request) {
 
         const data: Partial<IncomeSource> = {};
 
+        if(startDate !== undefined) {
+            const parsedStartDate = new Date(startDate);
+            if (isNaN(parsedStartDate.getTime())) { return NextResponse.json({ error: 'startDate is not a valid date' }, { status: 400 }); };
+            data.startDate = startDate;
+        }
+
+        if(endDate !== undefined) {
+            const parsedEndDate = new Date(endDate);
+            if (isNaN(parsedEndDate.getTime())) { return NextResponse.json({ error: 'endDate is not a valid date' }, { status: 400 }); };
+            data.endDate = endDate;
+        }
+
         if(name !== undefined && name !== '') data.name = name;
         if(amount !== undefined && amount >= 0) data.amount = amount;
         if(icon !== undefined && icon !== '') data.icon = icon;
         if(type !== undefined && (type == 'active' || type == 'passive')) data.type = type;
-        if(startDate !== undefined && new Date(startDate)) data.startDate = startDate;
-        if(endDate !== undefined && new Date(endDate)) data.endDate = endDate;
         if(note !== undefined && note !== '') data.note = note;
 
         const income = await prisma.incomeSource.update({
@@ -199,6 +203,6 @@ export async function DELETE(req: Request) {
     } catch (e) {
         console.log(e);
         if (e instanceof PrismaClientKnownRequestError && e.code === 'P2025') return NextResponse.json({ error: 'Income source not found' }, { status: 404 });
-        else return NextResponse.json({ error: '[income api] - failed to delete income' }, { status: 500 });
+        else return NextResponse.json({ error: '[income API] - failed to delete income' }, { status: 500 });
     }
 }

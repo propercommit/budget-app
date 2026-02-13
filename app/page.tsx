@@ -14,6 +14,7 @@ import { createCategory, createEntry, createSpending, deleteCategory, deleteEntr
 import { useEffect } from "react";
 import { Category, SpendingItem } from "@/lib/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { IncomeCard } from "@/components/income/income-card";
 
 type SpendingData = Record<string, SpendingItem[]>;
 type IncomeData = Record<string, { active: number; passive: number }>;
@@ -474,21 +475,15 @@ export default function Home() {
           onClose={() => setShowTrends(false)}
         />
       )}
-      
-      <MonthlyIncomeCard 
-        title="Monthly Income"
-        legend="Enter your active and passive income sources"
-        progressBarTitle="Income Distribution"
-        leftSliderTitle="Active Income"
-        leftSliderLegend="Salary, wages, freelance" 
-        rightSliderTitle="Passive Income"
-        rightSliderLegend="Investments, rentals, dividends"
-        activeIncome={currentIncome.active}
-        passiveIncome={currentIncome.passive}
-        onActiveIncomeChange={handleActiveIncomeChange}
-        onActiveIncomeCommit={handleActiveIncomeCommit}
-        onPassiveIncomeChange={handlePassiveIncomeChange}
-        onPassiveIncomeCommit={handlePassiveIncomeCommit}
+
+      <IncomeCard 
+        incomes={[
+            { id: '1', name: 'Salary', amount: 5000, type: 'active', icon: 'fuel', startDate: new Date(), note: '' },
+            { id: '2', name: 'Freelance', amount: 1500, type: 'active', icon: 'laptop', startDate: new Date(), note: '' },
+            // { id: '3', name: 'Dividends', amount: 500, type: 'passive', icon: 'chart', startDate: new Date(), note: '' },
+        ]}
+        onAdd={() => console.log('add')}
+        onSelect={(id: string) => console.log('select', id)}
       />
 
       <div data-spending-section>
