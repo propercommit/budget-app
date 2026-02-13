@@ -9,15 +9,15 @@ import { SpendingTrendsCard } from "@/components/spending-trends-card";
 import { SpendingCardPopin } from "@/components/spending-card-popin";
 import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
-import { createCategory, createEntry, createSpending, deleteCategory, deleteEntry, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateEntry, updateSpending } from "@/lib/api";
+import { createCategory, createEntry, createSpending, deleteCategory, deleteEntry, deleteSpending, getCategories, getSpending, updateCategory, updateEntry, updateSpending, getIncomeSources, createIncomeSource, updateIncomeSource, deleteIncomeSource } from "@/lib/api";
 import { useEffect } from "react";
 import { Category, SpendingItem, IncomeSource } from "@/lib/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { IncomeCard } from "@/components/income/income-card";
 import { IncomePopin } from "@/components/income/income-popin";
+import { IncomeDetailPopin } from "@/components/income/income-detail-popin";
 
 type SpendingData = Record<string, SpendingItem[]>;
-type IncomeData = Record<string, { active: number; passive: number }>;
 
 export default function Home() {
   // State
@@ -37,32 +37,31 @@ export default function Home() {
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null); 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [incomeData, setIncomeData] = useState<IncomeData>({});
   const [spendingData, setSpendingData] = useState<SpendingData>({});
+
+  // Income State
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
 
   // Income Popin State
   const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
   const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
 
-  // Temporary test data for income
-  const [testIncomes, setTestIncomes] = useState<IncomeSource[]>([
-    { id: '1', name: 'Salary', amount: 5000, type: 'active', icon: 'briefcase', startDate: new Date() },
-    { id: '2', name: 'Freelance', amount: 1500, type: 'active', icon: 'laptop', startDate: new Date() },
-    { id: '3', name: 'Dividends', amount: 500, type: 'passive', icon: 'chart', startDate: new Date() },
-  ]);
+  // Income Detail Popin State
+  const [isIncomeDetailOpen, setIsIncomeDetailOpen] = useState(false);
+  const [viewingIncomeSource, setViewingIncomeSource] = useState<IncomeSource | null>(null);
 
   useEffect(() => {
     async function loadAllData() {
       try {
-        const [categoriesData, incomeDataResult, spendingDataResult] = await Promise.all([
+        const [categoriesData, spendingDataResult, incomeSourcesData] = await Promise.all([
           getCategories(),
-          getIncome(),
-          getSpending()
+          getSpending(),
+          getIncomeSources(selectedMonth)
         ]);
         
         setCategories(categoriesData);
-        setIncomeData(incomeDataResult);
         setSpendingData(spendingDataResult);
+        setIncomeSources(incomeSourcesData);
       } catch (error) {
         console.error("Failed to load data, error :", error);
       } finally {
@@ -74,7 +73,7 @@ export default function Home() {
 
   // Derived values
   const currentSpendingItems = spendingData[selectedMonth] || [];
-  const currentIncome = incomeData[selectedMonth] || { active: 0, passive: 0 };
+  const totalIncome = incomeSources.reduce((sum, i) => sum + i.amount, 0);
 
   // Spending Popin Handlers
   const handleOpenCreateSpending = () => {
@@ -116,30 +115,65 @@ export default function Home() {
   };
 
   const handleSelectIncome = (id: string) => {
-    const income = testIncomes.find(i => i.id === id);
+    const income = incomeSources.find(i => i.id === id);
     if (income) {
-      setEditingIncomeSource(income);
+      setViewingIncomeSource(income);
+      setIsIncomeDetailOpen(true);
+    }
+  };
+
+  const handleEditFromDetail = () => {
+    setIsIncomeDetailOpen(false);
+    if (viewingIncomeSource) {
+      setEditingIncomeSource(viewingIncomeSource);
       setIsIncomePopinOpen(true);
     }
   };
 
-  const handleSaveIncome = (data: Omit<IncomeSource, 'id'>) => {
-    if (editingIncomeSource) {
-      // Edit
-      setTestIncomes(prev => prev.map(i => 
-        i.id === editingIncomeSource.id ? { ...data, id: i.id } : i
-      ));
-    } else {
-      // Add
-      setTestIncomes(prev => [...prev, { ...data, id: Date.now().toString() }]);
+  const handleSaveIncome = async (data: Omit<IncomeSource, 'id'>) => {
+    try {
+      if (editingIncomeSource) {
+        // Edit
+        const updated = await updateIncomeSource(editingIncomeSource.id, {
+          name: data.name,
+          amount: data.amount,
+          icon: data.icon,
+          type: data.type,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate?.toISOString(),
+          note: data.note,
+        });
+        setIncomeSources(prev => prev.map(i => 
+          i.id === editingIncomeSource.id ? updated : i
+        ));
+      } else {
+        // Add
+        const created = await createIncomeSource({
+          name: data.name,
+          amount: data.amount,
+          icon: data.icon,
+          type: data.type,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate?.toISOString(),
+          note: data.note,
+        });
+        setIncomeSources(prev => [...prev, created]);
+      }
+      setIsIncomePopinOpen(false);
+      setEditingIncomeSource(null);
+    } catch (error) {
+      console.error('Error saving income:', error);
     }
-    setIsIncomePopinOpen(false);
-    setEditingIncomeSource(null);
   };
 
-  const handleDeleteIncome = () => {
+  const handleDeleteIncome = async () => {
     if (editingIncomeSource) {
-      setTestIncomes(prev => prev.filter(i => i.id !== editingIncomeSource.id));
+      try {
+        await deleteIncomeSource(editingIncomeSource.id);
+        setIncomeSources(prev => prev.filter(i => i.id !== editingIncomeSource.id));
+      } catch (error) {
+        console.error('Error deleting income:', error);
+      }
     }
     setIsIncomePopinOpen(false);
     setEditingIncomeSource(null);
@@ -147,102 +181,51 @@ export default function Home() {
 
   // Month Handlers
   const handleMonthChange = async (newMonth: string) => {
-  setSelectedMonth(newMonth);
-  
-  // Handle income
-  if (!incomeData[newMonth]) {
-    const sortedMonths = Object.keys(incomeData).sort();
-    const previousMonths = sortedMonths.filter(m => m < newMonth);
+    setSelectedMonth(newMonth);
     
-    if (previousMonths.length > 0) {
-      const closestMonth = previousMonths[previousMonths.length - 1];
-      const previousIncome = incomeData[closestMonth];
+    // Reload income sources for the new month
+    try {
+      const incomeSourcesData = await getIncomeSources(newMonth);
+      setIncomeSources(incomeSourcesData);
+    } catch (error) {
+      console.error('Failed to load income sources:', error);
+    }
+    
+    // Handle spending
+    if (!spendingData[newMonth]) {
+      const sortedMonths = Object.keys(spendingData).sort();
+      const previousMonths = sortedMonths.filter(m => m < newMonth);
       
-      try {
-        await saveIncome({ 
-          month: newMonth, 
-          active: previousIncome.active, 
-          passive: previousIncome.passive 
-        });
+      if (previousMonths.length > 0) {
+        const closestMonth = previousMonths[previousMonths.length - 1];
+        const previousData = spendingData[closestMonth];
+
+        console.log('Copying spending from', closestMonth);
+        console.log('Previous data:', previousData);
+        console.log('Number of items to copy:', previousData.length);
         
-        setIncomeData(data => ({
-          ...data,
-          [newMonth]: { ...previousIncome }
-        }));
-      } catch (error) {
-        console.error('Failed to copy income:', error);
+        try {
+          // Create each spending item in the database
+          const newItems = await Promise.all(
+            previousData.map(item => 
+              createSpending({
+                name: item.name,
+                icon: item.icon,
+                categoryId: item.categoryId,
+                month: newMonth,
+              })
+            )
+          );
+          
+          setSpendingData(data => ({
+            ...data,
+            [newMonth]: newItems
+          }));
+        } catch (error) {
+          console.error('Failed to copy spending:', error);
+        }
       }
     }
-  }
-  
-  // Handle spending
-  if (!spendingData[newMonth]) {
-    const sortedMonths = Object.keys(spendingData).sort();
-    const previousMonths = sortedMonths.filter(m => m < newMonth);
-    
-    if (previousMonths.length > 0) {
-      const closestMonth = previousMonths[previousMonths.length - 1];
-      const previousData = spendingData[closestMonth];
-
-      console.log('Copying spending from', closestMonth);
-      console.log('Previous data:', previousData);
-      console.log('Number of items to copy:', previousData.length);
-      
-      try {
-        // Create each spending item in the database
-        const newItems = await Promise.all(
-          previousData.map(item => 
-            createSpending({
-              name: item.name,
-              icon: item.icon,
-              categoryId: item.categoryId,
-              month: newMonth,
-            })
-          )
-        );
-        
-        setSpendingData(data => ({
-          ...data,
-          [newMonth]: newItems
-        }));
-      } catch (error) {
-        console.error('Failed to copy spending:', error);
-      }
-    }
-  }
-};
-
-  // Income Handlers (old - keep for now until API is wired)
-  const handleActiveIncomeChange = (active: number) => {
-    // update state
-    setIncomeData(data => ({
-      ...data,
-      [selectedMonth]: {
-        ...data[selectedMonth],
-        active: active
-      },
-    }));
-  };
-
-  const handleActiveIncomeCommit = async(active: number) => {
-    // update database
-    await saveIncome({month: selectedMonth, active});
-  };
-
-  const handlePassiveIncomeChange = (passive: number) => {
-    // update state
-    setIncomeData(data => ({
-      ...data,
-      [selectedMonth]: {
-        ...data[selectedMonth],
-        passive: passive
-      }
-    }));
-  };
-
-  const handlePassiveIncomeCommit = async(passive: number) => {
-    // update database
-    await saveIncome({month: selectedMonth, passive});
   };
 
   // Spending Handlers
@@ -512,19 +495,14 @@ export default function Home() {
               month,
               spending,
             }))}
-          incomeData={Object.entries(incomeData)
-            .filter(([month]) => month <= selectedMonth)
-            .map(([month, income]) => ({
-              month,
-              income,
-            }))}
+          incomeData={[]}
           categories={categories}
           onClose={() => setShowTrends(false)}
         />
       )}
 
       <IncomeCard 
-        incomes={testIncomes}
+        incomes={incomeSources}
         onAdd={handleOpenAddIncome}
         onSelect={handleSelectIncome}
       />
@@ -541,6 +519,16 @@ export default function Home() {
         initialData={editingIncomeSource}
       />
 
+      <IncomeDetailPopin
+        isOpen={isIncomeDetailOpen}
+        onClose={() => {
+          setIsIncomeDetailOpen(false);
+          setViewingIncomeSource(null);
+        }}
+        onEdit={handleEditFromDetail}
+        income={viewingIncomeSource}
+      />
+
       <div data-spending-section>
         <SpendingCategoriesCard
           title="Spending Categories"
@@ -549,7 +537,7 @@ export default function Home() {
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
           spendingItems={currentSpendingItems}
-          totalIncome={currentIncome.active + currentIncome.passive}
+          totalIncome={totalIncome}
           onSpendingChange={handleSpendingChange}
           onSpendingCommit={handleSpendingCommit}
           onOpenCreateSpending={handleOpenCreateSpending}
@@ -587,14 +575,14 @@ export default function Home() {
 
       <div data-budget-overview>
         <BudgetOverviewCard 
-          totalIncome={currentIncome.active + currentIncome.passive}
+          totalIncome={totalIncome}
           categories={categories}
           spendingItems={currentSpendingItems}
         />
       </div>
 
       <StickyBudgetBar
-          totalIncome={currentIncome.active + currentIncome.passive}
+          totalIncome={totalIncome}
           totalBudgeted={currentSpendingItems.reduce((sum, item) => sum + item.budgeted, 0)}
           totalSpent={currentSpendingItems.reduce((sum, item) => sum + item.spent, 0)}
       />
