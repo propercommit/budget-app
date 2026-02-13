@@ -2,7 +2,6 @@
 import { Header } from "@/components/header";
 import { MonthPicker } from "@/components/month-picker";
 import { GraphToggleBtn } from "@/components/graph-toggle-button";
-import { MonthlyIncomeCard } from "@/components/monthly-income-card";
 import { useState } from "react";
 import { SpendingCategoriesCard } from "@/components/spending-categories-card";
 import { BudgetOverviewCard } from "@/components/budget-overview";
@@ -12,9 +11,10 @@ import { CategoryPopin } from "@/components/category-creation-popin";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
 import { createCategory, createEntry, createSpending, deleteCategory, deleteEntry, deleteSpending, getCategories, getIncome, getSpending, saveIncome, updateCategory, updateEntry, updateSpending } from "@/lib/api";
 import { useEffect } from "react";
-import { Category, SpendingItem } from "@/lib/types";
+import { Category, SpendingItem, IncomeSource } from "@/lib/types";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { IncomeCard } from "@/components/income/income-card";
+import { IncomePopin } from "@/components/income/income-popin";
 
 type SpendingData = Record<string, SpendingItem[]>;
 type IncomeData = Record<string, { active: number; passive: number }>;
@@ -39,6 +39,17 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [incomeData, setIncomeData] = useState<IncomeData>({});
   const [spendingData, setSpendingData] = useState<SpendingData>({});
+
+  // Income Popin State
+  const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
+  const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
+
+  // Temporary test data for income
+  const [testIncomes, setTestIncomes] = useState<IncomeSource[]>([
+    { id: '1', name: 'Salary', amount: 5000, type: 'active', icon: 'briefcase', startDate: new Date() },
+    { id: '2', name: 'Freelance', amount: 1500, type: 'active', icon: 'laptop', startDate: new Date() },
+    { id: '3', name: 'Dividends', amount: 500, type: 'passive', icon: 'chart', startDate: new Date() },
+  ]);
 
   useEffect(() => {
     async function loadAllData() {
@@ -96,6 +107,42 @@ export default function Home() {
     if (!open) {
       setEditingCategory(null);
     }
+  };
+
+  // Income Popin Handlers
+  const handleOpenAddIncome = () => {
+    setEditingIncomeSource(null);
+    setIsIncomePopinOpen(true);
+  };
+
+  const handleSelectIncome = (id: string) => {
+    const income = testIncomes.find(i => i.id === id);
+    if (income) {
+      setEditingIncomeSource(income);
+      setIsIncomePopinOpen(true);
+    }
+  };
+
+  const handleSaveIncome = (data: Omit<IncomeSource, 'id'>) => {
+    if (editingIncomeSource) {
+      // Edit
+      setTestIncomes(prev => prev.map(i => 
+        i.id === editingIncomeSource.id ? { ...data, id: i.id } : i
+      ));
+    } else {
+      // Add
+      setTestIncomes(prev => [...prev, { ...data, id: Date.now().toString() }]);
+    }
+    setIsIncomePopinOpen(false);
+    setEditingIncomeSource(null);
+  };
+
+  const handleDeleteIncome = () => {
+    if (editingIncomeSource) {
+      setTestIncomes(prev => prev.filter(i => i.id !== editingIncomeSource.id));
+    }
+    setIsIncomePopinOpen(false);
+    setEditingIncomeSource(null);
   };
 
   // Month Handlers
@@ -165,7 +212,7 @@ export default function Home() {
   }
 };
 
-  // Income Handlers
+  // Income Handlers (old - keep for now until API is wired)
   const handleActiveIncomeChange = (active: number) => {
     // update state
     setIncomeData(data => ({
@@ -477,13 +524,21 @@ export default function Home() {
       )}
 
       <IncomeCard 
-        incomes={[
-            { id: '1', name: 'Salary', amount: 5000, type: 'active', icon: 'fuel', startDate: new Date(), note: '' },
-            { id: '2', name: 'Freelance', amount: 1500, type: 'active', icon: 'laptop', startDate: new Date(), note: '' },
-            // { id: '3', name: 'Dividends', amount: 500, type: 'passive', icon: 'chart', startDate: new Date(), note: '' },
-        ]}
-        onAdd={() => console.log('add')}
-        onSelect={(id: string) => console.log('select', id)}
+        incomes={testIncomes}
+        onAdd={handleOpenAddIncome}
+        onSelect={handleSelectIncome}
+      />
+
+      <IncomePopin
+        isOpen={isIncomePopinOpen}
+        onClose={() => {
+          setIsIncomePopinOpen(false);
+          setEditingIncomeSource(null);
+        }}
+        onSave={handleSaveIncome}
+        onDelete={handleDeleteIncome}
+        mode={editingIncomeSource ? 'edit' : 'add'}
+        initialData={editingIncomeSource}
       />
 
       <div data-spending-section>
