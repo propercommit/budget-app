@@ -1,3 +1,5 @@
+import { formatAmount } from "@/lib/utils";
+
 interface IncomeCardCollapsedProps {
     totalIncome: number;
     activeTotal: number;
@@ -26,9 +28,9 @@ export function IncomeCardCollapsed({
 
     const getCenterText = () => {
         if (isEmpty) return { amount: '$0', label: 'No income yet' };
-        if (hoveredType === 'active') return { amount: `$${activeTotal.toLocaleString()}`, label: 'Active Income' };
-        if (hoveredType === 'passive') return { amount: `$${passiveTotal.toLocaleString()}`, label: 'Passive Income' };
-        return { amount: `$${totalIncome.toLocaleString()}`, label: 'Total Income' };
+        if (hoveredType === 'active') return { amount: formatAmount(activeTotal), label: 'Active Income' };
+        if (hoveredType === 'passive') return { amount: formatAmount(passiveTotal), label: 'Passive Income' };
+        return { amount: formatAmount(totalIncome), label: 'Total Income' };
     };
 
     const centerText = getCenterText();

@@ -126,7 +126,7 @@ export default function Home() {
     setIsIncomeDetailOpen(false);
     if (viewingIncomeSource) {
       setEditingIncomeSource(viewingIncomeSource);
-      setIsIncomePopinOpen(true);
+      setTimeout(() => setIsIncomePopinOpen(true), 0);
     }
   };
 
@@ -508,6 +508,7 @@ export default function Home() {
       />
 
       <IncomePopin
+        key={editingIncomeSource?.id ?? 'add'}
         isOpen={isIncomePopinOpen}
         onClose={() => {
           setIsIncomePopinOpen(false);

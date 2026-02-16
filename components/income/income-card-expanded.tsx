@@ -1,4 +1,6 @@
 import { IncomeSource } from "@/lib/types";
+import { iconMap } from "@/lib/icon-map";
+import { formatAmount } from "@/lib/utils";
 
 interface IncomeCardExpandedProps {
     incomes: IncomeSource[];
@@ -30,11 +32,19 @@ export function IncomeCardExpanded({
     const passiveLength = circumference * (passivePercentage / 100);
     const isEmpty = incomes.length === 0;
 
+    const renderIcon = (iconId: string) => {
+        if (iconId.startsWith("data:")) {
+            // eslint-disable-next-line @next/next/no-img-element
+            return <img src={iconId} alt="Custom icon" className="w-5 h-5 object-contain" />;
+        }
+        return iconMap[iconId] || iconMap["piggy-bank"];
+    };
+
     return (
         <div className="flex flex-col gap-4">
             {/* Header row: small donut + total */}
             <div className="flex items-center gap-4">
-                <div className="relative w-[80px] h-[80px]">
+                <div className="relative w-[80px] h-[80px] flex-shrink-0">
                     <svg width="80" height="80" viewBox="0 0 80 80" className="-rotate-90">
                         {isEmpty ? (
                             <circle
@@ -87,8 +97,8 @@ export function IncomeCardExpanded({
                         )}
                     </svg>
                 </div>
-                <div>
-                    <p className="text-2xl font-bold">${totalIncome.toLocaleString()}</p>
+                <div className="min-w-0">
+                    <p className="text-2xl font-bold">{formatAmount(totalIncome)}</p>
                     <p className="text-sm text-gray-500">Total Monthly</p>
                     {!isEmpty && (
                         <div className="flex gap-3 mt-1">
@@ -171,20 +181,20 @@ export function IncomeCardExpanded({
                                         setHoveredType(null);
                                     }}
                                 >
-                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl bg-gray-100">
-                                        {income.icon}
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gray-100 text-gray-600 flex-shrink-0">
+                                        {renderIcon(income.icon)}
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium">{income.name}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{income.name}</p>
                                         <div className="flex items-center gap-1.5">
                                             <div 
-                                                className="w-2 h-2 rounded-full" 
+                                                className="w-2 h-2 rounded-full flex-shrink-0" 
                                                 style={{ backgroundColor: income.type === 'active' ? '#007AFF' : '#FF9500' }} 
                                             />
                                             <span className="text-xs text-gray-500 capitalize">{income.type}</span>
                                         </div>
                                     </div>
-                                    <p className="font-semibold">${income.amount.toLocaleString()}</p>
+                                    <p className="font-semibold flex-shrink-0">{formatAmount(income.amount)}</p>
                                 </div>
                             );
                         })}
