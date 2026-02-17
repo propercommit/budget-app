@@ -18,6 +18,8 @@ import { BudgetOverviewCard } from "@/components/budget-overview/budget-overview
 import { SpendingCard } from "@/components/spending/spending-card";
 import { SpendingItemDetailPopin } from "@/components/spending/popins/spending-item-detail-popin";
 import { SpendingItemEditPopin } from "@/components/spending/popins/spending-item-edit-popin";
+import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
+import { EntryEditPopin } from "@/components/spending/popins/spending-entry-edit-popin";
 
 type SpendingData = Record<string, SpendingItem[]>;
 
@@ -55,6 +57,8 @@ export default function Home() {
 // test spending popins
 const [showDetail, setShowDetail] = useState(false);
 const [showEdit, setShowEdit] = useState(false);
+const [showEntryDetail, setShowEntryDetail] = useState(false);
+const [showEntryEdit, setShowEntryEdit] = useState(false);
 
 
   useEffect(() => {
@@ -544,61 +548,27 @@ const [showEdit, setShowEdit] = useState(false);
     categoryName="Transport"
     spendingCategoryColor="#FF9500"
     budgetNumber={900}
-    entries={[
-        { id: "1", name: "Shell Station", date: "2026-02-04", amount: 45.00 },
-        { id: "2", name: "BP Highway", date: "2026-02-02", amount: 62.50 },
-        { id: "3", name: "Total Gas", date: "2026-01-28", amount: 38.00 },
-    ]}
-    onItemDetailClick={() => console.log("detail clicked")}
-    onEntryClick={(entry) => console.log("entry clicked:", entry.name)}
-    onAddEntry={() => console.log("add entry")}
-/>
-<button
-    onClick={() => setShowDetail(true)}
-    className="px-4 py-2 bg-blue-500 text-white rounded-xl"
->
-    Test Detail Popin
-</button>
-<button
-    onClick={() => setShowEdit(true)}
-    className="px-4 py-2 bg-green-500 text-white rounded-xl ml-2"
->
-    Test Edit Popin
-</button>
-
-<SpendingItemDetailPopin
-    isOpen={showDetail}
-    onClose={() => setShowDetail(false)}
-    onEdit={() => { setShowDetail(false); setShowEdit(true); }}
-    spendingName="Fuel"
-    spendingItemIcon="⛽"
-    categoryName="Transport"
-    spendingCategoryColor="#FF9500"
-    budgetNumber={900}
-    totalSpent={200}
-    entriesCount={4}
     startDate="2024-01-01"
     note="Monthly fuel budget for commuting to work."
-/>
-
-<SpendingItemEditPopin
-    isOpen={showEdit}
-    onClose={() => setShowEdit(false)}
-    onSave={(data) => { console.log("saved:", data); setShowEdit(false); }}
-    onDelete={() => { console.log("deleted"); setShowEdit(false); }}
-    onCreateCategory={() => console.log("create category")}
-    mode="edit"
+    entries={[
+        { id: "1", name: "Shell Station", date: "2026-02-04", amount: 45.00, receipt: null, link: "https://shell.com/receipt/123" },
+        { id: "2", name: "BP Highway", date: "2026-02-02", amount: 62.50 },
+        { id: "3", name: "Total Gas", date: "2026-01-28", amount: 38.00 },
+        { id: "4", name: "Shell Station", date: "2026-01-25", amount: 54.50 },
+    ]}
     categories={[
         { name: "Transport", icon: "🚗", color: "#FF9500" },
         { name: "Entertainment", icon: "🎮", color: "#AF52DE" },
         { name: "Food", icon: "🍽️", color: "#FF3B30" },
+        { name: "Shopping", icon: "🛍️", color: "#FF2D55" },
+        { name: "Bills", icon: "📄", color: "#007AFF" },
     ]}
-    initialName="Fuel"
-    initialIcon="shopping-cart"
-    initialCategory="Transport"
-    initialBudget={900}
-    initialStartDate="2024-01-01"
-    initialNote="Monthly fuel budget for commuting to work."
+    onItemUpdate={(data) => console.log("item updated:", data)}
+    onItemDelete={() => console.log("item deleted")}
+    onEntryCreate={(data) => console.log("entry created:", data)}
+    onEntryUpdate={(id, data) => console.log("entry updated:", id, data)}
+    onEntryDelete={(id) => console.log("entry deleted:", id)}
+    onCreateCategory={(data) => console.log("category created:", data)}
 />
         {/* <SpendingCategoriesCard
           title="Spending Categories"
