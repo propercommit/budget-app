@@ -11,8 +11,6 @@ interface ChartHeaderProps {
 export function ChartHeader({ 
     latestValue, 
     previousValue, 
-    showValues, 
-    onToggleValues,
     increaseIsPositive = false,
 }: ChartHeaderProps) {
     const hasComparison = previousValue !== null && previousValue !== undefined;
