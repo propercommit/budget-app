@@ -17,9 +17,7 @@ export function IncomeCardCollapsed({
     passiveTotal, 
     activePercentage, 
     passivePercentage, 
-    onAdd,
     hoveredType,
-    setHoveredType
 }: IncomeCardCollapsedProps) {
     const circumference = 2 * Math.PI * 65;
     const activeLength = circumference * (activePercentage / 100);
@@ -101,42 +99,6 @@ export function IncomeCardCollapsed({
                     <span className="text-xs text-gray-500">{centerText.label}</span>
                 </div>
             </div>
-            
-            {isEmpty ? (
-                <button 
-                    onClick={onAdd}
-                    className="w-full py-4 px-6 rounded-2xl text-white font-semibold flex items-center justify-center gap-2"
-                    style={{ backgroundColor: '#007AFF', boxShadow: '0 4px 12px rgba(0, 122, 255, 0.3)' }}
-                >
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                    </div>
-                    <span>Add your first income</span>
-                </button>
-            ) : (
-                <div className="flex gap-4">
-                    <div 
-                        className="flex items-center gap-2 cursor-pointer transition-opacity duration-200"
-                        style={{ opacity: hoveredType === 'passive' ? 0.3 : 1 }}
-                        onMouseEnter={() => setHoveredType('active')}
-                        onMouseLeave={() => setHoveredType(null)}
-                    >
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#007AFF' }} />
-                        <p className="text-sm text-gray-500">{Math.round(activePercentage)}% Active</p>
-                    </div>
-                    <div 
-                        className="flex items-center gap-2 cursor-pointer transition-opacity duration-200"
-                        style={{ opacity: hoveredType === 'active' ? 0.3 : 1 }}
-                        onMouseEnter={() => setHoveredType('passive')}
-                        onMouseLeave={() => setHoveredType(null)}
-                    >
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#FF9500' }} />
-                        <p className="text-sm text-gray-500">{Math.round(passivePercentage)}% Passive</p>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -1,5 +1,6 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
+import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 interface IncomeDetailPopinProps {
     isOpen: boolean;
@@ -9,6 +10,9 @@ interface IncomeDetailPopinProps {
 }
 
 export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDetailPopinProps) {
+    
+    useLockScroll(isOpen);
+    
     if (!isOpen || !income) return null;
 
     const typeColor = income.type === 'active' ? '#007AFF' : '#FF9500';

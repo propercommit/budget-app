@@ -41,7 +41,10 @@ model SpendingItem {
   icon      String
   budgeted  Float    @default(0)
   spent     Float    @default(0)
-  month     String   // Format: "2025-01"
+  month     String   // Format: "2025-01" — keeping for backwards compat
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  note      String?  @db.VarChar(500)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   spendingEntries SpendingEntry[]
@@ -68,6 +71,7 @@ model IncomeSource {
   startDate DateTime @default(now())
   endDate   DateTime?
   note      String?  @db.VarChar(500)
+  month     String
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

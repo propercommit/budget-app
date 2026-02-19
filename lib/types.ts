@@ -22,6 +22,9 @@ export interface SpendingItem {
   budgeted: number;
   spent: number;
   month: string;
+  startDate: string;
+  endDate?: string | null;
+  note?: string | null;
   categoryId: string;
   category?: Category;
   entries?: SpendingEntry[];

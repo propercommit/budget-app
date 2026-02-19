@@ -43,15 +43,6 @@ export function ChartHeader({
                     <div className="text-sm text-muted-foreground">No previous data</div>
                 )}
             </div>
-            <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground cursor-pointer">
-                    Display Values
-                </label>
-                <Switch 
-                    checked={showValues} 
-                    onCheckedChange={onToggleValues}
-                />
-            </div>
         </div>
     );
 }

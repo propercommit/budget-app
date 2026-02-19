@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { ColorPicker } from "@/components/color-picker";
+import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 interface CategoryPopinProps {
     isOpen: boolean;
@@ -30,6 +31,8 @@ export function CategoryPopin({
     const [selectedColor, setSelectedColor] = useState(initialColor);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showErrors, setShowErrors] = useState(false);
+
+    useLockScroll(isOpen);
 
     const isCreate = mode === "create";
     const isNameValid = name.trim() !== "";

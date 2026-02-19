@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
+import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 // ============================================
 // SPENDING ITEM EDIT POPIN (Create/Edit Mode)
@@ -63,6 +64,8 @@ export function SpendingItemEditPopin({
     const [endDate, setEndDate] = useState(initialEndDate);
     const [note, setNote] = useState(initialNote);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    useLockScroll(isOpen);
 
     const isCreate = mode === "create";
     const isFormValid =

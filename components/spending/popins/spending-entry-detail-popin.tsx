@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { SpendingEntry } from "../spending-card-expanded";
+import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 interface EntryDetailPopinProps {
     isOpen: boolean;
@@ -25,6 +26,8 @@ function formatFullDate(dateString: string): string {
 
 export function EntryDetailPopin(props: EntryDetailPopinProps) {
     const { isOpen, onClose, onEdit, entry, spendingName, spendingItemIcon, spendingCategoryColor } = props;
+
+    useLockScroll(isOpen);
 
     if (!isOpen || !entry) return null;
 

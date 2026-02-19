@@ -19,7 +19,8 @@ import {
   deleteCategory, deleteEntry, deleteSpending,
   getCategories, getSpending,
   updateCategory, updateEntry, updateSpending,
-  getIncomeSources, createIncomeSource, updateIncomeSource, deleteIncomeSource
+  getIncomeSources, createIncomeSource, updateIncomeSource, deleteIncomeSource,
+  getAllIncomeSources
 } from "@/lib/api";
 import { Category, SpendingItem, IncomeSource } from "@/lib/types";
 import { SectionCard } from "@/components/section-card";
@@ -54,29 +55,32 @@ export default function Home() {
   const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
   const [isIncomeDetailOpen, setIsIncomeDetailOpen] = useState(false);
   const [viewingIncomeSource, setViewingIncomeSource] = useState<IncomeSource | null>(null);
+  const [allIncomeSources, setAllIncomeSources] = useState<IncomeSource[]>([]);
 
   // =====================
   // Data Loading
   // =====================
   useEffect(() => {
-    async function loadAllData() {
-      try {
-        const [categoriesData, spendingDataResult, incomeSourcesData] = await Promise.all([
-          getCategories(),
-          getSpending(),
-          getIncomeSources(selectedMonth)
-        ]);
-        setCategories(categoriesData);
-        setSpendingData(spendingDataResult);
-        setIncomeSources(incomeSourcesData);
-      } catch (error) {
-        console.error("Failed to load data:", error);
-      } finally {
-        setIsLoading(false);
+      async function loadAllData() {
+        try {
+          const [categoriesData, spendingDataResult, incomeSourcesData, allIncomeData] = await Promise.all([
+            getCategories(),
+            getSpending(),
+            getIncomeSources(selectedMonth),
+            getAllIncomeSources(),
+          ]);
+          setCategories(categoriesData);
+          setSpendingData(spendingDataResult);
+          setIncomeSources(incomeSourcesData);
+          setAllIncomeSources(allIncomeData);
+        } catch (error) {
+          console.error("Failed to load data:", error);
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-    loadAllData();
-  }, []);
+      loadAllData();
+    }, []);
 
   // =====================
   // Derived Values
@@ -91,6 +95,26 @@ export default function Home() {
     .filter(([month]) => month <= selectedMonth)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, spending]) => ({ month, spending }));
+
+    const incomeByMonth = historicalData.map(monthData => {
+    const monthStart = new Date(monthData.month + "-01");
+    const [y, m] = monthData.month.split("-").map(Number);
+    const monthEnd = new Date(y, m, 0);
+
+    const totalIncome = allIncomeSources
+      .filter(source => {
+        const start = new Date(source.startDate);
+        const end = source.endDate ? new Date(source.endDate) : null;
+        return start <= monthEnd && (!end || end >= monthStart);
+      })
+      .reduce((sum, source) => sum + source.amount, 0);
+
+    const date = new Date(monthData.month + "-01");
+    return {
+      label: date.toLocaleDateString("en-US", { month: "short" }),
+      value: totalIncome,
+    };
+  });
 
   // =====================
   // Income Handlers
@@ -140,11 +164,13 @@ export default function Home() {
           startDate: data.startDate.toISOString(),
           endDate: data.endDate?.toISOString(),
           note: data.note,
+          month: selectedMonth,
         });
         setIncomeSources(prev => [...prev, created]);
       }
       setIsIncomePopinOpen(false);
-      setEditingIncomeSource(null);
+      const refreshed = await getAllIncomeSources();
+      setAllIncomeSources(refreshed);
     } catch (error) {
       console.error('Error saving income:', error);
     }
@@ -155,6 +181,7 @@ export default function Home() {
       try {
         await deleteIncomeSource(editingIncomeSource.id);
         setIncomeSources(prev => prev.filter(i => i.id !== editingIncomeSource.id));
+        setAllIncomeSources(prev => prev.filter(i => i.id !== editingIncomeSource.id));
       } catch (error) {
         console.error('Error deleting income:', error);
       }
@@ -166,16 +193,10 @@ export default function Home() {
   // =====================
   // Month Handlers
   // =====================
-  const handleMonthChange = async (newMonth: string) => {
+const handleMonthChange = async (newMonth: string) => {
     setSelectedMonth(newMonth);
 
-    try {
-      const incomeSourcesData = await getIncomeSources(newMonth);
-      setIncomeSources(incomeSourcesData);
-    } catch (error) {
-      console.error('Failed to load income sources:', error);
-    }
-
+    // Handle spending
     if (!spendingData[newMonth]) {
       const sortedMonths = Object.keys(spendingData).sort();
       const previousMonths = sortedMonths.filter(m => m < newMonth);
@@ -200,6 +221,38 @@ export default function Home() {
           console.error('Failed to copy spending:', error);
         }
       }
+    }
+
+    // Handle income
+    try {
+      const newMonthIncome = await getIncomeSources(newMonth);
+
+      if (newMonthIncome.length === 0 && incomeSources.length > 0) {
+        const copiedIncome = await Promise.all(
+          incomeSources.map(source =>
+            createIncomeSource({
+              name: source.name,
+              amount: source.amount,
+              icon: source.icon,
+              type: source.type,
+              startDate: typeof source.startDate === 'string' ? source.startDate : source.startDate.toISOString(),
+              endDate: source.endDate
+                ? (typeof source.endDate === 'string' ? source.endDate : source.endDate.toISOString())
+                : undefined,
+              note: source.note ?? undefined,
+              month: newMonth,
+            })
+          )
+        );
+        setIncomeSources(copiedIncome);
+      } else {
+        setIncomeSources(newMonthIncome);
+      }
+
+      const refreshed = await getAllIncomeSources();
+      setAllIncomeSources(refreshed);
+    } catch (error) {
+      console.error('Failed to handle income for new month:', error);
     }
   };
 
@@ -511,7 +564,7 @@ export default function Home() {
               value: monthData.spending.reduce((sum, item) => sum + item.spent, 0),
             };
           })}
-          incomeData={[]}
+          incomeData={incomeByMonth}
           categoryData={Object.fromEntries(
             categories
               .map(cat => [

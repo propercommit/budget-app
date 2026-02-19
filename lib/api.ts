@@ -68,6 +68,9 @@ export async function createSpending(data: {
   budgeted?: number;
   spent?: number;
   month: string;
+  startDate?: string;
+  endDate?: string | null;
+  note?: string | null;
 }) {
   return fetchAPI("/api/spending", {
     method: "POST",
@@ -83,6 +86,9 @@ export async function updateSpending(
     categoryId?: string;
     budgeted?: number;
     spent?: number;
+    startDate?: string;
+    endDate?: string | null;
+    note?: string | null;
   }
 ) {
   return fetchAPI(`/api/spending/${id}`, {
@@ -103,6 +109,10 @@ export async function getIncomeSources(month: string) {
   return fetchAPI(`/api/income?month=${month}`);
 }
 
+export async function getAllIncomeSources() {
+  return fetchAPI("/api/income");
+}
+
 export async function createIncomeSource(data: {
   name: string;
   amount: number;
@@ -111,6 +121,7 @@ export async function createIncomeSource(data: {
   startDate: string;
   endDate?: string;
   note?: string;
+  month: string;
 }) {
   return fetchAPI("/api/income", {
     method: "POST",

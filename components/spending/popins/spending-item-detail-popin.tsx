@@ -1,5 +1,7 @@
 "use client";
 
+import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+
 interface SpendingItemDetailPopinProps {
     isOpen: boolean;
     onClose: () => void;
@@ -36,6 +38,9 @@ export function SpendingItemDetailPopin({
     endDate,
     note,
 }: SpendingItemDetailPopinProps) {
+
+    useLockScroll(isOpen);
+
     if (!isOpen) return null;
 
     const remaining = budgetNumber - totalSpent;
