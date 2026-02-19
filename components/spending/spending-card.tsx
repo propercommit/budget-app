@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { SpendingCardCollapsed } from "./spending-card-collapsed";
 import { SpendingCardExpanded, SpendingEntry } from "./spending-card-expanded";
 import { SpendingItemDetailPopin } from "./popins/spending-item-detail-popin";
 import { SpendingItemEditPopin } from "./popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "./popins/spending-entry-detail-popin";
 import { EntryEditPopin } from "./popins/spending-entry-edit-popin";
-import { CategoryPopin } from "./popins/spending-category-popin";
+import { CategoryPopin } from "../category/popins/category-popin";
 
 interface Category {
     name: string;
@@ -152,6 +153,9 @@ export function SpendingCard({
         spendingCategoryColor,
     };
 
+    // Check if any popin is open
+    const hasOpenPopin = showItemDetail || showItemEdit || showEntryDetail || showEntryEdit || showCategoryPopin;
+
     return (
         <>
             {/* Card */}
@@ -171,73 +175,75 @@ export function SpendingCard({
                 />
             )}
 
-            {/* Spending Item Detail Popin */}
-            <SpendingItemDetailPopin
-                isOpen={showItemDetail}
-                onClose={() => setShowItemDetail(false)}
-                onEdit={handleItemDetailToEdit}
-                spendingName={spendingName}
-                spendingItemIcon={spendingItemIcon}
-                categoryName={categoryName}
-                spendingCategoryColor={spendingCategoryColor}
-                budgetNumber={budgetNumber}
-                totalSpent={totalSpent}
-                entriesCount={spendingEntries}
-                startDate={startDate}
-                endDate={endDate}
-                note={note}
-            />
+            {/* Popins — portaled to body to escape overflow containers */}
+            {hasOpenPopin && typeof window !== "undefined" && createPortal(
+                <>
+                    <SpendingItemDetailPopin
+                        isOpen={showItemDetail}
+                        onClose={() => setShowItemDetail(false)}
+                        onEdit={handleItemDetailToEdit}
+                        spendingName={spendingName}
+                        spendingItemIcon={spendingItemIcon}
+                        categoryName={categoryName}
+                        spendingCategoryColor={spendingCategoryColor}
+                        budgetNumber={budgetNumber}
+                        totalSpent={totalSpent}
+                        entriesCount={spendingEntries}
+                        startDate={startDate}
+                        endDate={endDate}
+                        note={note}
+                    />
 
-            {/* Spending Item Edit Popin */}
-            <SpendingItemEditPopin
-                isOpen={showItemEdit}
-                onClose={() => setShowItemEdit(false)}
-                onSave={handleItemSave}
-                onDelete={handleItemDelete}
-                onCreateCategory={() => setShowCategoryPopin(true)}
-                mode="edit"
-                categories={categories}
-                initialName={spendingName}
-                initialIcon={spendingItemIcon}
-                initialCategory={categoryName}
-                initialBudget={budgetNumber}
-                initialStartDate={startDate}
-                initialEndDate={endDate}
-                initialNote={note}
-            />
+                    <SpendingItemEditPopin
+                        isOpen={showItemEdit}
+                        onClose={() => setShowItemEdit(false)}
+                        onSave={handleItemSave}
+                        onDelete={handleItemDelete}
+                        onCreateCategory={() => setShowCategoryPopin(true)}
+                        mode="edit"
+                        categories={categories}
+                        initialName={spendingName}
+                        initialIcon={spendingItemIcon}
+                        initialCategory={categoryName}
+                        initialBudget={budgetNumber}
+                        initialStartDate={startDate}
+                        initialEndDate={endDate}
+                        initialNote={note}
+                    />
 
-            {/* Entry Detail Popin */}
-            <EntryDetailPopin
-                isOpen={showEntryDetail}
-                onClose={() => { setShowEntryDetail(false); setSelectedEntry(null); }}
-                onEdit={handleEntryDetailToEdit}
-                entry={selectedEntry}
-                spendingName={spendingName}
-                spendingItemIcon={spendingItemIcon}
-                spendingCategoryColor={spendingCategoryColor}
-            />
+                    <EntryDetailPopin
+                        isOpen={showEntryDetail}
+                        onClose={() => { setShowEntryDetail(false); setSelectedEntry(null); }}
+                        onEdit={handleEntryDetailToEdit}
+                        entry={selectedEntry}
+                        spendingName={spendingName}
+                        spendingItemIcon={spendingItemIcon}
+                        spendingCategoryColor={spendingCategoryColor}
+                    />
 
-            {/* Entry Edit Popin */}
-            <EntryEditPopin
-                isOpen={showEntryEdit}
-                onClose={() => { setShowEntryEdit(false); setSelectedEntry(null); }}
-                onSave={handleEntrySave}
-                onDelete={entryMode === "edit" ? handleEntryDelete : undefined}
-                mode={entryMode}
-                entry={selectedEntry}
-                spendingName={spendingName}
-                spendingItemIcon={spendingItemIcon}
-                spendingCategoryName={categoryName}
-                spendingCategoryColor={spendingCategoryColor}
-            />
+                    <EntryEditPopin
+                        key={selectedEntry?.id ?? "create"}
+                        isOpen={showEntryEdit}
+                        onClose={() => { setShowEntryEdit(false); setSelectedEntry(null); }}
+                        onSave={handleEntrySave}
+                        onDelete={entryMode === "edit" ? handleEntryDelete : undefined}
+                        mode={entryMode}
+                        entry={selectedEntry}
+                        spendingName={spendingName}
+                        spendingItemIcon={spendingItemIcon}
+                        spendingCategoryName={categoryName}
+                        spendingCategoryColor={spendingCategoryColor}
+                    />
 
-            {/* Category Create Popin */}
-            <CategoryPopin
-                isOpen={showCategoryPopin}
-                onClose={() => setShowCategoryPopin(false)}
-                onSave={handleCreateCategory}
-                mode="create"
-            />
+                    <CategoryPopin
+                        isOpen={showCategoryPopin}
+                        onClose={() => setShowCategoryPopin(false)}
+                        onSave={handleCreateCategory}
+                        mode="create"
+                    />
+                </>,
+                document.body
+            )}
         </>
     );
 }

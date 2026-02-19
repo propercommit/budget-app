@@ -27,10 +27,10 @@ export function SpendingCardCollapsed({
 
     return (
         <div
-            className="bg-white rounded-3xl overflow-hidden"
+            className="rounded-2xl overflow-hidden"
             style={{
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)",
-                border: "1px solid rgba(0, 0, 0, 0.04)",
+                backgroundColor: "#ffffffff",
+                border: "1px solid rgba(0, 0, 0, 0.06)",
             }}
         >
             <div className="p-4 sm:p-5">

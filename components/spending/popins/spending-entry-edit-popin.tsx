@@ -34,9 +34,29 @@ export function EntryEditPopin({
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showErrors, setShowErrors] = useState(false);
 
     const isCreate = mode === "create";
-    const isFormValid = name.trim() !== "" && amount !== "" && parseFloat(amount) > 0 && date !== "";
+    const isNameValid = name.trim() !== "";
+    const isAmountValid = amount !== "" && parseFloat(amount) > 0;
+    const isDateValid = date !== "";
+    const isFormValid = isNameValid && isAmountValid && isDateValid;
+
+    const getInputStyle = (isValid: boolean) => ({
+        backgroundColor: "#F5F5F7",
+        border: `1px solid ${showErrors && !isValid ? "#FF3B30" : "#E5E5EA"}`,
+        color: "#1D1D1F",
+    });
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        e.currentTarget.style.borderColor = "#007AFF";
+        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>, isValid: boolean) => {
+        e.currentTarget.style.borderColor = showErrors && !isValid ? "#FF3B30" : "#E5E5EA";
+        e.currentTarget.style.boxShadow = "none";
+    };
 
     const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -49,6 +69,20 @@ export function EntryEditPopin({
             reader.onload = (event) => setReceipt(event.target?.result as string);
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleSave = () => {
+        if (!isFormValid) {
+            setShowErrors(true);
+            return;
+        }
+        onSave({
+            name,
+            amount: parseFloat(amount),
+            date,
+            receipt,
+            link: link || null,
+        });
     };
 
     if (!isOpen) return null;
@@ -150,20 +184,13 @@ export function EntryEditPopin({
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g., Shell Station, Grocery run"
                             className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                            style={{
-                                backgroundColor: "#F5F5F7",
-                                border: "1px solid #E5E5EA",
-                                color: "#1D1D1F",
-                            }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.borderColor = "#007AFF";
-                                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.borderColor = "#E5E5EA";
-                                e.currentTarget.style.boxShadow = "none";
-                            }}
+                            style={getInputStyle(isNameValid)}
+                            onFocus={handleFocus}
+                            onBlur={(e) => handleBlur(e, isNameValid)}
                         />
+                        {showErrors && !isNameValid && (
+                            <p className="text-xs mt-1" style={{ color: "#FF3B30" }}>Name is required</p>
+                        )}
                     </div>
 
                     {/* Amount */}
@@ -185,22 +212,14 @@ export function EntryEditPopin({
                                 onChange={(e) => setAmount(e.target.value)}
                                 placeholder="0.00"
                                 className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                                style={{
-                                    backgroundColor: "#F5F5F7",
-                                    border: "1px solid #E5E5EA",
-                                    color: "#1D1D1F",
-                                }}
-                                onFocus={(e) => {
-                                    e.currentTarget.style.borderColor = "#007AFF";
-                                    e.currentTarget.style.boxShadow =
-                                        "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                                }}
-                                onBlur={(e) => {
-                                    e.currentTarget.style.borderColor = "#E5E5EA";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
+                                style={getInputStyle(isAmountValid)}
+                                onFocus={handleFocus}
+                                onBlur={(e) => handleBlur(e, isAmountValid)}
                             />
                         </div>
+                        {showErrors && !isAmountValid && (
+                            <p className="text-xs mt-1" style={{ color: "#FF3B30" }}>Amount must be greater than 0</p>
+                        )}
                     </div>
 
                     {/* Date */}
@@ -214,20 +233,15 @@ export function EntryEditPopin({
                             onChange={(e) => setDate(e.target.value)}
                             className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
                             style={{
-                                backgroundColor: "#F5F5F7",
-                                border: "1px solid #E5E5EA",
-                                color: "#1D1D1F",
-                                WebkitAppearance: "none",
+                                ...getInputStyle(isDateValid),
+                                WebkitAppearance: "none" as const,
                             }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.borderColor = "#007AFF";
-                                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.borderColor = "#E5E5EA";
-                                e.currentTarget.style.boxShadow = "none";
-                            }}
+                            onFocus={handleFocus}
+                            onBlur={(e) => handleBlur(e, isDateValid)}
                         />
+                        {showErrors && !isDateValid && (
+                            <p className="text-xs mt-1" style={{ color: "#FF3B30" }}>Date is required</p>
+                        )}
                     </div>
 
                     {/* Receipt */}
@@ -312,14 +326,8 @@ export function EntryEditPopin({
                                 border: "1px solid #E5E5EA",
                                 color: "#1D1D1F",
                             }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.borderColor = "#007AFF";
-                                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.borderColor = "#E5E5EA";
-                                e.currentTarget.style.boxShadow = "none";
-                            }}
+                            onFocus={handleFocus}
+                            onBlur={(e) => handleBlur(e, true)}
                         />
                     </div>
                 </div>
@@ -341,22 +349,12 @@ export function EntryEditPopin({
                             Cancel
                         </button>
                         <button
-                            onClick={() =>
-                                onSave({
-                                    name,
-                                    amount: parseFloat(amount),
-                                    date,
-                                    receipt,
-                                    link: link || null,
-                                })
-                            }
-                            disabled={!isFormValid}
+                            onClick={handleSave}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={{
-                                backgroundColor: isFormValid ? "#34C759" : "#E5E5EA",
-                                color: isFormValid ? "white" : "#6E6E73",
-                                cursor: isFormValid ? "pointer" : "not-allowed",
-                                boxShadow: isFormValid ? "0 4px 12px rgba(52, 199, 89, 0.3)" : "none",
+                                backgroundColor: "#34C759",
+                                color: "white",
+                                boxShadow: "0 4px 12px rgba(52, 199, 89, 0.3)",
                             }}
                         >
                             {isCreate ? "Add Entry" : "Save Changes"}
