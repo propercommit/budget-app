@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { ColorPicker } from "@/components/color-picker";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { iconMap } from "@/lib/icon-map";
 
 interface CategoryPopinProps {
     isOpen: boolean;
@@ -135,7 +136,7 @@ export function CategoryPopin({
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold"
                             style={{ backgroundColor: selectedColor }}
                         >
-                            <span className="text-lg">{selectedIcon}</span>
+                            <span className="text-lg">{iconMap[selectedIcon]}</span>
                             <span>{name || "Category"}</span>
                         </div>
                     </div>
