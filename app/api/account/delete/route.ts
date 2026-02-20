@@ -3,16 +3,18 @@ import { createClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/supabase-server";
 
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-        },
-    }
-);
+function getSupabaseAdmin() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            },
+        }
+    );
+}
 
 export async function DELETE() {
     try {
@@ -27,7 +29,6 @@ export async function DELETE() {
 
         const userId = user.id;
 
-        // Delete in order respecting foreign key constraints
         await prisma.spendingEntry.deleteMany({
             where: { spendingItem: { userId } },
         });
@@ -48,7 +49,7 @@ export async function DELETE() {
             where: { id: userId },
         });
 
-        // Delete from Supabase Auth
+        const supabaseAdmin = getSupabaseAdmin();
         const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
         if (authError) {
