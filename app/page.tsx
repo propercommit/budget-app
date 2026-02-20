@@ -57,6 +57,8 @@ export default function Home() {
   const [viewingIncomeSource, setViewingIncomeSource] = useState<IncomeSource | null>(null);
   const [allIncomeSources, setAllIncomeSources] = useState<IncomeSource[]>([]);
 
+  const [lastCreatedCategoryName, setLastCreatedCategoryName] = useState<string | null>(null);
+
   // =====================
   // Data Loading
   // =====================
@@ -587,11 +589,13 @@ const handleMonthChange = async (newMonth: string) => {
 
       {/* Popins */}
       <SpendingItemEditPopin
+        autoSelectCategory={lastCreatedCategoryName}
         key={editingSpendingItem?.id ?? `create-${spendingPopinKey}`}
         isOpen={isSpendingPopinOpen}
         onClose={() => {
           setIsSpendingPopinOpen(false);
           setEditingSpendingItem(null);
+          setLastCreatedCategoryName(null);
         }}
         onSave={async (data) => {
           const category = categories.find(c => c.label === data.category);
@@ -658,6 +662,7 @@ const handleMonthChange = async (newMonth: string) => {
             await handleEditCategory(editingCategory.id, data.name, data.icon, data.color);
           } else {
             await handleAddCategory(data.name, data.icon, data.color);
+            setLastCreatedCategoryName(data.name);
           }
           setIsCategoryPopinOpen(false);
           setEditingCategory(null);

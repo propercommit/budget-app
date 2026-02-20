@@ -5,10 +5,6 @@ import { IconPicker } from "@/components/icon-picker";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 import { iconMap } from "@/lib/icon-map";
 
-// ============================================
-// SPENDING ITEM EDIT POPIN (Create/Edit Mode)
-// ============================================
-
 interface Category {
     name: string;
     icon: string;
@@ -39,6 +35,7 @@ interface SpendingItemEditPopinProps {
     initialStartDate?: string;
     initialEndDate?: string;
     initialNote?: string;
+    autoSelectCategory?: string | null;
 }
 
 export function SpendingItemEditPopin({
@@ -56,6 +53,7 @@ export function SpendingItemEditPopin({
     initialStartDate = "",
     initialEndDate = "",
     initialNote = "",
+    autoSelectCategory = null,
 }: SpendingItemEditPopinProps) {
     const [name, setName] = useState(initialName);
     const [selectedIcon, setSelectedIcon] = useState(initialIcon);
@@ -65,6 +63,13 @@ export function SpendingItemEditPopin({
     const [endDate, setEndDate] = useState(initialEndDate);
     const [note, setNote] = useState(initialNote);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [lastAutoSelected, setLastAutoSelected] = useState<string | null>(null);
+
+    // Sync autoSelectCategory without useEffect
+    if (autoSelectCategory && autoSelectCategory !== lastAutoSelected) {
+        setSelectedCategory(autoSelectCategory);
+        setLastAutoSelected(autoSelectCategory);
+    }
 
     useLockScroll(isOpen);
 
