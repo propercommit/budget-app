@@ -39,4 +39,5 @@ export type IncomeSource = {
     startDate: Date;
     endDate?: Date;
     note?: string;
+    month: string;
 };

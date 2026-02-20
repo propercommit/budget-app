@@ -1,5 +1,3 @@
-import { Switch } from "./ui/switch";
-
 interface ChartHeaderProps {
     latestValue: number;
     previousValue: number | null;

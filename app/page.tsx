@@ -73,6 +73,7 @@ export default function Home() {
           setSpendingData(spendingDataResult);
           setIncomeSources(incomeSourcesData);
           setAllIncomeSources(allIncomeData);
+
         } catch (error) {
           console.error("Failed to load data:", error);
         } finally {
@@ -97,24 +98,16 @@ export default function Home() {
     .map(([month, spending]) => ({ month, spending }));
 
     const incomeByMonth = historicalData.map(monthData => {
-    const monthStart = new Date(monthData.month + "-01");
-    const [y, m] = monthData.month.split("-").map(Number);
-    const monthEnd = new Date(y, m, 0);
+      const monthIncome = allIncomeSources
+        .filter(source => source.month === monthData.month)
+        .reduce((sum, source) => sum + source.amount, 0);
 
-    const totalIncome = allIncomeSources
-      .filter(source => {
-        const start = new Date(source.startDate);
-        const end = source.endDate ? new Date(source.endDate) : null;
-        return start <= monthEnd && (!end || end >= monthStart);
-      })
-      .reduce((sum, source) => sum + source.amount, 0);
-
-    const date = new Date(monthData.month + "-01");
-    return {
-      label: date.toLocaleDateString("en-US", { month: "short" }),
-      value: totalIncome,
-    };
-  });
+      const date = new Date(monthData.month + "-01");
+      return {
+        label: date.toLocaleDateString("en-US", { month: "short" }),
+        value: monthIncome,
+      };
+    });
 
   // =====================
   // Income Handlers
@@ -205,14 +198,15 @@ const handleMonthChange = async (newMonth: string) => {
         const closestMonth = previousMonths[previousMonths.length - 1];
         const previousData = spendingData[closestMonth];
 
-        try {
-          const newItems = await Promise.all(
+      try {
+        const newItems = await Promise.all(
             previousData.map(item =>
               createSpending({
                 name: item.name,
                 icon: item.icon,
                 categoryId: item.categoryId,
                 month: newMonth,
+                startDate: `${newMonth}-01`,
               })
             )
           );
