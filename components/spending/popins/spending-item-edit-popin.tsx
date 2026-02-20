@@ -193,7 +193,7 @@ export function SpendingItemEditPopin({
                                         color: selectedCategory === cat.name ? "white" : "#6E6E73",
                                     }}
                                 >
-                                    <span>{cat.icon}</span>
+                                    <span className="text-sm w-4 h-4">{iconMap[cat.icon] || cat.icon}</span>
                                     <span>{cat.name}</span>
                                 </button>
                             ))}
