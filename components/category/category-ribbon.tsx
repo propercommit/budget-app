@@ -1,5 +1,6 @@
 "use client";
 
+import { iconMap } from "@/lib/icon-map";
 
 interface Category {
     name: string;
@@ -57,7 +58,7 @@ export function CategoryRibbon({
                             boxShadow: selectedCategory === cat.name ? "none" : "0 1px 4px rgba(0,0,0,0.03)",
                         }}
                     >
-                        <span className="text-sm">{cat.icon}</span>
+                        <span className="text-sm w-4 h-4">{iconMap[cat.icon] || cat.icon}</span>
                         <span>{cat.name}</span>
                     </button>
                 ))}
