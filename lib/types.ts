@@ -22,14 +22,22 @@ export interface SpendingItem {
   budgeted: number;
   spent: number;
   month: string;
+  startDate: string;
+  endDate?: string | null;
+  note?: string | null;
   categoryId: string;
   category?: Category;
   entries?: SpendingEntry[];
 }
 
-export interface MonthlyIncome {
-  id: string;
-  month: string;
-  active: number;
-  passive: number;
-}
+export type IncomeSource = {
+    id: string;
+    name: string;
+    amount: number;
+    icon: string;
+    type: "active" | "passive";
+    startDate: Date;
+    endDate?: Date;
+    note?: string;
+    month: string;
+};

@@ -16,7 +16,7 @@ model User {
   
   categories    Category[]
   spendingItems SpendingItem[]
-  monthlyIncomes MonthlyIncome[]
+  IncomeSources IncomeSource[]
 }
 
 model Category {
@@ -41,7 +41,10 @@ model SpendingItem {
   icon      String
   budgeted  Float    @default(0)
   spent     Float    @default(0)
-  month     String   // Format: "2025-01"
+  month     String   // Format: "2025-01" — keeping for backwards compat
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  note      String?  @db.VarChar(500)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   spendingEntries SpendingEntry[]
@@ -54,18 +57,27 @@ model SpendingItem {
   @@unique([userId, name, month])
 }
 
-model MonthlyIncome {
+enum IncomeType {
+  active
+  passive
+}
+
+model IncomeSource {
   id        String   @id @default(cuid())
-  month     String   // Format: "2025-01"
-  active    Float    @default(0)
-  passive   Float    @default(0)
+  name      String   @db.VarChar(100)
+  amount    Float    @default(0)
+  icon      String
+  type      IncomeType
+  startDate DateTime @default(now())
+  endDate   DateTime?
+  note      String?  @db.VarChar(500)
+  month     String
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, month])
 }
 
 model SpendingEntry {

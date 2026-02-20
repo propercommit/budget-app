@@ -1,5 +1,3 @@
-import { Switch } from "./ui/switch";
-
 interface ChartHeaderProps {
     latestValue: number;
     previousValue: number | null;
@@ -11,8 +9,6 @@ interface ChartHeaderProps {
 export function ChartHeader({ 
     latestValue, 
     previousValue, 
-    showValues, 
-    onToggleValues,
     increaseIsPositive = false,
 }: ChartHeaderProps) {
     const hasComparison = previousValue !== null && previousValue !== undefined;
@@ -42,15 +38,6 @@ export function ChartHeader({
                 ) : (
                     <div className="text-sm text-muted-foreground">No previous data</div>
                 )}
-            </div>
-            <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-muted-foreground cursor-pointer">
-                    Display Values
-                </label>
-                <Switch 
-                    checked={showValues} 
-                    onCheckedChange={onToggleValues}
-                />
             </div>
         </div>
     );

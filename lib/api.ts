@@ -68,6 +68,9 @@ export async function createSpending(data: {
   budgeted?: number;
   spent?: number;
   month: string;
+  startDate?: string;
+  endDate?: string | null;
+  note?: string | null;
 }) {
   return fetchAPI("/api/spending", {
     method: "POST",
@@ -83,6 +86,9 @@ export async function updateSpending(
     categoryId?: string;
     budgeted?: number;
     spent?: number;
+    startDate?: string;
+    endDate?: string | null;
+    note?: string | null;
   }
 ) {
   return fetchAPI(`/api/spending/${id}`, {
@@ -99,21 +105,52 @@ export async function deleteSpending(id: string) {
 
 // ============ INCOME ============
 
-export async function getIncome(month?: string) {
-  const url = month !== undefined && month !== "" 
-    ? `/api/income?month=${month}` 
-    : "/api/income";
-  return fetchAPI(url);
+export async function getIncomeSources(month: string) {
+  return fetchAPI(`/api/income?month=${month}`);
 }
 
-export async function saveIncome(data: {
+export async function getAllIncomeSources() {
+  return fetchAPI("/api/income");
+}
+
+export async function createIncomeSource(data: {
+  name: string;
+  amount: number;
+  icon: string;
+  type: 'active' | 'passive';
+  startDate: string;
+  endDate?: string;
+  note?: string;
   month: string;
-  active?: number;
-  passive?: number;
 }) {
   return fetchAPI("/api/income", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateIncomeSource(
+  id: string,
+  data: {
+    name?: string;
+    amount?: number;
+    icon?: string;
+    type?: 'active' | 'passive';
+    startDate?: string;
+    endDate?: string;
+    note?: string;
+  }
+) {
+  return fetchAPI("/api/income", {
+    method: "PUT",
+    body: JSON.stringify({ id, ...data }),
+  });
+}
+
+export async function deleteIncomeSource(id: string) {
+  return fetchAPI("/api/income", {
+    method: "DELETE",
+    body: JSON.stringify({ id }),
   });
 }
 
