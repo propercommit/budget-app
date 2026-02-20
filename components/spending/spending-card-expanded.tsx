@@ -1,5 +1,6 @@
 "use client";
 
+import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
 
 export interface SpendingEntry {
@@ -83,7 +84,7 @@ export function SpendingCardExpanded({
                             className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
                             style={{ backgroundColor: `${spendingCategoryColor}15` }}
                         >
-                            {spendingItemIcon}
+                            {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
                         <div className="text-left">
                             <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>
@@ -227,7 +228,7 @@ export function SpendingCardExpanded({
                                     className="w-9 h-9 rounded-lg flex items-center justify-center text-base"
                                     style={{ backgroundColor: `${spendingCategoryColor}20` }}
                                 >
-                                    {spendingItemIcon}
+                                    {iconMap[spendingItemIcon] || spendingItemIcon}
                                 </div>
                                 <div>
                                     <p className="font-medium text-sm" style={{ color: "#1D1D1F" }}>

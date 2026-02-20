@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { SpendingEntry } from "../spending-card-expanded";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { iconMap } from "@/lib/icon-map";
 
 interface EntryDetailPopinProps {
     isOpen: boolean;
@@ -62,8 +63,8 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                 <div className="px-5 py-5 space-y-5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: spendingCategoryColor + "15" }}>
-                                {spendingItemIcon}
+                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: spendingCategoryColor + "15" }}>
+                                {iconMap[spendingItemIcon] || spendingItemIcon}
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold" style={{ color: "#1D1D1F" }}>{entry.name}</h3>
