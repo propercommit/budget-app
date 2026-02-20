@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { iconMap } from "@/lib/icon-map";
 
 // ============================================
 // SPENDING ITEM EDIT POPIN (Create/Edit Mode)
@@ -193,7 +194,7 @@ export function SpendingItemEditPopin({
                                         color: selectedCategory === cat.name ? "white" : "#6E6E73",
                                     }}
                                 >
-                                    <span className="text-sm w-4 h-4">{iconMap[cat.icon] || cat.icon}</span>
+                                    <span className="text-sm [&>svg]:w-4 [&>svg]:h-4">{iconMap[cat.icon] || cat.icon}</span>
                                     <span>{cat.name}</span>
                                 </button>
                             ))}
