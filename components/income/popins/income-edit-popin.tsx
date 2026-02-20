@@ -6,7 +6,7 @@ import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 interface IncomePopinProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (data: Omit<IncomeSource, 'id'>) => void;
+    onSave: (data: Omit<IncomeSource, 'id' | 'month'>) => void;
     onDelete?: () => void;
     mode: 'add' | 'edit';
     initialData?: IncomeSource | null;

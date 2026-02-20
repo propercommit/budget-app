@@ -133,41 +133,41 @@ export default function Home() {
     }
   };
 
-  const handleSaveIncome = async (data: Omit<IncomeSource, 'id'>) => {
-    try {
-      if (editingIncomeSource) {
-        const updated = await updateIncomeSource(editingIncomeSource.id, {
-          name: data.name,
-          amount: data.amount,
-          icon: data.icon,
-          type: data.type,
-          startDate: data.startDate.toISOString(),
-          endDate: data.endDate?.toISOString(),
-          note: data.note,
-        });
-        setIncomeSources(prev => prev.map(i =>
-          i.id === editingIncomeSource.id ? updated : i
-        ));
-      } else {
-        const created = await createIncomeSource({
-          name: data.name,
-          amount: data.amount,
-          icon: data.icon,
-          type: data.type,
-          startDate: data.startDate.toISOString(),
-          endDate: data.endDate?.toISOString(),
-          note: data.note,
-          month: selectedMonth,
-        });
-        setIncomeSources(prev => [...prev, created]);
+  const handleSaveIncome = async (data: Omit<IncomeSource, 'id' | 'month'>) => {
+      try {
+        if (editingIncomeSource) {
+          const updated = await updateIncomeSource(editingIncomeSource.id, {
+            name: data.name,
+            amount: data.amount,
+            icon: data.icon,
+            type: data.type,
+            startDate: data.startDate.toISOString(),
+            endDate: data.endDate?.toISOString(),
+            note: data.note,
+          });
+          setIncomeSources(prev => prev.map(i =>
+            i.id === editingIncomeSource.id ? updated : i
+          ));
+        } else {
+          const created = await createIncomeSource({
+            name: data.name,
+            amount: data.amount,
+            icon: data.icon,
+            type: data.type,
+            startDate: data.startDate.toISOString(),
+            endDate: data.endDate?.toISOString(),
+            note: data.note,
+            month: selectedMonth,
+          });
+          setIncomeSources(prev => [...prev, created]);
+        }
+        setIsIncomePopinOpen(false);
+        const refreshed = await getAllIncomeSources();
+        setAllIncomeSources(refreshed);
+      } catch (error) {
+        console.error('Error saving income:', error);
       }
-      setIsIncomePopinOpen(false);
-      const refreshed = await getAllIncomeSources();
-      setAllIncomeSources(refreshed);
-    } catch (error) {
-      console.error('Error saving income:', error);
-    }
-  };
+    };
 
   const handleDeleteIncome = async () => {
     if (editingIncomeSource) {
