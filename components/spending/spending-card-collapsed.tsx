@@ -1,5 +1,7 @@
 "use client";
 
+import { iconMap } from "@/lib/icon-map";
+
 interface SpendingCardCollapsedProps {
     spendingName: string;
     categoryName: string;
@@ -42,7 +44,7 @@ export function SpendingCardCollapsed({
                             className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
                             style={{ backgroundColor: `${spendingCategoryColor}15` }}
                         >
-                            {spendingItemIcon}
+                            {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
                         <div>
                             <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>
