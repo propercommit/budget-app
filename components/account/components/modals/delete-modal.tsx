@@ -19,6 +19,7 @@ interface DeleteModalProps {
     password: string;
     error: string | null;
     isSaving: boolean;
+    isGoogleUser?: boolean;
     onConfirmTextChange: (value: string) => void;
     onPasswordChange: (value: string) => void;
     onSubmit: () => void;
@@ -31,6 +32,7 @@ export function DeleteModal({
     password,
     error,
     isSaving,
+    isGoogleUser = false,
     onConfirmTextChange,
     onPasswordChange,
     onSubmit,
@@ -78,20 +80,23 @@ export function DeleteModal({
                             autoComplete="off"
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="deletePassword" className="text-sm font-medium text-gray-700">
-                            Enter your password
-                        </Label>
-                        <Input
-                            id="deletePassword"
-                            type="password"
-                            value={password}
-                            onChange={(e) => onPasswordChange(e.target.value)}
-                            placeholder="Enter password to confirm"
-                            className="h-12 text-base rounded-xl"
-                            autoComplete="current-password"
-                        />
-                    </div>
+
+                    {!isGoogleUser && (
+                        <div className="space-y-2">
+                            <Label htmlFor="deletePassword" className="text-sm font-medium text-gray-700">
+                                Enter your password
+                            </Label>
+                            <Input
+                                id="deletePassword"
+                                type="password"
+                                value={password}
+                                onChange={(e) => onPasswordChange(e.target.value)}
+                                placeholder="Enter password to confirm"
+                                className="h-12 text-base rounded-xl"
+                                autoComplete="current-password"
+                            />
+                        </div>
+                    )}
 
                     {error && (
                         <div className="bg-red-50 p-4 rounded-xl text-sm text-red-700">
