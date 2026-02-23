@@ -65,7 +65,6 @@ export function SpendingItemEditPopin({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [lastAutoSelected, setLastAutoSelected] = useState<string | null>(null);
 
-    // Sync autoSelectCategory without useEffect
     if (autoSelectCategory && autoSelectCategory !== lastAutoSelected) {
         setSelectedCategory(autoSelectCategory);
         setLastAutoSelected(autoSelectCategory);
@@ -78,7 +77,8 @@ export function SpendingItemEditPopin({
         name.trim() !== "" &&
         budget !== "" &&
         parseFloat(budget) > 0 &&
-        selectedCategory !== "";
+        selectedCategory !== "" &&
+        startDate !== "";
 
     const selectedCategoryColor =
         categories.find((c) => c.name === selectedCategory)?.color ?? "#007AFF";
@@ -87,58 +87,46 @@ export function SpendingItemEditPopin({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-            style={{
-                fontFamily:
-                    '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
-            }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center font-[-apple-system,BlinkMacSystemFont,'SF_Pro_Display','SF_Pro_Text',system-ui,sans-serif]"
+            role="dialog"
+            aria-modal="true"
+            aria-label={isCreate ? "New Spending Item" : "Edit Spending Item"}
         >
             {/* Backdrop */}
             <div
-                className="absolute inset-0"
-                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)" }}
+                className="absolute inset-0 bg-black/40 backdrop-blur-[4px]"
                 onClick={onClose}
+                aria-hidden="true"
             />
 
             {/* Popin */}
-            <div
-                className="relative w-full sm:max-w-md bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0"
-                style={{
-                    boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)",
-                    maxHeight: "90vh",
-                    display: "flex",
-                    flexDirection: "column",
-                }}
-            >
+            <div className="relative w-full sm:max-w-md bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col">
                 {/* Mobile Handle */}
                 <div className="sm:hidden flex justify-center pt-3 pb-1">
-                    <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "#E5E5EA" }} />
+                    <div className="w-10 h-1 rounded-full bg-[#E5E5EA]" />
                 </div>
 
                 {/* Header */}
-                <div
-                    className="flex items-center justify-between px-5 py-4"
-                    style={{ borderBottom: "1px solid #E5E5EA" }}
-                >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E5EA]">
                     <div>
-                        <h2 className="text-lg font-semibold" style={{ color: "#1D1D1F" }}>
+                        <h2 className="text-lg font-semibold text-[#1D1D1F]">
                             {isCreate ? "New Spending Item" : "Edit Spending Item"}
                         </h2>
-                        <p className="text-sm" style={{ color: "#6E6E73" }}>
+                        <p className="text-sm text-[#6E6E73]">
                             {isCreate ? "Create a new budget item" : "Update budget and details"}
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                        style={{ backgroundColor: "#F5F5F7" }}
+                        className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-[#F5F5F7]"
+                        aria-label="Close dialog"
                     >
                         <svg
-                            className="w-5 h-5"
-                            style={{ color: "#6E6E73" }}
+                            className="w-5 h-5 text-[#6E6E73]"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
+                            aria-hidden="true"
                         >
                             <path
                                 strokeLinecap="round"
@@ -154,28 +142,17 @@ export function SpendingItemEditPopin({
                 <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
                     {/* Name */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                        <label htmlFor="spending-name" className="block text-sm font-semibold text-[#1D1D1F]">
                             Name
                         </label>
                         <input
+                            id="spending-name"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="e.g., Fuel, Netflix, Groceries"
-                            className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                            style={{
-                                backgroundColor: "#F5F5F7",
-                                border: "1px solid #E5E5EA",
-                                color: "#1D1D1F",
-                            }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.borderColor = "#007AFF";
-                                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.borderColor = "#E5E5EA";
-                                e.currentTarget.style.boxShadow = "none";
-                            }}
+                            aria-required="true"
+                            className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200 bg-[#F5F5F7] border border-[#E5E5EA] text-[#1D1D1F] focus:border-[#007AFF] focus:ring-[3px] focus:ring-[#007AFF]/10"
                         />
                     </div>
 
@@ -183,15 +160,17 @@ export function SpendingItemEditPopin({
                     <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
 
                     {/* Category */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <fieldset className="space-y-2">
+                        <legend className="block text-sm font-semibold text-[#1D1D1F]">
                             Category
-                        </label>
-                        <div className="flex flex-wrap gap-2">
+                        </legend>
+                        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Select a category">
                             {categories.map((cat) => (
                                 <button
                                     key={cat.name}
                                     onClick={() => setSelectedCategory(cat.name)}
+                                    role="radio"
+                                    aria-checked={selectedCategory === cat.name}
                                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95"
                                     style={{
                                         backgroundColor:
@@ -199,24 +178,23 @@ export function SpendingItemEditPopin({
                                         color: selectedCategory === cat.name ? "white" : "#6E6E73",
                                     }}
                                 >
-                                    <span className="text-sm [&>svg]:w-4 [&>svg]:h-4">{iconMap[cat.icon] || cat.icon}</span>
+                                    <span className="text-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">
+                                        {iconMap[cat.icon] || cat.icon}
+                                    </span>
                                     <span>{cat.name}</span>
                                 </button>
                             ))}
                             <button
                                 onClick={onCreateCategory}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 border-2 border-dashed"
-                                style={{
-                                    borderColor: "#007AFF",
-                                    backgroundColor: "rgba(0, 122, 255, 0.05)",
-                                    color: "#007AFF",
-                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 border-2 border-dashed border-[#007AFF] bg-[#007AFF]/5 text-[#007AFF]"
+                                aria-label="Create new category"
                             >
                                 <svg
                                     className="w-4 h-4"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
+                                    aria-hidden="true"
                                 >
                                     <path
                                         strokeLinecap="round"
@@ -228,86 +206,64 @@ export function SpendingItemEditPopin({
                                 <span>New Category</span>
                             </button>
                         </div>
-                    </div>
+                    </fieldset>
 
                     {/* Budget */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                        <label htmlFor="spending-budget" className="block text-sm font-semibold text-[#1D1D1F]">
                             Monthly Budget
                         </label>
                         <div className="relative">
                             <span
-                                className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold"
-                                style={{ color: "#6E6E73" }}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-[#6E6E73]"
+                                aria-hidden="true"
                             >
                                 $
                             </span>
                             <input
+                                id="spending-budget"
                                 type="number"
                                 value={budget}
                                 onChange={(e) => setBudget(e.target.value)}
                                 placeholder="0"
-                                className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                                style={{
-                                    backgroundColor: "#F5F5F7",
-                                    border: "1px solid #E5E5EA",
-                                    color: "#1D1D1F",
-                                }}
-                                onFocus={(e) => {
-                                    e.currentTarget.style.borderColor = "#007AFF";
-                                    e.currentTarget.style.boxShadow =
-                                        "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                                }}
-                                onBlur={(e) => {
-                                    e.currentTarget.style.borderColor = "#E5E5EA";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
+                                aria-required="true"
+                                aria-label="Monthly budget amount in dollars"
+                                className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200 bg-[#F5F5F7] border border-[#E5E5EA] text-[#1D1D1F] focus:border-[#007AFF] focus:ring-[3px] focus:ring-[#007AFF]/10"
                             />
                         </div>
-                        <p className="text-xs" style={{ color: "#6E6E73" }}>
+                        <p className="text-xs text-[#6E6E73]">
                             Set how much you want to spend per month
                         </p>
                     </div>
 
                     {/* Date Range */}
-                    <div className="space-y-2 max-w-full overflow-hidden">
-                        <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <fieldset className="space-y-2 max-w-full overflow-hidden">
+                        <legend className="block text-sm font-semibold text-[#1D1D1F]">
                             Date Range
-                        </label>
+                        </legend>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="w-full sm:flex-1 min-w-0">
                                 <input
+                                    id="spending-start-date"
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                    style={{
-                                        backgroundColor: "#F5F5F7",
-                                        border: "1px solid #E5E5EA",
-                                        color: startDate ? "#1D1D1F" : "#6E6E73",
-                                        WebkitAppearance: "none",
-                                        minWidth: 0,
-                                    }}
-                                    onFocus={(e) => {
-                                        e.currentTarget.style.borderColor = "#007AFF";
-                                        e.currentTarget.style.boxShadow =
-                                            "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                                    }}
-                                    onBlur={(e) => {
-                                        e.currentTarget.style.borderColor = "#E5E5EA";
-                                        e.currentTarget.style.boxShadow = "none";
-                                    }}
+                                    aria-required="true"
+                                    aria-label="Start date"
+                                    className={`w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200 bg-[#F5F5F7] border border-[#E5E5EA] [appearance:none] [-webkit-appearance:none] min-w-0 focus:border-[#007AFF] focus:ring-[3px] focus:ring-[#007AFF]/10 ${
+                                        startDate ? "text-[#1D1D1F]" : "text-[#6E6E73]"
+                                    }`}
                                 />
-                                <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>
+                                <p className="text-xs mt-1 ml-1 text-[#6E6E73]">
                                     Start
                                 </p>
                             </div>
                             <svg
-                                className="hidden sm:block w-5 h-5 flex-shrink-0"
-                                style={{ color: "#6E6E73" }}
+                                className="hidden sm:block w-5 h-5 flex-shrink-0 text-[#6E6E73]"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                             >
                                 <path
                                     strokeLinecap="round"
@@ -318,77 +274,49 @@ export function SpendingItemEditPopin({
                             </svg>
                             <div className="w-full sm:flex-1 min-w-0">
                                 <input
+                                    id="spending-end-date"
                                     type="date"
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                    style={{
-                                        backgroundColor: "#F5F5F7",
-                                        border: "1px solid #E5E5EA",
-                                        color: endDate ? "#1D1D1F" : "#6E6E73",
-                                        WebkitAppearance: "none",
-                                        minWidth: 0,
-                                    }}
-                                    onFocus={(e) => {
-                                        e.currentTarget.style.borderColor = "#007AFF";
-                                        e.currentTarget.style.boxShadow =
-                                            "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                                    }}
-                                    onBlur={(e) => {
-                                        e.currentTarget.style.borderColor = "#E5E5EA";
-                                        e.currentTarget.style.boxShadow = "none";
-                                    }}
+                                    aria-label="End date (optional)"
+                                    className={`w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200 bg-[#F5F5F7] border border-[#E5E5EA] [appearance:none] [-webkit-appearance:none] min-w-0 focus:border-[#007AFF] focus:ring-[3px] focus:ring-[#007AFF]/10 ${
+                                        endDate ? "text-[#1D1D1F]" : "text-[#6E6E73]"
+                                    }`}
                                 />
-                                <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>
-                                    End <span style={{ color: "#AEAEB2" }}>(optional)</span>
+                                <p className="text-xs mt-1 ml-1 text-[#6E6E73]">
+                                    End <span className="text-[#AEAEB2]">(optional)</span>
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </fieldset>
 
                     {/* Note */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                        <label htmlFor="spending-note" className="block text-sm font-semibold text-[#1D1D1F]">
                             Note{" "}
-                            <span style={{ color: "#6E6E73", fontWeight: 400 }}>(optional)</span>
+                            <span className="text-[#6E6E73] font-normal">(optional)</span>
                         </label>
                         <textarea
+                            id="spending-note"
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                             placeholder="Add any details..."
                             rows={3}
-                            className="w-full px-4 py-3 rounded-xl text-base outline-none transition-all duration-200 resize-none"
-                            style={{
-                                backgroundColor: "#F5F5F7",
-                                border: "1px solid #E5E5EA",
-                                color: "#1D1D1F",
-                            }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.borderColor = "#007AFF";
-                                e.currentTarget.style.boxShadow =
-                                    "0 0 0 3px rgba(0, 122, 255, 0.1)";
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.borderColor = "#E5E5EA";
-                                e.currentTarget.style.boxShadow = "none";
-                            }}
+                            aria-label="Additional notes (optional)"
+                            className="w-full px-4 py-3 rounded-xl text-base outline-none transition-all duration-200 resize-none bg-[#F5F5F7] border border-[#E5E5EA] text-[#1D1D1F] focus:border-[#007AFF] focus:ring-[3px] focus:ring-[#007AFF]/10"
                         />
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div
-                    className="px-5 py-4 space-y-3"
-                    style={{ borderTop: "1px solid #E5E5EA" }}
-                >
+                <div className="px-5 py-4 space-y-3 border-t border-[#E5E5EA]">
                     {/* Primary Action Buttons */}
                     <div
                         className={`flex gap-3 transition-opacity duration-200 ${showDeleteConfirm ? "opacity-40 pointer-events-none" : ""}`}
                     >
                         <button
                             onClick={onClose}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] bg-[#F5F5F7] text-[#1D1D1F]"
                         >
                             Cancel
                         </button>
@@ -406,13 +334,12 @@ export function SpendingItemEditPopin({
                                 })
                             }
                             disabled={!isFormValid}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{
-                                backgroundColor: isFormValid ? "#007AFF" : "#E5E5EA",
-                                color: isFormValid ? "white" : "#6E6E73",
-                                cursor: isFormValid ? "pointer" : "not-allowed",
-                                boxShadow: isFormValid ? "0 4px 12px rgba(0, 122, 255, 0.3)" : "none",
-                            }}
+                            aria-disabled={!isFormValid}
+                            className={`flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] ${
+                                isFormValid
+                                    ? "bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.3)] cursor-pointer"
+                                    : "bg-[#E5E5EA] text-[#6E6E73] cursor-not-allowed"
+                            }`}
                         >
                             {isCreate ? "Create" : "Save Changes"}
                         </button>
@@ -424,11 +351,8 @@ export function SpendingItemEditPopin({
                             {!showDeleteConfirm ? (
                                 <button
                                     onClick={() => setShowDeleteConfirm(true)}
-                                    className="w-full py-3 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] hover:bg-red-50 flex items-center justify-center gap-2"
-                                    style={{
-                                        border: "1px solid #FF3B30",
-                                        color: "#FF3B30",
-                                    }}
+                                    className="w-full py-3 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] hover:bg-red-50 flex items-center justify-center gap-2 border border-[#FF3B30] text-[#FF3B30]"
+                                    aria-label="Delete this spending item"
                                 >
                                     <svg
                                         className="w-4 h-4"
@@ -436,6 +360,7 @@ export function SpendingItemEditPopin({
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
                                         strokeWidth={2}
+                                        aria-hidden="true"
                                     >
                                         <path
                                             strokeLinecap="round"
@@ -447,23 +372,16 @@ export function SpendingItemEditPopin({
                                 </button>
                             ) : (
                                 <div
-                                    className="p-4 rounded-xl"
-                                    style={{
-                                        backgroundColor: "rgba(255, 59, 48, 0.05)",
-                                        border: "1px solid rgba(255, 59, 48, 0.1)",
-                                    }}
+                                    className="p-4 rounded-xl bg-[#FF3B30]/5 border border-[#FF3B30]/10"
+                                    role="alert"
                                 >
-                                    <p
-                                        className="text-sm font-medium text-center mb-3"
-                                        style={{ color: "#1D1D1F" }}
-                                    >
+                                    <p className="text-sm font-medium text-center mb-3 text-[#1D1D1F]">
                                         Are you sure? This will delete all entries. This cannot be undone.
                                     </p>
                                     <div className="flex gap-3">
                                         <button
                                             onClick={() => setShowDeleteConfirm(false)}
-                                            className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
-                                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                                            className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] bg-[#F5F5F7] text-[#1D1D1F]"
                                         >
                                             Cancel
                                         </button>
@@ -472,8 +390,7 @@ export function SpendingItemEditPopin({
                                                 setShowDeleteConfirm(false);
                                                 onDelete?.();
                                             }}
-                                            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
-                                            style={{ backgroundColor: "#FF3B30" }}
+                                            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98] bg-[#FF3B30]"
                                         >
                                             Delete
                                         </button>
