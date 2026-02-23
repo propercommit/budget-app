@@ -1,5 +1,6 @@
 "use client";
 
+import { iconMap } from "@/lib/icon-map";
 import { MiniAreaChart } from "./mini-area-chart";
 
 interface CategoryTrendCardProps {
@@ -26,7 +27,7 @@ export function CategoryTrendCard({ category, data, isSelected, onClick }: Categ
             }}
         >
             <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">{category.icon}</span>
+                <span className="text-lg [&>svg]:w-5 [&>svg]:h-5">{iconMap[category.icon] || category.icon}</span>
                 <span className="text-sm font-medium truncate" style={{ color: "#1D1D1F" }}>{category.name}</span>
             </div>
             <div className="h-10 mb-2">
