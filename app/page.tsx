@@ -477,77 +477,231 @@ const handleMonthChange = async (newMonth: string) => {
           />
         </div>
 
-      <SpendingCarousel key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
-          {filteredSpendingItems.map((item) => (
-            <div key={item.id} className="w-full flex-shrink-0 snap-center">
-              <SpendingCard
-                spendingName={item.name}
-                spendingItemIcon={item.icon}
-                categoryName={item.category?.label ?? "Uncategorized"}
-                spendingCategoryColor={item.category?.color ?? "#6E6E73"}
-                budgetNumber={item.budgeted}
-                startDate={item.startDate ? new Date(item.startDate).toISOString().split("T")[0] : ""}
-                endDate={item.endDate ? new Date(item.endDate).toISOString().split("T")[0] : undefined}
-                note={item.note ?? undefined}
-                entries={(item.entries || []).map((e) => ({
-                  id: e.id,
-                  name: e.name,
-                  date: new Date(e.date).toISOString().split("T")[0],
-                  amount: e.amount,
-                  receipt: e.receiptUrl ?? null,
-                  link: e.link ?? null,
-                }))}
-                categories={categories.map((c) => ({
-                  name: c.label,
-                  icon: c.icon,
-                  color: c.color,
-                }))}
-                onItemUpdate={async (data) => {
-                  try {
-                    const category = categories.find((c) => c.label === data.category);
-                    if (!category) return;
-                    await updateSpending(item.id, {
-                      name: data.name,
-                      icon: data.icon,
-                      categoryId: category.id,
-                      budgeted: data.budget,
-                      startDate: data.startDate,
-                      endDate: data.endDate || null,
-                      note: data.note || null,
-                    });
-                    const freshData = await getSpending();
-                    setSpendingData(freshData);
-                  } catch (error) {
-                    console.error("Error updating spending item:", error);
-                  }
-                }}
-                onItemDelete={() => handleDeleteSpending(item.id)}
-                onEntryCreate={async (data) => {
-                  await handleAddEntry(item.id, {
-                    name: data.name,
-                    amount: data.amount,
-                    date: data.date,
-                    receiptUrl: data.receipt ?? undefined,
-                    link: data.link ?? undefined,
-                  });
-                }}
-                onEntryUpdate={async (entryId, data) => {
-                  await handleUpdateEntry(item.id, entryId, {
-                    name: data.name,
-                    amount: data.amount,
-                    date: data.date,
-                    receiptUrl: data.receipt ?? undefined,
-                    link: data.link ?? undefined,
-                  });
-                }}
-                onEntryDelete={(entryId) => handleDeleteEntry(item.id, entryId)}
-                onCreateCategory={async (data) => {
-                  await handleAddCategory(data.name, data.icon, data.color);
-                }}
-              />
-            </div>
-          ))}
-        </SpendingCarousel>
+    <SpendingCarousel key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
+      {filteredSpendingItems.map((item) => (
+        <div key={item.id} className="w-full flex-shrink-0 snap-center">
+          <SpendingCard
+            spendingName={item.name}
+            spendingItemIcon={item.icon}
+            categoryName={item.category?.label ?? "Uncategorized"}
+            spendingCategoryColor={item.category?.color ?? "#6E6E73"}
+            budgetNumber={item.budgeted}
+            startDate={item.startDate ? new Date(item.startDate).toISOString().split("T")[0] : ""}
+            endDate={item.endDate ? new Date(item.endDate).toISOString().split("T")[0] : undefined}
+            note={item.note ?? undefined}
+            entries={(item.entries || []).map((e) => ({
+              id: e.id,
+              name: e.name,
+              date: new Date(e.date).toISOString().split("T")[0],
+              amount: e.amount,
+              receipt: e.receiptUrl ?? null,
+              link: e.link ?? null,
+            }))}
+            categories={categories.map((c) => ({
+              name: c.label,
+              icon: c.icon,
+              color: c.color,
+            }))}
+            onItemUpdate={async (data) => {
+              const cat = categories.find((c) => c.label === data.category);
+              if (!cat) return;
+
+              const optimistic = {
+                ...item,
+                name: data.name,
+                icon: data.icon,
+                categoryId: cat.id,
+                category: cat,
+                budgeted: data.budget,
+                startDate: data.startDate,
+                endDate: data.endDate || null,
+                note: data.note || null,
+              };
+
+              // optimistic update
+              setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].map(s =>
+                  s.id === item.id ? optimistic : s
+                )
+              }));
+
+              try {
+                const realSpending = await updateSpending(item.id, {
+                  name: data.name,
+                  icon: data.icon,
+                  categoryId: cat.id,
+                  budgeted: data.budget,
+                  startDate: data.startDate,
+                  endDate: data.endDate || null,
+                  note: data.note || null,
+                });
+                setSpendingData(prev => ({
+                  ...prev,
+                  [selectedMonth]: prev[selectedMonth].map(s =>
+                    s.id === item.id ? realSpending : s
+                  )
+                }));
+              } catch (error) {
+                // TODO: toast notification
+                console.error("Error updating spending item:", error);
+                // rollback
+                setSpendingData(prev => ({
+                  ...prev,
+                  [selectedMonth]: prev[selectedMonth].map(s =>
+                    s.id === item.id ? item : s
+                  )
+                }));
+              }
+            }}
+            onItemDelete={() => handleDeleteSpending(item.id)}
+            onEntryCreate={async (data) => {
+              const optimisticEntry = {
+                id: `temp-${crypto.randomUUID()}`,
+                name: data.name,
+                amount: data.amount,
+                date: data.date,
+                receiptUrl: data.receipt ?? null,
+                link: data.link ?? null,
+                spendingItemId: item.id,
+              };
+
+              // optimistic update — add entry + update spent
+              setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].map(s =>
+                  s.id === item.id
+                    ? {
+                        ...s,
+                        spent: s.spent + data.amount,
+                        entries: [...(s.entries || []), optimisticEntry],
+                      }
+                    : s
+                )
+              }));
+
+              try {
+                await handleAddEntry(item.id, {
+                  name: data.name,
+                  amount: data.amount,
+                  date: data.date,
+                  receiptUrl: data.receipt ?? undefined,
+                  link: data.link ?? undefined,
+                });
+              } catch (error) {
+                // TODO: toast notification
+                console.error("Error creating entry:", error);
+                // rollback
+                setSpendingData(prev => ({
+                  ...prev,
+                  [selectedMonth]: prev[selectedMonth].map(s =>
+                    s.id === item.id
+                      ? {
+                          ...s,
+                          spent: s.spent - data.amount,
+                          entries: (s.entries || []).filter(e => e.id !== optimisticEntry.id),
+                        }
+                      : s
+                  )
+                }));
+              }
+            }}
+            onEntryUpdate={async (entryId, data) => {
+              const originalEntry = item.entries?.find(e => e.id === entryId);
+              const amountDiff = data.amount - (originalEntry?.amount ?? 0);
+
+              // optimistic update
+              setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].map(s =>
+                  s.id === item.id
+                    ? {
+                        ...s,
+                        spent: s.spent + amountDiff,
+                        entries: (s.entries || []).map(e =>
+                          e.id === entryId
+                            ? { ...e, name: data.name, amount: data.amount, date: data.date, receiptUrl: data.receipt ?? null, link: data.link ?? null }
+                            : e
+                        ),
+                      }
+                    : s
+                )
+              }));
+
+              try {
+                await handleUpdateEntry(item.id, entryId, {
+                  name: data.name,
+                  amount: data.amount,
+                  date: data.date,
+                  receiptUrl: data.receipt ?? undefined,
+                  link: data.link ?? undefined,
+                });
+              } catch (error) {
+                // TODO: toast notification
+                console.error("Error updating entry:", error);
+                // rollback
+                setSpendingData(prev => ({
+                  ...prev,
+                  [selectedMonth]: prev[selectedMonth].map(s =>
+                    s.id === item.id
+                      ? {
+                          ...s,
+                          spent: s.spent - amountDiff,
+                          entries: (s.entries || []).map(e =>
+                            e.id === entryId && originalEntry ? originalEntry : e
+                          ),
+                        }
+                      : s
+                  )
+                }));
+              }
+            }}
+            onEntryDelete={async (entryId) => {
+              const originalEntry = item.entries?.find(e => e.id === entryId);
+
+              // optimistic update — remove entry + update spent
+              setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].map(s =>
+                  s.id === item.id
+                    ? {
+                        ...s,
+                        spent: s.spent - (originalEntry?.amount ?? 0),
+                        entries: (s.entries || []).filter(e => e.id !== entryId),
+                      }
+                    : s
+                )
+              }));
+
+              try {
+                await handleDeleteEntry(item.id, entryId);
+              } catch (error) {
+                // TODO: toast notification
+                console.error("Error deleting entry:", error);
+                // rollback — restore entry
+                if (originalEntry) {
+                  setSpendingData(prev => ({
+                    ...prev,
+                    [selectedMonth]: prev[selectedMonth].map(s =>
+                      s.id === item.id
+                        ? {
+                            ...s,
+                            spent: s.spent + originalEntry.amount,
+                            entries: [...(s.entries || []), originalEntry],
+                          }
+                        : s
+                    )
+                  }));
+                }
+              }
+            }}
+            onCreateCategory={async (data) => {
+              await handleAddCategory(data.name, data.icon, data.color);
+            }}
+          />
+        </div>
+      ))}
+    </SpendingCarousel>
       </SectionCard>
 
       {/* Insights */}
@@ -600,20 +754,60 @@ const handleMonthChange = async (newMonth: string) => {
         onSave={async (data) => {
           const category = categories.find(c => c.label === data.category);
           if (!category) return;
+
+          // case spending item edit
           if (editingSpendingItem) {
-            await updateSpending(editingSpendingItem.id, {
+            const optimisticSpending = {
+              ...editingSpendingItem,
               name: data.name,
               icon: data.icon,
               categoryId: category.id,
+              category: category,
               budgeted: data.budget,
               startDate: data.startDate,
               endDate: data.endDate || null,
               note: data.note || null,
-            });
-            const freshData = await getSpending();
-            setSpendingData(freshData);
+            };
+
+            // update state immediately
+            setSpendingData(prev => ({
+              ...prev,
+              [selectedMonth]: prev[selectedMonth].map(item =>
+                item.id === editingSpendingItem.id ? optimisticSpending : item
+              )
+            }));
+
+            setIsSpendingPopinOpen(false);
+            setEditingSpendingItem(null);
+
+            // update db
+            try {
+              await updateSpending(editingSpendingItem.id, {
+                name: data.name,
+                icon: data.icon,
+                categoryId: category.id,
+                budgeted: data.budget,
+                startDate: data.startDate,
+                endDate: data.endDate || null,
+                note: data.note || null,
+              });
+              const freshData = await getSpending();
+              setSpendingData(freshData);
+            } catch (error) {
+              // TODO: toast notification
+              console.log('error updating spending item:', error);
+              // rollback — restore the original item
+              setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].map(item =>
+                  item.id === editingSpendingItem.id ? editingSpendingItem : item
+                )
+              }));
+            }
           } else {
-            const spending = await createSpending({
+
+            const optimisticSpending: SpendingItem = {
+              id: `temp-${crypto.randomUUID()}`,
               name: data.name,
               icon: data.icon,
               categoryId: category.id,
@@ -622,14 +816,47 @@ const handleMonthChange = async (newMonth: string) => {
               startDate: data.startDate,
               endDate: data.endDate || null,
               note: data.note || null,
-            });
+              spent: 0,
+              category: category,
+              entries: []
+            };
+
+            // update state
             setSpendingData(prev => ({
               ...prev,
-              [selectedMonth]: [...(prev[selectedMonth] || []), spending]
+              [selectedMonth]: [...(prev[selectedMonth] || []), optimisticSpending]
             }));
+
+            setIsSpendingPopinOpen(false);
+            setEditingSpendingItem(null);
+
+            // update db
+            try {
+              const realSpending = await createSpending({
+                name: data.name,
+                icon: data.icon,
+                categoryId: category.id,
+                month: selectedMonth,
+                budgeted: data.budget,
+                startDate: data.startDate,
+                endDate: data.endDate || null,
+                note: data.note || null,
+              });
+              setSpendingData(prev => ({
+              ...prev,
+              [selectedMonth]: prev[selectedMonth].map(item =>
+                item.id === optimisticSpending.id ? realSpending : item
+              )
+            }));
+            } catch (error) {
+              // TODO : set up toast here warning the user about the error
+              console.log('error occurred trying to create spending item :', error);
+                setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].filter(item => item.id !== optimisticSpending.id)
+              }));
+            }
           }
-          setIsSpendingPopinOpen(false);
-          setEditingSpendingItem(null);
         }}
         onDelete={editingSpendingItem ? async () => {
           await handleDeleteSpending(editingSpendingItem.id);
