@@ -315,54 +315,17 @@ const handleMonthChange = async (newMonth: string) => {
   // Entry Handlers
   // =====================
   const handleAddEntry = async (
-    spendingItemId: string,
-    entry: { name: string; amount: number; receiptUrl?: string; link?: string; date?: string }
+  spendingItemId: string,
+  entry: { name: string; amount: number; receiptUrl?: string; link?: string; date?: string }
   ) => {
-    const tempId = `temp-${Date.now()}`;
-    const tempEntry = {
-      id: tempId,
+    return await createEntry({
+      spendingItemId,
       name: entry.name,
       amount: entry.amount,
-      receiptUrl: entry.receiptUrl || null,
-      link: entry.link || null,
-      date: entry.date || new Date().toISOString(),
-      spendingItemId,
-    };
-    const previousData = { ...spendingData };
-
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item => {
-        if (item.id === spendingItemId) {
-          const updatedEntries = [...(item.entries || []), tempEntry];
-          return { ...item, entries: updatedEntries, spent: updatedEntries.reduce((sum, e) => sum + e.amount, 0) };
-        }
-        return item;
-      })
-    }));
-
-    try {
-      const newEntry = await createEntry({
-        spendingItemId,
-        name: entry.name,
-        amount: entry.amount,
-        receiptUrl: entry.receiptUrl,
-        link: entry.link,
-        date: entry.date,
-      });
-      setSpendingData(data => ({
-        ...data,
-        [selectedMonth]: data[selectedMonth].map(item => {
-          if (item.id === spendingItemId) {
-            return { ...item, entries: (item.entries || []).map(e => e.id === tempId ? newEntry : e) };
-          }
-          return item;
-        })
-      }));
-    } catch (error) {
-      console.error('Error adding entry:', error);
-      setSpendingData(previousData);
-    }
+      receiptUrl: entry.receiptUrl,
+      link: entry.link,
+      date: entry.date,
+    });
   };
 
   const handleUpdateEntry = async (
@@ -370,47 +333,11 @@ const handleMonthChange = async (newMonth: string) => {
     entryId: string,
     updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string; date?: string }
   ) => {
-    const previousData = { ...spendingData };
-
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item => {
-        if (item.id === spendingItemId) {
-          const updatedEntries = (item.entries || []).map(e => e.id === entryId ? { ...e, ...updatedData } : e);
-          return { ...item, entries: updatedEntries, spent: updatedEntries.reduce((sum, e) => sum + e.amount, 0) };
-        }
-        return item;
-      })
-    }));
-
-    try {
-      await updateEntry(entryId, updatedData);
-    } catch (error) {
-      console.error('Error updating entry:', error);
-      setSpendingData(previousData);
-    }
+    return await updateEntry(entryId, updatedData);
   };
 
   const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
-    const previousData = { ...spendingData };
-
-    setSpendingData(data => ({
-      ...data,
-      [selectedMonth]: data[selectedMonth].map(item => {
-        if (item.id === spendingItemId) {
-          const updatedEntries = (item.entries || []).filter(e => e.id !== entryId);
-          return { ...item, entries: updatedEntries, spent: updatedEntries.reduce((sum, e) => sum + e.amount, 0) };
-        }
-        return item;
-      })
-    }));
-
-    try {
-      await deleteEntry(entryId);
-    } catch (error) {
-      console.error('Error deleting entry:', error);
-      setSpendingData(previousData);
-    }
+    return await deleteEntry(entryId);
   };
 
   // =====================
@@ -782,7 +709,7 @@ const handleMonthChange = async (newMonth: string) => {
 
             // update db
             try {
-              await updateSpending(editingSpendingItem.id, {
+              const realSpending = await updateSpending(editingSpendingItem.id, {
                 name: data.name,
                 icon: data.icon,
                 categoryId: category.id,
@@ -791,8 +718,12 @@ const handleMonthChange = async (newMonth: string) => {
                 endDate: data.endDate || null,
                 note: data.note || null,
               });
-              const freshData = await getSpending();
-              setSpendingData(freshData);
+              setSpendingData(prev => ({
+                ...prev,
+                [selectedMonth]: prev[selectedMonth].map(item =>
+                  item.id === editingSpendingItem.id ? realSpending : item
+                )
+              }));
             } catch (error) {
               // TODO: toast notification
               console.log('error updating spending item:', error);
