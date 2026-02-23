@@ -1,3 +1,5 @@
+import { iconMap } from "@/lib/icon-map";
+
 interface CategoryBreakdown {
     name: string;
     icon?: string;
@@ -153,7 +155,7 @@ function CategoryRow({
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
                 style={{ backgroundColor: `${color}15` }}
             >
-                {category.icon || '📁'}
+                {category.icon ? (iconMap[category.icon] || category.icon) : '📁'}            
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
