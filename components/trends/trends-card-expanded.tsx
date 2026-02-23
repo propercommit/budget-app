@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AreaLineChart } from "@/components/area-line-chart";
 import { CategoryTrendCard } from "./category-trend-card";
+import { iconMap } from "@/lib/icon-map";
 
 interface CategoryInfo {
     name: string;
@@ -183,7 +184,7 @@ export function TrendsCardExpanded({
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xl">{selectedCategoryInfo.icon}</span>
+                                    <span className="text-xl [&>svg]:w-5 [&>svg]:h-5">{iconMap[selectedCategoryInfo.icon] || selectedCategoryInfo.icon}</span>
                                     <span className="text-base font-semibold" style={{ color: "#1D1D1F" }}>{selectedCategory}</span>
                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedCategoryInfo.color }} />
                                 </div>
