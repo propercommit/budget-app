@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { SpendingEntry } from "../spending-card-expanded";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { useSettings } from "@/lib/settings-context";
+import { CURRENCY_SYMBOLS } from "@/lib/constants";
 
 interface EntryEditPopinProps {
     isOpen: boolean;
@@ -35,6 +37,7 @@ export function EntryEditPopin({
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const { settings } = useSettings();  // ← add this line
 
     useLockScroll(isOpen);
 
@@ -179,7 +182,7 @@ export function EntryEditPopin({
                                 className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold"
                                 style={{ color: "#6E6E73" }}
                             >
-                                $
+                                {CURRENCY_SYMBOLS[settings.currency]}
                             </span>
                             <input
                                 type="number"

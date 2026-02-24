@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkline } from "./sparkline";
+import { useSettings } from "@/lib/settings-context";
 
 interface StatBoxProps {
     label: string;
@@ -15,6 +16,7 @@ export function StatBox({ label, value, change, color, bgColor, sparklineData }:
     const isPositive = change >= 0;
     const isSpending = label.toLowerCase().includes("spending");
     const isGood = isSpending ? !isPositive : isPositive;
+    const { formatAmount } = useSettings();
 
     return (
         <div className="flex-1 p-3 rounded-2xl" style={{ backgroundColor: bgColor }}>
@@ -23,7 +25,7 @@ export function StatBox({ label, value, change, color, bgColor, sparklineData }:
                 <Sparkline data={sparklineData} color={color} width={44} height={22} />
             </div>
             <p className="text-xl font-bold mb-0.5" style={{ color: "#1D1D1F" }}>
-                ${value.toLocaleString()}
+                {formatAmount(value)}
             </p>
             <div className="flex items-center gap-1">
                 <span className="text-xs font-semibold" style={{ color: isGood ? "#34C759" : "#FF3B30" }}>

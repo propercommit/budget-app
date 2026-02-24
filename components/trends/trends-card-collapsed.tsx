@@ -1,6 +1,7 @@
 "use client";
 
 import { StatBox } from "./stat-box";
+import { useSettings } from "@/lib/settings-context";
 
 interface TrendsCardCollapsedProps {
     spendingStats: { current: number; change: number };
@@ -19,6 +20,7 @@ export function TrendsCardCollapsed({
     spendingData,
     incomeData,
 }: TrendsCardCollapsedProps) {
+    const { formatAmount } = useSettings();
     return (
         <div className="space-y-3">
             <div className="flex gap-3">
@@ -50,7 +52,7 @@ export function TrendsCardCollapsed({
                         {isNetPositive ? "Net Savings" : "Net Loss"}
                     </p>
                     <p className="text-xl font-bold" style={{ color: isNetPositive ? "#34C759" : "#FF3B30" }}>
-                        {isNetPositive ? "+" : "-"}${Math.abs(netCurrent).toLocaleString()}
+                        {isNetPositive ? "+" : "-"}{formatAmount(Math.abs(netCurrent))}
                     </p>
                 </div>
                 <div

@@ -1,21 +1,16 @@
+import { useSettings } from "@/lib/settings-context";
+
 interface BudgetOverviewCollapsedProps {
     totalIncome: number;
     totalSpent: number;
     onExpand: () => void;
 }
 
-const formatAmount = (amount: number): string => {
-    if (amount >= 1_000_000_000_000) return `$${(amount / 1_000_000_000_000).toFixed(1)}T`;
-    if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-    if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-    if (amount >= 10_000) return `$${(amount / 1_000).toFixed(1)}K`;
-    return `$${amount.toLocaleString()}`;
-};
-
 export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: BudgetOverviewCollapsedProps) {
     const remaining = totalIncome - totalSpent;
     const isOverspent = totalSpent > totalIncome;
     const incomeUsedPercent = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0;
+    const { formatAmount } = useSettings(); 
 
     return (
         <div 

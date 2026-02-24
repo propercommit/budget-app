@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AreaLineChart } from "@/components/area-line-chart";
 import { CategoryTrendCard } from "./category-trend-card";
 import { iconMap } from "@/lib/icon-map";
+import { useSettings } from "@/lib/settings-context";
 
 interface CategoryInfo {
     name: string;
@@ -35,9 +36,9 @@ export function TrendsCardExpanded({
     categories,
 }: TrendsCardExpandedProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
     const selectedCategoryData = selectedCategory ? categoryData[selectedCategory] : null;
     const selectedCategoryInfo = categories.find(c => c.name === selectedCategory);
+    const { formatAmount } = useSettings();
 
     const getStats = (data: { label: string; value: number }[]) => {
         if (!data || data.length < 2) return { current: 0, change: 0 };
@@ -75,7 +76,7 @@ export function TrendsCardExpanded({
                         </span>
                     </div>
                     <p className="text-2xl font-bold mb-2" style={{ color: "#1D1D1F" }}>
-                        ${spendingStats.current.toLocaleString()}
+                        {formatAmount(spendingStats.current)}
                     </p>
                     <AreaLineChart
                         data={toChartData(spendingData)}
@@ -103,7 +104,7 @@ export function TrendsCardExpanded({
                         </span>
                     </div>
                     <p className="text-2xl font-bold mb-2" style={{ color: "#1D1D1F" }}>
-                        ${incomeStats.current.toLocaleString()}
+                        {formatAmount(incomeStats.current)}
                     </p>
                     <AreaLineChart
                         data={toChartData(incomeData)}
@@ -126,7 +127,7 @@ export function TrendsCardExpanded({
                             {isNetPositive ? "You saved this month" : "You overspent this month"}
                         </p>
                         <p className="text-3xl font-bold" style={{ color: isNetPositive ? "#34C759" : "#FF3B30" }}>
-                            {isNetPositive ? "+" : "-"}${Math.abs(netCurrent).toLocaleString()}
+                            {isNetPositive ? "+" : "-"}{formatAmount(Math.abs(netCurrent))}
                         </p>
                     </div>
                     <div className="text-right">
@@ -135,7 +136,7 @@ export function TrendsCardExpanded({
                             className="text-lg font-semibold"
                             style={{ color: (netCurrent - netPrevious) >= 0 ? "#34C759" : "#FF3B30" }}
                         >
-                            {(netCurrent - netPrevious) >= 0 ? "↑" : "↓"}${Math.abs(netCurrent - netPrevious).toLocaleString()}
+                            {(netCurrent - netPrevious) >= 0 ? "↑" : "↓"}{formatAmount(Math.abs(netCurrent - netPrevious))}
                         </p>
                     </div>
                 </div>
@@ -199,7 +200,7 @@ export function TrendsCardExpanded({
                                 </span>
                             </div>
                             <p className="text-2xl font-bold mb-2" style={{ color: "#1D1D1F" }}>
-                                ${selectedCategoryStats.current.toLocaleString()}
+                                {formatAmount(selectedCategoryStats.current)}
                             </p>
                             <AreaLineChart
                                 data={toChartData(selectedCategoryData)}

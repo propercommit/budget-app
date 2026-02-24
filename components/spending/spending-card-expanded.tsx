@@ -2,6 +2,7 @@
 
 import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
+import { useSettings } from "@/lib/settings-context";
 
 export interface SpendingEntry {
     id: string;
@@ -52,6 +53,7 @@ export function SpendingCardExpanded({
     const amountLeft = budgetNumber - totalSpent;
     const isOverBudget = amountLeft < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
+    const { formatAmount } = useSettings();
 
     const filteredEntries = entries
         .filter((entry) => entry.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -100,10 +102,10 @@ export function SpendingCardExpanded({
                     <div className="flex items-center gap-3">
                         <div className="text-right">
                             <p className="text-lg font-bold tabular-nums" style={{ color: "#1D1D1F" }}>
-                                ${totalSpent.toLocaleString()}
+                                {formatAmount(totalSpent)}
                             </p>
                             <p className="text-xs" style={{ color: "#6E6E73" }}>
-                                of ${budgetNumber.toLocaleString()}
+                                of {formatAmount(budgetNumber)}
                             </p>
                         </div>
                         <button
@@ -240,7 +242,7 @@ export function SpendingCardExpanded({
                                 </div>
                             </div>
                             <p className="font-semibold text-sm tabular-nums" style={{ color: "#1D1D1F" }}>
-                                -${entry.amount.toFixed(2)}
+                                -{formatAmount(entry.amount)}
                             </p>
                         </button>
                     ))}

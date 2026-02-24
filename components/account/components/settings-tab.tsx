@@ -1,8 +1,21 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/lib/settings-context";
+import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from "@/lib/constants";
+import { Currency, DateFormat } from "@/lib/constants";
 
 export function SettingsTab() {
+    const { settings, isLoading, updateCurrency, updateDateFormat, updateDarkMode } = useSettings();
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4 sm:space-y-6 sm:px-4">
             {/* Preferences Card */}
@@ -19,11 +32,16 @@ export function SettingsTab() {
                                 <h4 className="font-medium text-gray-900">Currency</h4>
                                 <p className="text-sm text-gray-500">Your preferred currency</p>
                             </div>
-                            <select className="h-12 sm:h-10 px-4 border border-gray-300 rounded-xl text-base sm:text-sm bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none touch-manipulation">
-                                <option>USD ($)</option>
-                                <option>EUR (€)</option>
-                                <option>GBP (£)</option>
-                                <option>CHF (Fr)</option>
+                            <select
+                                value={settings.currency}
+                                onChange={(e) => updateCurrency(e.target.value as Currency)}
+                                className="h-12 sm:h-10 px-4 border border-gray-300 rounded-xl text-base sm:text-sm bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none touch-manipulation"
+                            >
+                                {CURRENCY_OPTIONS.map((option) => (
+                                    <option key={option.code} value={option.code}>
+                                        {option.label}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
@@ -33,10 +51,16 @@ export function SettingsTab() {
                                 <h4 className="font-medium text-gray-900">Date Format</h4>
                                 <p className="text-sm text-gray-500">How dates are displayed</p>
                             </div>
-                            <select className="h-12 sm:h-10 px-4 border border-gray-300 rounded-xl text-base sm:text-sm bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none touch-manipulation">
-                                <option>MM/DD/YYYY</option>
-                                <option>DD/MM/YYYY</option>
-                                <option>YYYY-MM-DD</option>
+                            <select
+                                value={settings.dateFormat}
+                                onChange={(e) => updateDateFormat(e.target.value as DateFormat)}
+                                className="h-12 sm:h-10 px-4 border border-gray-300 rounded-xl text-base sm:text-sm bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none touch-manipulation"
+                            >
+                                {DATE_FORMAT_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
@@ -47,10 +71,17 @@ export function SettingsTab() {
                                 <p className="text-sm text-gray-500">Use dark theme</p>
                             </div>
                             <button
-                                className="relative w-14 h-8 sm:w-12 sm:h-7 bg-gray-200 rounded-full transition-colors touch-manipulation"
+                                onClick={() => updateDarkMode(!settings.darkMode)}
+                                className={`relative w-14 h-8 sm:w-12 sm:h-7 rounded-full transition-colors touch-manipulation ${
+                                    settings.darkMode ? "bg-green-500" : "bg-gray-200"
+                                }`}
                                 aria-label="Toggle dark mode"
                             >
-                                <span className="absolute left-1 top-1 w-6 h-6 sm:w-5 sm:h-5 bg-white rounded-full shadow transition-transform" />
+                                <span
+                                    className={`absolute left-1 top-1 w-6 h-6 sm:w-5 sm:h-5 bg-white rounded-full shadow transition-transform ${
+                                        settings.darkMode ? "translate-x-6 sm:translate-x-5" : ""
+                                    }`}
+                                />
                             </button>
                         </div>
                     </div>
