@@ -49,6 +49,7 @@ export default function Home() {
   // Category Popin
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryPopinKey, setCategoryPopinKey] = useState(0);
 
   // Income Popins
   const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
@@ -399,6 +400,7 @@ const handleMonthChange = async (newMonth: string) => {
             onSelect={setSelectedCategory}
             onAddCategory={() => {
               setEditingCategory(null);
+              setCategoryPopinKey(prev => prev + 1);
               setIsCategoryPopinOpen(true);
             }}
           />
@@ -811,6 +813,7 @@ const handleMonthChange = async (newMonth: string) => {
         } : undefined}
         onCreateCategory={() => {
           setEditingCategory(null);
+          setCategoryPopinKey(prev => prev + 1);
           setIsCategoryPopinOpen(true);
         }}
         mode={editingSpendingItem ? "edit" : "create"}
@@ -825,6 +828,7 @@ const handleMonthChange = async (newMonth: string) => {
       />
 
       <CategoryPopin
+        key={editingCategory?.id ?? `create-${categoryPopinKey}`}
         isOpen={isCategoryPopinOpen}
         onClose={() => {
           setIsCategoryPopinOpen(false);

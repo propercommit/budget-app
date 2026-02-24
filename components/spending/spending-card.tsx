@@ -80,6 +80,8 @@ export function SpendingCard({
     const totalSpent = entries.reduce((sum, entry) => sum + entry.amount, 0);
     const spendingEntries = entries.length;
 
+    const [categoryPopinKey, setCategoryPopinKey] = useState(0);
+
     // === Handlers ===
 
     const handleItemDetailClick = () => {
@@ -199,7 +201,10 @@ export function SpendingCard({
                         onClose={() => setShowItemEdit(false)}
                         onSave={handleItemSave}
                         onDelete={handleItemDelete}
-                        onCreateCategory={() => setShowCategoryPopin(true)}
+                        onCreateCategory={() => {
+                            setCategoryPopinKey(prev => prev + 1);
+                            setShowCategoryPopin(true);
+                            }}
                         mode="edit"
                         categories={categories}
                         initialName={spendingName}
@@ -236,6 +241,7 @@ export function SpendingCard({
                     />
 
                     <CategoryPopin
+                        key={categoryPopinKey}
                         isOpen={showCategoryPopin}
                         onClose={() => setShowCategoryPopin(false)}
                         onSave={handleCreateCategory}
