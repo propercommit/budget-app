@@ -5,6 +5,7 @@ import { SpendingEntry } from "../spending-card-expanded";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
+import { iconMap } from "@/lib/icon-map";
 
 interface EntryEditPopinProps {
     isOpen: boolean;
@@ -130,7 +131,7 @@ export function EntryEditPopin({
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-xl"
                         style={{ backgroundColor: `${spendingCategoryColor}15` }}
                     >
-                        <span className="text-lg">{spendingItemIcon}</span>
+                        <span className="text-lg">{iconMap[spendingItemIcon] || spendingItemIcon}</span>
                         <span className="text-sm font-medium" style={{ color: "#1D1D1F" }}>
                             {spendingName}
                         </span>
