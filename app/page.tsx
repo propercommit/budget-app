@@ -483,6 +483,7 @@ const handleMonthChange = async (newMonth: string) => {
             }}
             onItemDelete={() => handleDeleteSpending(item.id)}
             onEntryCreate={async (data) => {
+              
               const optimisticEntry = {
                 id: `temp-${crypto.randomUUID()}`,
                 name: data.name,
@@ -508,13 +509,27 @@ const handleMonthChange = async (newMonth: string) => {
               }));
 
               try {
-                await handleAddEntry(item.id, {
+                const realEntry = await handleAddEntry(item.id, {
                   name: data.name,
                   amount: data.amount,
                   date: data.date,
                   receiptUrl: data.receipt ?? undefined,
                   link: data.link ?? undefined,
                 });
+
+                setSpendingData(prev => ({
+                  ...prev,
+                  [selectedMonth]: prev[selectedMonth].map(s =>
+                    s.id === item.id
+                      ? {
+                          ...s,
+                          entries: (s.entries || []).map(e =>
+                            e.id === optimisticEntry.id ? realEntry : e
+                          ),
+                        }
+                      : s
+                  )
+                }));
               } catch (error) {
                 // TODO: toast notification
                 console.error("Error creating entry:", error);
@@ -522,7 +537,7 @@ const handleMonthChange = async (newMonth: string) => {
                 setSpendingData(prev => ({
                   ...prev,
                   [selectedMonth]: prev[selectedMonth].map(s =>
-                    s.id === item.id
+                    s.id === item.id 
                       ? {
                           ...s,
                           spent: s.spent - data.amount,
