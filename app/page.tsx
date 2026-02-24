@@ -24,6 +24,7 @@ import {
 } from "@/lib/api";
 import { Category, SpendingItem, IncomeSource } from "@/lib/types";
 import { SectionCard } from "@/components/section-card";
+import toast from "react-hot-toast";
 
 type SpendingData = Record<string, SpendingItem[]>;
 
@@ -472,7 +473,7 @@ const handleMonthChange = async (newMonth: string) => {
                   )
                 }));
               } catch (error) {
-                // TODO: toast notification
+                toast.error('Error updating spending item');
                 console.error("Error updating spending item:", error);
                 // rollback
                 setSpendingData(prev => ({
@@ -533,7 +534,7 @@ const handleMonthChange = async (newMonth: string) => {
                   )
                 }));
               } catch (error) {
-                // TODO: toast notification
+                toast.error('Error creating entry:');
                 console.error("Error creating entry:", error);
                 // rollback
                 setSpendingData(prev => ({
@@ -581,7 +582,7 @@ const handleMonthChange = async (newMonth: string) => {
                   link: data.link ?? undefined,
                 });
               } catch (error) {
-                // TODO: toast notification
+                toast.error('Error updating entry');
                 console.error("Error updating entry:", error);
                 // rollback
                 setSpendingData(prev => ({
@@ -620,7 +621,7 @@ const handleMonthChange = async (newMonth: string) => {
               try {
                 await handleDeleteEntry(item.id, entryId);
               } catch (error) {
-                // TODO: toast notification
+                toast.error('Error deleting entry');
                 console.error("Error deleting entry:", error);
                 // rollback — restore entry
                 if (originalEntry) {
@@ -742,7 +743,7 @@ const handleMonthChange = async (newMonth: string) => {
                 )
               }));
             } catch (error) {
-              // TODO: toast notification
+              toast.error('error updating spending item');
               console.log('error updating spending item:', error);
               // rollback — restore the original item
               setSpendingData(prev => ({
@@ -797,7 +798,7 @@ const handleMonthChange = async (newMonth: string) => {
               )
             }));
             } catch (error) {
-              // TODO : set up toast here warning the user about the error
+              toast.error('an error occurred trying to create spending item');
               console.log('error occurred trying to create spending item :', error);
                 setSpendingData(prev => ({
                 ...prev,
