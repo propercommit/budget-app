@@ -1,6 +1,7 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { useSettings } from "@/lib/settings-context";
 
 interface IncomeDetailPopinProps {
     isOpen: boolean;
@@ -12,6 +13,7 @@ interface IncomeDetailPopinProps {
 export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDetailPopinProps) {
     
     useLockScroll(isOpen);
+    const { formatAmount } = useSettings();
     
     if (!isOpen || !income) return null;
 
@@ -82,7 +84,7 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
                         <div className="flex-1 min-w-0">
                             <h3 className="text-xl font-semibold text-gray-900 truncate">{income.name}</h3>
                             <p className="text-2xl font-bold" style={{ color: typeColor }}>
-                                ${income.amount.toLocaleString()}
+                                {formatAmount(income.amount)}
                             </p>
                         </div>
                     </div>

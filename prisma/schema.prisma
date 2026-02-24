@@ -17,6 +17,7 @@ model User {
   categories    Category[]
   spendingItems SpendingItem[]
   IncomeSources IncomeSource[]
+  settings      UserSettings?
 }
 
 model Category {
@@ -89,4 +90,15 @@ model SpendingEntry {
   date            DateTime  @default(now())
   spendingItemId  String
   spendingItem    SpendingItem  @relation(fields: [spendingItemId], references: [id], onDelete: Cascade)
+}
+
+model UserSettings {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currency   String   @default("USD")
+  dateFormat String   @default("MM/DD/YYYY")
+  darkMode   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

@@ -1,3 +1,5 @@
+import { useSettings } from "@/lib/settings-context";
+
 interface ValueLabelProps {
     x: number;
     y: number;
@@ -15,6 +17,7 @@ export function ValueLabel({
     delay = 0,
     animated = false,
 }: ValueLabelProps) {
+    const { formatAmount } = useSettings();
     return (
         <text
             x={x}
@@ -29,7 +32,7 @@ export function ValueLabel({
                 }),
             }}
         >
-            ${value.toLocaleString()}
+            {formatAmount(value)}
         </text>
     );
 }

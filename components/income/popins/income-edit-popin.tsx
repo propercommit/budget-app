@@ -2,6 +2,8 @@ import { useState } from "react";
 import { IncomeSource } from "@/lib/types";
 import { IconPicker } from "@/components/icon-picker";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { useSettings } from "@/lib/settings-context";
+import { CURRENCY_SYMBOLS } from "@/lib/constants";
 
 interface IncomePopinProps {
     isOpen: boolean;
@@ -21,6 +23,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
     const [endDate, setEndDate] = useState(initialData?.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
     const [note, setNote] = useState(initialData?.note || '');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const { settings } = useSettings();
 
     useLockScroll(isOpen);
 
@@ -109,7 +112,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         </label>
                         <div className="relative">
                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-gray-400 pointer-events-none">
-                                $
+                                {CURRENCY_SYMBOLS[settings.currency]}
                             </div>
                             <input
                                 type="text"

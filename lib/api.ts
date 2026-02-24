@@ -199,3 +199,16 @@ export async function deleteEntry(id: string) {
     method: "DELETE",
   });
 }
+
+// ============ SETTINGS ============
+
+export async function getSettings() {
+  return fetchAPI("/api/settings");
+}
+
+export async function updateSettings(data: { currency?: string; dateFormat?: string; darkMode?: boolean }) {
+  return fetchAPI("/api/settings", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
+import { useSettings } from "@/lib/settings-context";
 
 interface StickyBudgetBarProps {
     totalIncome: number;
@@ -9,6 +10,7 @@ interface StickyBudgetBarProps {
 }
 
 export function StickyBudgetBar({ totalIncome, totalBudgeted, totalSpent }: StickyBudgetBarProps) {
+    const { formatAmount } = useSettings();
     const [isVisible, setIsVisible] = useState(false);
     const remainingBudget = totalIncome - totalBudgeted;
     const afterSpending = totalIncome - totalSpent;
@@ -58,7 +60,7 @@ export function StickyBudgetBar({ totalIncome, totalBudgeted, totalSpent }: Stic
                             remainingBudget >= 0 ? "text-green-700" : "text-red-700"
                         }`}
                     >
-                        {remainingBudget >= 0 ? "" : "-"}${Math.abs(remainingBudget).toFixed(2)}
+                        {formatAmount(remainingBudget)}
                     </span>
                 </div>
 
@@ -80,7 +82,7 @@ export function StickyBudgetBar({ totalIncome, totalBudgeted, totalSpent }: Stic
                             afterSpending >= 0 ? "text-cyan-700" : "text-red-700"
                         }`}
                     >
-                        {afterSpending >= 0 ? "" : "-"}${Math.abs(afterSpending).toFixed(2)}
+                        {formatAmount(afterSpending)}
                     </span>
                 </div>
             </div>

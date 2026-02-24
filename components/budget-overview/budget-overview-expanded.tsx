@@ -1,4 +1,5 @@
 import { iconMap } from "@/lib/icon-map";
+import { useSettings } from "@/lib/settings-context";
 
 interface CategoryBreakdown {
     name: string;
@@ -15,14 +16,6 @@ interface BudgetOverviewExpandedProps {
     categoryBreakdown: CategoryBreakdown[];
     onCollapse: () => void;
 }
-
-const formatAmount = (amount: number): string => {
-    if (amount >= 1_000_000_000_000) return `$${(amount / 1_000_000_000_000).toFixed(1)}T`;
-    if (amount >= 1_000_000_000) return `$${(amount / 1_000_000_000).toFixed(1)}B`;
-    if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-    if (amount >= 10_000) return `$${(amount / 1_000).toFixed(1)}K`;
-    return `$${amount.toLocaleString()}`;
-};
 
 // ============================================
 // DONUT CHART COMPONENT
@@ -148,6 +141,7 @@ function CategoryRow({
 }) {
     const percentage = budget > 0 ? (spent / budget) * 100 : 0;
     const isOver = spent > budget;
+    const { formatAmount } = useSettings();
     
     return (
         <div className="flex items-center gap-3">
@@ -203,6 +197,7 @@ export function BudgetOverviewExpanded({
     const incomeUsedPercent = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0;
     const budgetUsedPercent = totalBudgeted > 0 ? (totalSpent / totalBudgeted) * 100 : 0;
     const isOverBudget = totalSpent > totalBudgeted && totalBudgeted > 0;
+    const { formatAmount } = useSettings();
     
     // Donut segments from category breakdown
     const donutSegments = categoryBreakdown
@@ -311,7 +306,7 @@ export function BudgetOverviewExpanded({
                         height={10}
                     />
                     <div className="flex justify-between mt-1.5">
-                        <span className="text-xs text-gray-400">$0</span>
+                        <span className="text-xs text-gray-400">{formatAmount(0)}</span>
                         <span className="text-xs text-gray-400">{formatAmount(totalIncome)}</span>
                     </div>
                 </div>

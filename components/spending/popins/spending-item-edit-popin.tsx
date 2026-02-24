@@ -4,6 +4,8 @@ import { useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 import { iconMap } from "@/lib/icon-map";
+import { useSettings } from "@/lib/settings-context";
+import { CURRENCY_SYMBOLS } from "@/lib/constants";
 
 interface Category {
     name: string;
@@ -64,6 +66,7 @@ export function SpendingItemEditPopin({
     const [note, setNote] = useState(initialNote);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [lastAutoSelected, setLastAutoSelected] = useState<string | null>(null);
+    const { settings } = useSettings();
 
     if (autoSelectCategory && autoSelectCategory !== lastAutoSelected) {
         setSelectedCategory(autoSelectCategory);
@@ -218,7 +221,7 @@ export function SpendingItemEditPopin({
                                 className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-[#6E6E73]"
                                 aria-hidden="true"
                             >
-                                $
+                                {CURRENCY_SYMBOLS[settings.currency]}
                             </span>
                             <input
                                 id="spending-budget"

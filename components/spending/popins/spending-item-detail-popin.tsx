@@ -1,6 +1,7 @@
 "use client";
 
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { useSettings } from "@/lib/settings-context";
 
 interface SpendingItemDetailPopinProps {
     isOpen: boolean;
@@ -40,6 +41,7 @@ export function SpendingItemDetailPopin({
 }: SpendingItemDetailPopinProps) {
 
     useLockScroll(isOpen);
+    const { formatAmount } = useSettings();
 
     if (!isOpen) return null;
 
@@ -162,7 +164,7 @@ export function SpendingItemDetailPopin({
                                 Monthly Budget
                             </span>
                             <span className="text-lg font-bold" style={{ color: "#1D1D1F" }}>
-                                ${budgetNumber.toLocaleString()}
+                                {formatAmount(budgetNumber)}
                             </span>
                         </div>
 
@@ -189,7 +191,7 @@ export function SpendingItemDetailPopin({
                                     Spent:{" "}
                                 </span>
                                 <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                                    ${totalSpent.toLocaleString()}
+                                    {formatAmount(totalSpent)}
                                 </span>
                             </div>
                             <div

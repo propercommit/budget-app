@@ -1,6 +1,6 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
-import { formatAmount } from "@/lib/utils";
+import { useSettings } from "@/lib/settings-context";
 
 interface IncomeCardExpandedProps {
     incomes: IncomeSource[];
@@ -31,6 +31,7 @@ export function IncomeCardExpanded({
     const activeLength = circumference * (activePercentage / 100);
     const passiveLength = circumference * (passivePercentage / 100);
     const isEmpty = incomes.length === 0;
+    const { formatAmount } = useSettings();
 
     const renderIcon = (iconId: string) => {
         if (iconId.startsWith("data:")) {

@@ -2,6 +2,7 @@
 
 import { iconMap } from "@/lib/icon-map";
 import { MiniAreaChart } from "./mini-area-chart";
+import { useSettings } from "@/lib/settings-context";
 
 interface CategoryTrendCardProps {
     category: { name: string; icon: string; color: string };
@@ -15,6 +16,7 @@ export function CategoryTrendCard({ category, data, isSelected, onClick }: Categ
     const previous = data[data.length - 2]?.value || 0;
     const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
     const isDown = change <= 0;
+    const { formatAmount } = useSettings();
 
     return (
         <button
@@ -34,7 +36,7 @@ export function CategoryTrendCard({ category, data, isSelected, onClick }: Categ
                 <MiniAreaChart data={data} color={category.color} height={40} />
             </div>
             <div className="flex items-center justify-between">
-                <span className="text-sm font-bold" style={{ color: "#1D1D1F" }}>${current.toLocaleString()}</span>
+                <span className="text-sm font-bold" style={{ color: "#1D1D1F" }}>{formatAmount(current)}</span>
                 <span className="text-xs font-semibold" style={{ color: isDown ? "#34C759" : "#FF3B30" }}>
                     {isDown ? "↓" : "↑"}{Math.abs(change).toFixed(0)}%
                 </span>
