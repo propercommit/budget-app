@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/header";
 import { MonthPicker } from "@/components/month-picker";
 import { StickyBudgetBar } from "@/components/sticky-budget-bar";
@@ -9,8 +9,7 @@ import { IncomePopin } from "@/components/income/popins/income-edit-popin";
 import { IncomeDetailPopin } from "@/components/income/popins/income-detail-popin";
 import { BudgetOverviewCard } from "@/components/budget-overview/budget-overview";
 import { SpendingCard } from "@/components/spending/spending-card";
-import { SpendingCarousel } from "@/components/spending/spending-carousel";
-import { SpendingItemEditPopin } from "@/components/spending/popins/spending-item-edit-popin";
+import { SpendingCarousel, SpendingCarouselRef } from "@/components/spending/spending-carousel";import { SpendingItemEditPopin } from "@/components/spending/popins/spending-item-edit-popin";
 import { CategoryRibbon } from "@/components/category/category-ribbon";
 import { CategoryPopin } from "@/components/category/popins/category-popin";
 import { TrendsCard } from "@/components/trends/trends-card";
@@ -46,6 +45,7 @@ export default function Home() {
   const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
   const [editingSpendingItem, setEditingSpendingItem] = useState<SpendingItem | null>(null);
   const [spendingPopinKey, setSpendingPopinKey] = useState(0);
+  const carouselRef = useRef<SpendingCarouselRef>(null);
 
   // Category Popin
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
@@ -491,7 +491,7 @@ export default function Home() {
           />
         </div>
 
-    <SpendingCarousel key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
+    <SpendingCarousel ref={carouselRef} key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
       {filteredSpendingItems.map((item) => (
         <div key={item.id} className="w-full flex-shrink-0 snap-center">
           <SpendingCard
@@ -855,10 +855,15 @@ export default function Home() {
             };
 
             // update state
-            setSpendingData(prev => ({
-              ...prev,
-              [selectedMonth]: [...(prev[selectedMonth] || []), optimisticSpending]
-            }));
+            setSpendingData(prev => {
+              const updated = {
+                ...prev,
+                [selectedMonth]: [...(prev[selectedMonth] || []), optimisticSpending]
+              };
+              const newIndex = updated[selectedMonth].length - 1;
+              setTimeout(() => carouselRef.current?.scrollToIndex(newIndex), 100);
+              return updated;
+            });
 
             setIsSpendingPopinOpen(false);
             setEditingSpendingItem(null);

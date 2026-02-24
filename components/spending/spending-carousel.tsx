@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, ReactNode } from "react";
+import { useRef, useState, useEffect, useCallback, ReactNode, forwardRef, useImperativeHandle } from "react";
 
 interface SpendingCarouselProps {
     itemCount: number;
@@ -8,7 +8,12 @@ interface SpendingCarouselProps {
     children: ReactNode;
 }
 
-export function SpendingCarousel({ itemCount, onAdd, children }: SpendingCarouselProps) {
+export interface SpendingCarouselRef {
+    scrollToIndex: (index: number) => void;
+}
+
+export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarouselProps>(
+    function SpendingCarousel({ itemCount, onAdd, children }, ref) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [activeIndex, setActiveIndex] = useState(0);
 
@@ -35,6 +40,10 @@ export function SpendingCarousel({ itemCount, onAdd, children }: SpendingCarouse
         scrollRef.current.scrollTo({ left: index * cardWidth, behavior: "smooth" });
         setActiveIndex(index);
     };
+
+    useImperativeHandle(ref, () => ({
+        scrollToIndex,
+    }));
 
     if (itemCount === 0) {
         return (
@@ -93,3 +102,4 @@ export function SpendingCarousel({ itemCount, onAdd, children }: SpendingCarouse
         </div>
     );
 }
+);
