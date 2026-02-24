@@ -1,4 +1,9 @@
-import { ShoppingCart, Fuel, HeartPulse, Lightbulb, Film, PiggyBank, Home, Car, CreditCard, Phone, Utensils, Plane, Grid2X2 } from "lucide-react";
+import { 
+    ShoppingCart, Fuel, HeartPulse, Lightbulb, Film, PiggyBank, Home, Car, 
+    CreditCard, Phone, Utensils, Plane, Grid2X2, Briefcase, Laptop, 
+    TrendingUp, Zap, Coffee, Music, Shield, Dumbbell, Shirt, Monitor, 
+    Smartphone, Train, ShoppingBag, Gamepad2 
+} from "lucide-react";
 
 export const iconMap: Record<string, React.ReactNode> = {
     "shopping-cart": <ShoppingCart className="w-5 h-5" />,
@@ -13,7 +18,21 @@ export const iconMap: Record<string, React.ReactNode> = {
     "phone": <Phone className="w-5 h-5" />,
     "utensils": <Utensils className="w-5 h-5" />,
     "plane": <Plane className="w-5 h-5" />,
-    "all": <Grid2X2 className="w-5 h-5"></Grid2X2>
+    "all": <Grid2X2 className="w-5 h-5"></Grid2X2>,
+    "briefcase": <Briefcase className="w-5 h-5" />,
+    "laptop": <Laptop className="w-5 h-5" />,
+    "trending-up": <TrendingUp className="w-5 h-5" />,
+    "zap": <Zap className="w-5 h-5" />,
+    "coffee": <Coffee className="w-5 h-5" />,
+    "music": <Music className="w-5 h-5" />,
+    "shield": <Shield className="w-5 h-5" />,
+    "dumbbell": <Dumbbell className="w-5 h-5" />,
+    "shirt": <Shirt className="w-5 h-5" />,
+    "monitor": <Monitor className="w-5 h-5" />,
+    "smartphone": <Smartphone className="w-5 h-5" />,
+    "train": <Train className="w-5 h-5" />,
+    "shopping-bag": <ShoppingBag className="w-5 h-5" />,
+    "gamepad-2": <Gamepad2 className="w-5 h-5" />,
 };
 
 export const availableIcons = [
@@ -29,4 +48,18 @@ export const availableIcons = [
     { id: "phone", name: "Phone" },
     { id: "utensils", name: "Food" },
     { id: "plane", name: "Travel" },
+    { id: "briefcase", name: "Work" },
+    { id: "laptop", name: "Laptop" },
+    { id: "trending-up", name: "Investing" },
+    { id: "zap", name: "Energy" },
+    { id: "coffee", name: "Coffee" },
+    { id: "music", name: "Music" },
+    { id: "shield", name: "Insurance" },
+    { id: "dumbbell", name: "Fitness" },
+    { id: "shirt", name: "Clothing" },
+    { id: "monitor", name: "Screen" },
+    { id: "smartphone", name: "Mobile" },
+    { id: "train", name: "Train" },
+    { id: "shopping-bag", name: "Bag" },
+    { id: "gamepad-2", name: "Gaming" },
 ];
