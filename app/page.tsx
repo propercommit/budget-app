@@ -138,59 +138,130 @@ export default function Home() {
   };
 
   const handleSaveIncome = async (data: Omit<IncomeSource, 'id' | 'month'>) => {
+    if (editingIncomeSource) {
+      // --- EDIT PATH ---
+      const optimistic: IncomeSource = {
+        ...editingIncomeSource,
+        name: data.name,
+        amount: data.amount,
+        icon: data.icon,
+        type: data.type,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        note: data.note,
+      };
+
+      // 1. Update state immediately
+      setIncomeSources(prev =>
+        prev.map(i => i.id === editingIncomeSource.id ? optimistic : i)
+      );
+
+      // 2. Close modal
+      setIsIncomePopinOpen(false);
+      setEditingIncomeSource(null);
+
+      // 3. API call
       try {
-        if (editingIncomeSource) {
-          const updated = await updateIncomeSource(editingIncomeSource.id, {
-            name: data.name,
-            amount: data.amount,
-            icon: data.icon,
-            type: data.type,
-            startDate: data.startDate.toISOString(),
-            endDate: data.endDate?.toISOString(),
-            note: data.note,
-          });
-          setIncomeSources(prev => prev.map(i =>
-            i.id === editingIncomeSource.id ? updated : i
-          ));
-        } else {
-          const created = await createIncomeSource({
-            name: data.name,
-            amount: data.amount,
-            icon: data.icon,
-            type: data.type,
-            startDate: data.startDate.toISOString(),
-            endDate: data.endDate?.toISOString(),
-            note: data.note,
-            month: selectedMonth,
-          });
-          setIncomeSources(prev => [...prev, created]);
-        }
-        setIsIncomePopinOpen(false);
+        const updated = await updateIncomeSource(editingIncomeSource.id, {
+          name: data.name,
+          amount: data.amount,
+          icon: data.icon,
+          type: data.type,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate?.toISOString(),
+          note: data.note,
+        });
+        setIncomeSources(prev =>
+          prev.map(i => i.id === editingIncomeSource.id ? updated : i)
+        );
         const refreshed = await getAllIncomeSources();
         setAllIncomeSources(refreshed);
       } catch (error) {
+        toast.error('Error updating income source');
         console.error('Error saving income:', error);
+        // rollback
+        setIncomeSources(prev =>
+          prev.map(i => i.id === editingIncomeSource.id ? editingIncomeSource : i)
+        );
       }
-    };
 
-  const handleDeleteIncome = async () => {
-    if (editingIncomeSource) {
+    } else {
+      // --- CREATE PATH ---
+      const optimisticIncome: IncomeSource = {
+        id: `temp-${crypto.randomUUID()}`,
+        name: data.name,
+        amount: data.amount,
+        icon: data.icon,
+        type: data.type,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        note: data.note,
+        month: selectedMonth,
+      };
+
+      // 1. Update state immediately
+      setIncomeSources(prev => [...prev, optimisticIncome]);
+
+      // 2. Close modal
+      setIsIncomePopinOpen(false);
+      setEditingIncomeSource(null);
+
+      // 3. API call — swap temp for real
       try {
-        await deleteIncomeSource(editingIncomeSource.id);
-        setIncomeSources(prev => prev.filter(i => i.id !== editingIncomeSource.id));
-        setAllIncomeSources(prev => prev.filter(i => i.id !== editingIncomeSource.id));
+        const created = await createIncomeSource({
+          name: data.name,
+          amount: data.amount,
+          icon: data.icon,
+          type: data.type,
+          startDate: data.startDate.toISOString(),
+          endDate: data.endDate?.toISOString(),
+          note: data.note,
+          month: selectedMonth,
+        });
+        setIncomeSources(prev =>
+          prev.map(i => i.id === optimisticIncome.id ? created : i)
+        );
+        const refreshed = await getAllIncomeSources();
+        setAllIncomeSources(refreshed);
       } catch (error) {
-        console.error('Error deleting income:', error);
+        toast.error('Error creating income source');
+        console.error('Error saving income:', error);
+        // rollback
+        setIncomeSources(prev =>
+          prev.filter(i => i.id !== optimisticIncome.id)
+        );
       }
     }
+  };
+
+  const handleDeleteIncome = async () => {
+    if (!editingIncomeSource) return;
+
+    const original = editingIncomeSource;
+
+    // Update state
+    setIncomeSources(prev => prev.filter(i => i.id !== original.id));
+    setAllIncomeSources(prev => prev.filter(i => i.id !== original.id));
+
+    // Close modal
     setIsIncomePopinOpen(false);
     setEditingIncomeSource(null);
+
+    try {
+      await deleteIncomeSource(original.id);
+    } catch (error) {
+      toast.error('Error deleting income source');
+      console.error('Error deleting income:', error);
+      // rollback
+      setIncomeSources(prev => [...prev, original]);
+      setAllIncomeSources(prev => [...prev, original]);
+    }
   };
 
   // =====================
   // Month Handlers
   // =====================
-const handleMonthChange = async (newMonth: string) => {
+  const handleMonthChange = async (newMonth: string) => {
     setSelectedMonth(newMonth);
 
     // Handle spending
@@ -264,14 +335,27 @@ const handleMonthChange = async (newMonth: string) => {
   };
 
   const handleDeleteSpending = async (id: string) => {
+    
+    const originalItem = currentSpendingItems.find(item => item.id === id);
+
+    // optimistic update
+    setSpendingData(prev => ({
+      ...prev,
+      [selectedMonth]: prev[selectedMonth].filter(item => item.id !== id)
+    }));
+
     try {
       await deleteSpending(id);
-      setSpendingData(data => ({
-        ...data,
-        [selectedMonth]: data[selectedMonth].filter(item => item.id !== id)
-      }));
     } catch (error) {
+      toast.error('Error deleting spending item');
       console.error('Error deleting spending:', error);
+      // rollback
+      if (originalItem) {
+        setSpendingData(prev => ({
+          ...prev,
+          [selectedMonth]: [...(prev[selectedMonth] || []), originalItem]
+        }));
+      }
     }
   };
 
@@ -279,37 +363,37 @@ const handleMonthChange = async (newMonth: string) => {
   // Category Handlers
   // =====================
   const handleAddCategory = async (name: string, icon: string, color: string) => {
-    try {
-      const newCategory = await createCategory({ label: name, icon, color });
-      setCategories(prev => [...prev, newCategory]);
-      return newCategory;
-    } catch (error) {
-      console.error("Failed to create category:", error);
-      return undefined;
-    }
+    return await createCategory({ label: name, icon, color });
   };
 
   const handleEditCategory = async (id: string, name: string, icon: string, color: string) => {
-    try {
-      await updateCategory(id, { label: name, icon, color });
-      setCategories(categories.map(c =>
-        c.id === id ? { ...c, label: name, icon, color } : c
-      ));
-    } catch (error) {
-      console.error('Error updating category:', error);
-    }
+    return await updateCategory(id, { label: name, icon, color });
   };
 
   const handleDeleteCategory = async (id: string) => {
+    const originalCategory = categories.find(c => c.id === id);
+
+    // optimistic update
+    setCategories(prev => prev.filter(c => c.id !== id));
+
+    // reset selected category if we're deleting the active filter
+    if (originalCategory && selectedCategory === originalCategory.label) {
+      setSelectedCategory("all");
+    }
+
     try {
-      const categoryToDelete = categories.find(c => c.id === id);
       await deleteCategory(id);
-      setCategories(categories.filter(c => c.id !== id));
-      if (categoryToDelete && selectedCategory === categoryToDelete.label) {
-        setSelectedCategory("all");
-      }
     } catch (error) {
-      console.error("Failed to delete category:", error);
+      toast.error('Error deleting category');
+      console.error('Error deleting category:', error);
+      // rollback
+      if (originalCategory) {
+        setCategories(prev => [...prev, originalCategory]);
+        // restore selected category if it was reset
+        if (selectedCategory === "all" && originalCategory.label) {
+          setSelectedCategory(originalCategory.label);
+        }
+      }
     }
   };
 
@@ -689,7 +773,7 @@ const handleMonthChange = async (newMonth: string) => {
       {/* Popins */}
       <SpendingItemEditPopin
         autoSelectCategory={lastCreatedCategoryName}
-        key={editingSpendingItem?.id ?? `create-${spendingPopinKey}`}
+        key={editingSpendingItem?.id ?? `create-spending-${spendingPopinKey}`}
         isOpen={isSpendingPopinOpen}
         onClose={() => {
           setIsSpendingPopinOpen(false);
@@ -829,7 +913,7 @@ const handleMonthChange = async (newMonth: string) => {
       />
 
       <CategoryPopin
-        key={editingCategory?.id ?? `create-${categoryPopinKey}`}
+        key={editingCategory?.id ?? `create-category-${categoryPopinKey}`}
         isOpen={isCategoryPopinOpen}
         onClose={() => {
           setIsCategoryPopinOpen(false);
@@ -837,13 +921,69 @@ const handleMonthChange = async (newMonth: string) => {
         }}
         onSave={async (data: { name: string; icon: string; color: string }) => {
           if (editingCategory) {
-            await handleEditCategory(editingCategory.id, data.name, data.icon, data.color);
+            // --- EDIT PATH ---
+            const optimistic = {
+              ...editingCategory,
+              label: data.name,
+              icon: data.icon,
+              color: data.color,
+            };
+
+            // 1. Update state immediately
+            setCategories(prev =>
+              prev.map(c => c.id === editingCategory.id ? optimistic : c)
+            );
+
+            // 2. Close modal
+            setIsCategoryPopinOpen(false);
+            setEditingCategory(null);
+
+            // 3. API call + rollback
+            try {
+              await handleEditCategory(editingCategory.id, data.name, data.icon, data.color);
+            } catch (error) {
+              toast.error("Error updating category");
+              console.log('error updating category: ', error);
+              // Rollback — put the original back
+              setCategories(prev =>
+                prev.map(c => c.id === editingCategory.id ? editingCategory : c)
+              );
+            }
+
           } else {
-            await handleAddCategory(data.name, data.icon, data.color);
+            // --- CREATE PATH ---
+            const optimisticCategory: Category = {
+              id: `temp-${crypto.randomUUID()}`,
+              label: data.name,
+              icon: data.icon,
+              color: data.color,
+            };
+
+            // 1. Update state immediately
+            setCategories(prev => [...prev, optimisticCategory]);
             setLastCreatedCategoryName(data.name);
+
+            // 2. Close modal
+            setIsCategoryPopinOpen(false);
+            setEditingCategory(null);
+
+            // 3. API call — swap temp for real
+            try {
+              const realCategory = await handleAddCategory(data.name, data.icon, data.color);
+              if (realCategory) {
+                setCategories(prev =>
+                  prev.map(c => c.id === optimisticCategory.id ? realCategory : c)
+                );
+              }
+            } catch (error) {
+              toast.error("Error creating category");
+              console.log('error creating category: ', error);
+              // Rollback — remove the optimistic one
+              setCategories(prev =>
+                prev.filter(c => c.id !== optimisticCategory.id)
+              );
+            }
           }
-          setIsCategoryPopinOpen(false);
-          setEditingCategory(null);
         }}
         onDelete={editingCategory ? async () => {
           await handleDeleteCategory(editingCategory.id);

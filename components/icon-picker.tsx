@@ -64,7 +64,6 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                                 type="button"
                                 key={icon.id}
                                 onClick={() => {
-                                    console.log('IconPicker clicked:', icon.id);
                                     onChange(icon.id);
                                 }}
                                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all flex-shrink-0 min-w-[72px] ${
