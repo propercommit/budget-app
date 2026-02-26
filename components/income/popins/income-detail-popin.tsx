@@ -1,6 +1,6 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
-import { useLockScroll } from "@/components/hooks/use-lock-scroll";
+import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { useSettings } from "@/lib/settings-context";
 
 interface IncomeDetailPopinProps {
@@ -11,11 +11,9 @@ interface IncomeDetailPopinProps {
 }
 
 export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDetailPopinProps) {
-    
-    useLockScroll(isOpen);
     const { formatAmount } = useSettings();
-    
-    if (!isOpen || !income) return null;
+
+    if (!income) return null;
 
     const typeColor = income.type === 'active' ? '#007AFF' : '#FF9500';
 
@@ -36,114 +34,87 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div 
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={onClose}
-            />
-            
-            {/* Popin */}
-            <div className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-900">Income Details</h2>
-                    <div className="flex items-center gap-2">
-                        {/* Edit Button */}
-                        <button
-                            onClick={onEdit}
-                            className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
-                            title="Edit income"
-                        >
-                            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                        </button>
-                        {/* Close Button */}
-                        <button
-                            onClick={onClose}
-                            className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
-                        >
-                            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+        <PopinWrapper
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Income Details"
+            headerActions={
+                <button
+                    onClick={onEdit}
+                    className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                    style={{ backgroundColor: "#F5F5F7" }}
+                    title="Edit income"
+                >
+                    <svg className="w-5 h-5" style={{ color: "#6E6E73" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                </button>
+            }
+            footer={
+                <button
+                    onClick={onClose}
+                    className="w-full py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
+                    style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                >
+                    Close
+                </button>
+            }
+        >
+            <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                    <div
+                        className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${typeColor}15`, color: typeColor }}
+                    >
+                        {renderIcon(income.icon)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-xl font-semibold truncate" style={{ color: "#1D1D1F" }}>{income.name}</h3>
+                        <p className="text-2xl font-bold" style={{ color: typeColor }}>
+                            {formatAmount(income.amount)}
+                        </p>
                     </div>
                 </div>
-                
-                {/* Content */}
-                <div className="p-6 space-y-6">
-                    {/* Hero: Icon + Name + Amount */}
-                    <div className="flex items-center gap-4">
-                        <div 
-                            className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: `${typeColor}15`, color: typeColor }}
-                        >
-                            {renderIcon(income.icon)}
+
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Type</span>
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: typeColor }}
+                            />
+                            <span className="text-sm font-semibold capitalize" style={{ color: "#1D1D1F" }}>
+                                {income.type}
+                            </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <h3 className="text-xl font-semibold text-gray-900 truncate">{income.name}</h3>
-                            <p className="text-2xl font-bold" style={{ color: typeColor }}>
-                                {formatAmount(income.amount)}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Duration</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                                {formatDate(income.startDate)}
+                            </span>
+                            <span style={{ color: "#C7C7CC" }}>→</span>
+                            <span className="text-sm font-semibold" style={{ color: income.endDate ? "#1D1D1F" : "#34C759" }}>
+                                {income.endDate ? formatDate(income.endDate) : 'Present'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {income.note && (
+                        <div className="space-y-2">
+                            <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Note</span>
+                            <p className="text-sm leading-relaxed p-4 rounded-xl" style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}>
+                                {income.note}
                             </p>
                         </div>
-                    </div>
-                    
-                    {/* Divider */}
-                    <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-                    
-                    {/* Details Grid */}
-                    <div className="space-y-4">
-                        {/* Type */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-500">Type</span>
-                            <div className="flex items-center gap-2">
-                                <div 
-                                    className="w-2.5 h-2.5 rounded-full"
-                                    style={{ backgroundColor: typeColor }}
-                                />
-                                <span className="text-sm font-semibold text-gray-900 capitalize">
-                                    {income.type}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        {/* Duration */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-500">Duration</span>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900">
-                                    {formatDate(income.startDate)}
-                                </span>
-                                <span className="text-gray-400">→</span>
-                                <span className={`text-sm font-semibold ${income.endDate ? 'text-gray-900' : 'text-green-500'}`}>
-                                    {income.endDate ? formatDate(income.endDate) : 'Present'}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        {/* Note (if exists) */}
-                        {income.note && (
-                            <div className="space-y-2">
-                                <span className="text-sm font-medium text-gray-500">Note</span>
-                                <p className="text-sm leading-relaxed p-4 rounded-xl bg-gray-100 text-gray-900">
-                                    {income.note}
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                
-                {/* Footer */}
-                <div className="p-6 pt-2">
-                    <button
-                        onClick={onClose}
-                        className="w-full py-3.5 px-4 rounded-xl font-semibold bg-gray-100 text-gray-900 border border-gray-200 hover:bg-gray-200 transition-colors"
-                    >
-                        Close
-                    </button>
+                    )}
                 </div>
             </div>
-        </div>
+        </PopinWrapper>
     );
 }
