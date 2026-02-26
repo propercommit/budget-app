@@ -203,12 +203,17 @@ export function SpendingCardExpanded({
                             style={{ color: "#1D1D1F" }}
                         />
                     </div>
-                    <select
-                        value={sortOrder}
-                        onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-                        className="px-3 py-2.5 rounded-xl text-xs font-medium outline-none cursor-pointer"
-                        style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
-                    >
+                        <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+                            className="px-3 pr-8 py-2.5 rounded-xl text-xs font-medium outline-none cursor-pointer appearance-none bg-no-repeat"
+                            style={{
+                                backgroundColor: "#F5F5F7",
+                                color: "#1D1D1F",
+                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E6E73' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                                backgroundPosition: "right 10px center",
+                            }}
+                        >
                         <option value="newest">Newest</option>
                         <option value="oldest">Oldest</option>
                         <option value="highest">Highest</option>

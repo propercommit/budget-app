@@ -31,6 +31,7 @@ export default function Home() {
   // =====================
   // State
   // =====================
+  const [isSpendingExpanded, setIsSpendingExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(
     `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
@@ -493,8 +494,10 @@ export default function Home() {
 
     <SpendingCarousel ref={carouselRef} key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
       {filteredSpendingItems.map((item) => (
-        <div key={item.id} className="w-full flex-shrink-0 snap-center">
+          <div key={item.id} className="w-full flex-shrink-0 snap-center overflow-hidden px-2">
           <SpendingCard
+            isExpanded={isSpendingExpanded}
+            onToggleExpand={()=> setIsSpendingExpanded(prev => !prev)}
             spendingName={item.name}
             spendingItemIcon={item.icon}
             categoryName={item.category?.label ?? "Uncategorized"}
