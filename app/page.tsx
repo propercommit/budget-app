@@ -494,7 +494,7 @@ export default function Home() {
 
     <SpendingCarousel ref={carouselRef} key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
       {filteredSpendingItems.map((item) => (
-          <div key={item.id} className="w-full flex-shrink-0 snap-center overflow-hidden px-2">
+          <div key={item.id} className="w-full flex-shrink-0 snap-center snap-always overflow-hidden px-2">
           <SpendingCard
             isExpanded={isSpendingExpanded}
             onToggleExpand={()=> setIsSpendingExpanded(prev => !prev)}

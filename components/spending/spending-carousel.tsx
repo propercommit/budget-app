@@ -18,15 +18,32 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
     const [activeIndex, setActiveIndex] = useState(0);
     const safeIndex = Math.min(activeIndex, Math.max(0, itemCount - 1));
     const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isScrollingRef = useRef(false);
 
+    const updateHeight = useCallback((index: number) => {
+        if (!scrollRef.current) return;
+        const child = scrollRef.current.children[index] as HTMLElement;
+        if (child) {
+            setContainerHeight(child.scrollHeight);
+        }
+    }, []);
 
     const handleScroll = useCallback(() => {
         if (!scrollRef.current) return;
         const container = scrollRef.current;
         const cardWidth = container.offsetWidth;
         const newIndex = Math.round(container.scrollLeft / cardWidth);
-        setActiveIndex(Math.max(0, Math.min(newIndex, itemCount - 1)));
-    }, [itemCount]);
+        const clamped = Math.max(0, Math.min(newIndex, itemCount - 1));
+        setActiveIndex(clamped);
+
+        isScrollingRef.current = true;
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+            isScrollingRef.current = false;
+            updateHeight(clamped);
+        }, 150);
+    }, [itemCount, updateHeight]);
 
     useEffect(() => {
         const el = scrollRef.current;
@@ -47,13 +64,15 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
         const activeChild = scrollRef.current.children[safeIndex] as HTMLElement;
         if (!activeChild) return;
 
-        const updateHeight = () => {
-            setContainerHeight(activeChild.scrollHeight);
+        const onResize = () => {
+            if (!isScrollingRef.current) {
+                setContainerHeight(activeChild.scrollHeight);
+            }
         };
 
-        updateHeight();
+        onResize();
 
-        const observer = new ResizeObserver(updateHeight);
+        const observer = new ResizeObserver(onResize);
         observer.observe(activeChild);
 
         return () => observer.disconnect();
