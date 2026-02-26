@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "components/category/category-creation-popin.tsx", "components/spending-card"  ],
+, "components/category/popins/category-creation-popin.tsx", "components/spending-card"  ],
   "exclude": ["node_modules"]
 }
