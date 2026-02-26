@@ -42,6 +42,8 @@ interface SpendingCardProps {
     onEntryUpdate: (entryId: string, data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => void;
     onEntryDelete: (entryId: string) => void;
     onCreateCategory: (data: { name: string; icon: string; color: string }) => void;
+    isExpanded: boolean;
+    onToggleExpand: ()=> void;
 }
 
 export function SpendingCard({
@@ -55,15 +57,15 @@ export function SpendingCard({
     note,
     entries,
     categories,
+    isExpanded,
     onItemUpdate,
     onItemDelete,
     onEntryCreate,
     onEntryUpdate,
     onEntryDelete,
     onCreateCategory,
+    onToggleExpand,
 }: SpendingCardProps) {
-    // Card state
-    const [isExpanded, setIsExpanded] = useState(false);
 
     // Popin visibility
     const [showItemDetail, setShowItemDetail] = useState(false);
@@ -165,7 +167,7 @@ export function SpendingCard({
                 <SpendingCardExpanded
                     {...sharedCardProps}
                     entries={entries}
-                    onCollapse={() => setIsExpanded(false)}
+                    onCollapse={onToggleExpand}
                     onEntryClick={handleEntryClick}
                     onAddEntry={handleAddEntry}
                     onItemDetailClick={handleItemDetailClick}
@@ -173,7 +175,7 @@ export function SpendingCard({
             ) : (
                 <SpendingCardCollapsed
                     {...sharedCardProps}
-                    onExpand={() => setIsExpanded(true)}
+                    onExpand={onToggleExpand}
                 />
             )}
 

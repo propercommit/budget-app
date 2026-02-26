@@ -16,8 +16,9 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
     function SpendingCarousel({ itemCount, onAdd, children }, ref) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [activeIndex, setActiveIndex] = useState(0);
-
     const safeIndex = Math.min(activeIndex, Math.max(0, itemCount - 1));
+    const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
+
 
     const handleScroll = useCallback(() => {
         if (!scrollRef.current) return;
@@ -40,6 +41,23 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
         scrollRef.current.scrollTo({ left: index * cardWidth, behavior: "smooth" });
         setActiveIndex(index);
     };
+
+    useEffect(() => {
+        if (!scrollRef.current) return;
+        const activeChild = scrollRef.current.children[safeIndex] as HTMLElement;
+        if (!activeChild) return;
+
+        const updateHeight = () => {
+            setContainerHeight(activeChild.scrollHeight);
+        };
+
+        updateHeight();
+
+        const observer = new ResizeObserver(updateHeight);
+        observer.observe(activeChild);
+
+        return () => observer.disconnect();
+    }, [safeIndex]);
 
     useImperativeHandle(ref, () => ({
         scrollToIndex,
@@ -65,15 +83,17 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
 
     return (
         <div className="space-y-3">
-            <div
-                ref={scrollRef}
-                className="flex overflow-x-auto snap-x snap-mandatory"
-                style={{
-                    scrollbarWidth: "none",
-                    msOverflowStyle: "none",
-                    WebkitOverflowScrolling: "touch",
-                }}
-            >
+        <div
+            ref={scrollRef}
+            className="flex items-start overflow-x-auto overflow-y-hidden snap-x snap-mandatory"
+            style={{
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+                height: containerHeight ? `${containerHeight}px` : "auto",
+                transition: "height 500ms cubic-bezier(0.25, 1, 0.5, 1)",
+            }}
+        >
                 {children}
 
                 <style jsx>{`
