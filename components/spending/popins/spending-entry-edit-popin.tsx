@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SpendingEntry } from "../spending-card-expanded";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 import { useSettings } from "@/lib/settings-context";
@@ -38,7 +38,8 @@ export function EntryEditPopin({
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const { settings } = useSettings();  // ← add this line
+    const { settings } = useSettings();
+    const popinRef = useRef<HTMLDivElement>(null);
 
     useLockScroll(isOpen);
 
@@ -57,6 +58,13 @@ export function EntryEditPopin({
             reader.readAsDataURL(file);
         }
     };
+
+    useEffect(() => {
+        if (isOpen) {
+            popinRef.current?.focus();
+        }
+    }, [isOpen]);
+
 
     if (!isOpen) return null;
 
@@ -77,7 +85,9 @@ export function EntryEditPopin({
 
             {/* Popin */}
             <div
-                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0"
+                ref={popinRef}
+                tabIndex={-1}
+                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0"
                 style={{
                     boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)",
                     maxHeight: "90vh",
