@@ -66,7 +66,7 @@ export function SpendingItemDetailPopin({
 
             {/* Popin */}
             <div
-                className="relative w-full sm:max-w-md bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0"
+                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0"
                 style={{ boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)" }}
             >
                 {/* Mobile Handle */}

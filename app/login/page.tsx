@@ -147,7 +147,7 @@ export default function LoginPage() {
 
             {/* Main content */}
             <div className="flex-1 flex items-start sm:items-center justify-center px-4 pb-8 sm:pb-12">
-                <div className="w-full max-w-sm sm:max-w-md">
+                <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl">
                     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
                         {/* Card header */}
                         <div className="px-5 pt-6 pb-2 sm:px-8 sm:pt-8 sm:pb-4 text-center">

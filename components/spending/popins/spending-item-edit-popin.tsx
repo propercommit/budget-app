@@ -103,7 +103,7 @@ export function SpendingItemEditPopin({
             />
 
             {/* Popin */}
-            <div className="relative w-full sm:max-w-md bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col">
+            <div className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0 shadow-[0_-8px_40px_rgba(0,0,0,0.15)] max-h-[90vh] flex flex-col">
                 {/* Mobile Handle */}
                 <div className="sm:hidden flex justify-center pt-3 pb-1">
                     <div className="w-10 h-1 rounded-full bg-[#E5E5EA]" />

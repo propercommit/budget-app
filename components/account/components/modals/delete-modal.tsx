@@ -39,7 +39,7 @@ export function DeleteModal({
 }: DeleteModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl">
+            <DialogContent className="sm:max-w-md lg:max-w-lg xl:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl">
                 <DialogHeader>
                     <div className="flex items-center gap-3">
                         <div className="w-12 h-12 sm:w-10 sm:h-10 bg-red-100 rounded-xl flex items-center justify-center">

@@ -39,7 +39,7 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}>
             <div className="absolute inset-0" style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)" }} onClick={onClose} />
 
-            <div className="relative w-full sm:max-w-md bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0" style={{ boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)" }}>
+            <div className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-3xl overflow-hidden mx-3 sm:mx-0 mb-3 sm:mb-0" style={{ boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)" }}>
                 <div className="sm:hidden flex justify-center pt-3 pb-1">
                     <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "#E5E5EA" }} />
                 </div>
