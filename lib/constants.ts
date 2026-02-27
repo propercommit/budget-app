@@ -24,3 +24,21 @@ export const DATE_FORMAT_OPTIONS = VALID_DATE_FORMATS.map(format => ({
   value: format,
   label: format,
 }));
+
+export const DATE_FORMAT_TOKENS: Record<DateFormat, string> = {
+  "MM/DD/YYYY": "MMM d, yyyy",
+  "DD/MM/YYYY": "d MMM yyyy",
+  "YYYY-MM-DD": "yyyy-MM-dd",
+};
+
+export const DATE_FORMAT_SHORT_TOKENS: Record<DateFormat, string> = {
+  "MM/DD/YYYY": "MMM dd",
+  "DD/MM/YYYY": "dd MMM",
+  "YYYY-MM-DD": "MM-dd",
+};
+
+export const DATE_FORMAT_FULL_TOKENS: Record<DateFormat, string> = {
+  "MM/DD/YYYY": "EEEE, MMMM d, yyyy",
+  "DD/MM/YYYY": "EEEE d MMMM yyyy",
+  "YYYY-MM-DD": "yyyy-MM-dd, EEEE",
+};
