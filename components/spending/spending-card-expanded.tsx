@@ -28,11 +28,6 @@ interface SpendingCardExpandedProps {
     onItemDetailClick: () => void;
 }
 
-const formatShortDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
-};
-
 export function SpendingCardExpanded({
     spendingName,
     categoryName,
@@ -53,7 +48,7 @@ export function SpendingCardExpanded({
     const amountLeft = budgetNumber - totalSpent;
     const isOverBudget = amountLeft < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
-    const { formatAmount } = useSettings();
+    const { formatAmount, formatDateShort } = useSettings();
 
     const filteredEntries = entries
         .filter((entry) => entry.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -242,7 +237,7 @@ export function SpendingCardExpanded({
                                         {entry.name}
                                     </p>
                                     <p className="text-xs" style={{ color: "#6E6E73" }}>
-                                        {formatShortDate(entry.date)}
+                                        {formatDateShort(entry.date)}
                                     </p>
                                 </div>
                             </div>

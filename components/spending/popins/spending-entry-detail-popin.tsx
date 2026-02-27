@@ -4,6 +4,7 @@ import Image from "next/image";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
+import { useSettings } from "@/lib/settings-context";
 
 interface EntryDetailPopinProps {
     isOpen: boolean;
@@ -15,19 +16,10 @@ interface EntryDetailPopinProps {
     spendingCategoryColor: string;
 }
 
-function formatFullDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-    });
-}
-
 export function EntryDetailPopin(props: EntryDetailPopinProps) {
     const { isOpen, onClose, onEdit, entry, spendingName, spendingItemIcon, spendingCategoryColor } = props;
-
+    const { formatDateFull } = useSettings();
+    
     if (!entry) return null;
 
     const entryLink = entry.link || null;
@@ -79,7 +71,7 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
 
                 <div className="flex items-center justify-between py-2">
                     <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Date</span>
-                    <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>{formatFullDate(entry.date)}</span>
+                    <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>{formatDateFull(entry.date)}</span>
                 </div>
 
                 {entryReceipt !== null && (

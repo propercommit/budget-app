@@ -11,19 +11,11 @@ interface IncomeDetailPopinProps {
 }
 
 export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDetailPopinProps) {
-    const { formatAmount } = useSettings();
+    const { formatAmount, formatDate } = useSettings();
 
     if (!income) return null;
 
     const typeColor = income.type === 'active' ? '#007AFF' : '#FF9500';
-
-    const formatDate = (date: Date) => {
-        return new Date(date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
 
     const renderIcon = (iconId: string) => {
         if (iconId.startsWith("data:")) {

@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getSettings, updateSettings } from "@/lib/api";
-import { Currency, DateFormat, CURRENCY_SYMBOLS } from "@/lib/constants";
-import toast from "react-hot-toast";
 import { formatAmount as formatAmountUtil } from "@/lib/utils";
-
+import { format } from "date-fns";
+import toast from "react-hot-toast";
+import { Currency, DateFormat, CURRENCY_SYMBOLS, DATE_FORMAT_TOKENS, DATE_FORMAT_SHORT_TOKENS, DATE_FORMAT_FULL_TOKENS } from "@/lib/constants";
 // Types
 interface Settings {
   currency: Currency;
@@ -20,6 +20,9 @@ interface SettingsContextValue {
   updateDateFormat: (dateFormat: DateFormat) => Promise<void>;
   updateDarkMode: (darkMode: boolean) => Promise<void>;
   formatAmount: (amount: number) => string;
+  formatDate: (date: string | Date) => string;
+  formatDateShort: (date: string | Date) => string;
+  formatDateFull: (date: string | Date) => string;
 }
 
 // Defaults
@@ -92,8 +95,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   // Format amount using the user's currency
   const formatAmount = useCallback((amount: number): string => {
-      return formatAmountUtil(amount, CURRENCY_SYMBOLS[settings.currency]);
+    return formatAmountUtil(amount, CURRENCY_SYMBOLS[settings.currency]);
   }, [settings.currency]);
+
+  // Format date using the user's date format (full: "Jan 5, 2026")
+  const formatDate = useCallback((date: string | Date): string => {
+    return format(new Date(date), DATE_FORMAT_TOKENS[settings.dateFormat]);
+  }, [settings.dateFormat]);
+
+  // Format date short (no year: "Jan 05")
+  const formatDateShort = useCallback((date: string | Date): string => {
+    return format(new Date(date), DATE_FORMAT_SHORT_TOKENS[settings.dateFormat]);
+  }, [settings.dateFormat]);
+
+  const formatDateFull = useCallback((date: string | Date): string => {
+    return format(new Date(date), DATE_FORMAT_FULL_TOKENS[settings.dateFormat]);
+  }, [settings.dateFormat]);
 
   return (
     <SettingsContext.Provider
@@ -104,6 +121,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateDateFormat,
         updateDarkMode,
         formatAmount,
+        formatDate,
+        formatDateShort,
+        formatDateFull,
       }}
     >
       {children}
