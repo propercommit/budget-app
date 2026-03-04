@@ -162,13 +162,6 @@ pnpm lint         # Run ESLint
 - **No page reloads** — all data mutations update local state optimistically after API confirmation
 - **React portals for modals** — avoids CSS `transform` conflicts with `position: fixed`
 
----
 
-## License
-
-This project is licensed under the [Elastic License 2.0](https://www.elastic.co/licensing/elastic-license).
-
-Source code is available for personal use and review. Commercial use, resale,
-and hosting as a service are not permitted without explicit written permission.
 
 
