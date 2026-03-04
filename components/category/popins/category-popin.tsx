@@ -117,12 +117,16 @@ export function CategoryPopin({
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        maxLength={30}
                         placeholder="e.g., Transport, Food"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
                         style={getInputStyle(isNameValid)}
                         onFocus={handleFocus}
                         onBlur={(e) => handleBlur(e, isNameValid)}
                     />
+                    <p className="text-xs text-right" style={{ color: name.length >= 25 ? "#FF9500" : "#6E6E73" }}>
+                        {name.length}/30
+                    </p>
                     {showErrors && !isNameValid && (
                         <p className="text-xs mt-1" style={{ color: "#FF3B30" }}>Category name is required</p>
                     )}

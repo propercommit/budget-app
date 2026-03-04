@@ -2,10 +2,13 @@ import {
     ShoppingCart, Fuel, HeartPulse, Lightbulb, Film, PiggyBank, Home, Car, 
     CreditCard, Phone, Utensils, Plane, Grid2X2, Briefcase, Laptop, 
     TrendingUp, Zap, Coffee, Music, Shield, Dumbbell, Shirt, Monitor, 
-    Smartphone, Train, ShoppingBag, Gamepad2 
+    Smartphone, Train, ShoppingBag, Gamepad2,
+    Grid2x2, Rows3
 } from "lucide-react";
 
 export const iconMap: Record<string, React.ReactNode> = {
+    "rows": <Rows3 className="w-5 h-5"/>,
+    "grid": <Grid2x2 className="w-5 h-5"/>,
     "shopping-cart": <ShoppingCart className="w-5 h-5" />,
     "fuel": <Fuel className="w-5 h-5" />,
     "heart-pulse": <HeartPulse className="w-5 h-5" />,

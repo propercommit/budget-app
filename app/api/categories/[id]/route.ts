@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from "@/lib/supabase-server";
 
 // Constants
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
-const MAX_LABEL_LENGTH = 50;
+const MAX_LABEL_LENGTH = 30;
 
 // PUT /api/categories/[id] - Update a category
 export async function PUT(
