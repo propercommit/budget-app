@@ -28,7 +28,7 @@ export function useIncome(selectedMonth: string) {
       }
     }
     load();
-  }, []);
+  }, [selectedMonth]);
 
   const createIncome = useCallback(async (
     month: string,
