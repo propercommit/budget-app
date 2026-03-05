@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { ReceiptViewer } from "@/components/ui/receipt-viewer";
 
 interface EntryDetailPopinProps {
     isOpen: boolean;
@@ -19,7 +21,8 @@ interface EntryDetailPopinProps {
 export function EntryDetailPopin(props: EntryDetailPopinProps) {
     const { isOpen, onClose, onEdit, entry, spendingName, spendingItemIcon, spendingCategoryColor } = props;
     const { formatDateFull } = useSettings();
-    
+    const [isReceiptViewerOpen, setIsReceiptViewerOpen] = useState(false);
+
     if (!entry) return null;
 
     const entryLink = entry.link || null;
@@ -77,7 +80,11 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                 {entryReceipt !== null && (
                     <div>
                         <p className="text-sm font-medium mb-2" style={{ color: "#6E6E73" }}>Receipt</p>
-                        <div className="relative rounded-xl overflow-hidden h-48 cursor-pointer" style={{ backgroundColor: "#F5F5F7" }} onClick={() => window.open(entryReceipt, "_blank")}>
+                        <div
+                            className="relative rounded-xl overflow-hidden h-48 cursor-pointer"
+                            style={{ backgroundColor: "#F5F5F7" }}
+                            onClick={() => setIsReceiptViewerOpen(true)}
+                        >
                             <Image
                                 src={entryReceipt}
                                 alt="Receipt"
@@ -91,6 +98,12 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
 
                 {entryLink !== null && <LinkRow url={entryLink} />}
             </div>
+
+            <ReceiptViewer
+                isOpen={isReceiptViewerOpen}
+                onClose={() => setIsReceiptViewerOpen(false)}
+                imageUrl={entryReceipt ?? ""}
+            />
         </PopinWrapper>
     );
 }
