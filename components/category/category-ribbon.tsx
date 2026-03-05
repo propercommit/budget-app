@@ -42,7 +42,7 @@ export function CategoryRibbon({
                         boxShadow: selectedCategory === "all" ? "none" : "0 1px 4px rgba(0,0,0,0.03)",
                     }}
                 >
-                    All
+                    <span>{iconMap["rows"]}</span>
                 </button>
 
                 {/* Category pills */}
@@ -59,7 +59,7 @@ export function CategoryRibbon({
                         }}
                     >
                         <span>{iconMap[cat.icon] || cat.icon}</span>
-                        <span>{cat.name}</span>
+                        <span className="truncate max-w-[120px]">{cat.name}</span>
                     </button>
                 ))}
 
