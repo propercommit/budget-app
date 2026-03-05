@@ -13,19 +13,12 @@ import { SpendingCarousel, SpendingCarouselRef } from "@/components/spending/spe
 import { CategoryRibbon } from "@/components/category/category-ribbon";
 import { CategoryPopin } from "@/components/category/popins/category-popin";
 import { TrendsCard } from "@/components/trends/trends-card";
-import {
-  createCategory, createEntry, createSpending,
-  deleteCategory, deleteEntry, deleteSpending,
-  getCategories, getSpending,
-  updateCategory, updateEntry, updateSpending,
-  getIncomeSources, createIncomeSource, updateIncomeSource, deleteIncomeSource,
-  getAllIncomeSources
-} from "@/lib/api";
 import { Category, SpendingItem, IncomeSource } from "@/lib/types";
 import { SectionCard } from "@/components/section-card";
 import toast from "react-hot-toast";
-
-type SpendingData = Record<string, SpendingItem[]>;
+import { useCategories } from "@/components/hooks/use-categories";
+import { createIncomeSource, deleteIncomeSource, getAllIncomeSources, getIncomeSources, updateIncomeSource } from "@/lib/api";
+import { useSpending } from "@/components/hooks/use-spending";
 
 export default function Home() {
   // =====================
@@ -38,8 +31,8 @@ export default function Home() {
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [spendingData, setSpendingData] = useState<SpendingData>({});
+  const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
+  const { spendingData, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry } = useSpending();
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
 
   // Spending Popin
@@ -52,6 +45,7 @@ export default function Home() {
   const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryPopinKey, setCategoryPopinKey] = useState(0);
+  
 
   // Income Popins
   const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
@@ -68,16 +62,12 @@ export default function Home() {
   useEffect(() => {
       async function loadAllData() {
         try {
-          const [categoriesData, spendingDataResult, incomeSourcesData, allIncomeData] = await Promise.all([
-            getCategories(),
-            getSpending(),
+        const [incomeSourcesData, allIncomeData] = await Promise.all([
             getIncomeSources(selectedMonth),
             getAllIncomeSources(),
-          ]);
-          setCategories(categoriesData);
-          setSpendingData(spendingDataResult);
-          setIncomeSources(incomeSourcesData);
-          setAllIncomeSources(allIncomeData);
+        ]);
+        setIncomeSources(incomeSourcesData);
+        setAllIncomeSources(allIncomeData);
 
         } catch (error) {
           console.error("Failed to load data:", error);
@@ -113,6 +103,18 @@ export default function Home() {
         value: monthIncome,
       };
     });
+
+  // =====================
+  // Category Handlers
+  // =====================
+
+  const handleDeleteCategory = async (id: string) => {
+      const deleted = categories.find(c => c.id === id);
+      const success = await deleteCategory(id);
+      if (success && deleted && selectedCategory === deleted.label) {
+          setSelectedCategory("all");
+      }
+  };
 
   // =====================
   // Income Handlers
@@ -269,27 +271,8 @@ export default function Home() {
     if (!spendingData[newMonth]) {
       const sortedMonths = Object.keys(spendingData).sort();
       const previousMonths = sortedMonths.filter(m => m < newMonth);
-
       if (previousMonths.length > 0) {
-        const closestMonth = previousMonths[previousMonths.length - 1];
-        const previousData = spendingData[closestMonth];
-
-      try {
-        const newItems = await Promise.all(
-            previousData.map(item =>
-              createSpending({
-                name: item.name,
-                icon: item.icon,
-                categoryId: item.categoryId,
-                month: newMonth,
-                startDate: `${newMonth}-01`,
-              })
-            )
-          );
-          setSpendingData(data => ({ ...data, [newMonth]: newItems }));
-        } catch (error) {
-          console.error('Failed to copy spending:', error);
-        }
+        await copySpendingToMonth(previousMonths[previousMonths.length - 1], newMonth);
       }
     }
 
@@ -336,95 +319,7 @@ export default function Home() {
   };
 
   const handleDeleteSpending = async (id: string) => {
-    
-    const originalItem = currentSpendingItems.find(item => item.id === id);
-
-    // optimistic update
-    setSpendingData(prev => ({
-      ...prev,
-      [selectedMonth]: prev[selectedMonth].filter(item => item.id !== id)
-    }));
-
-    try {
-      await deleteSpending(id);
-    } catch (error) {
-      toast.error('Error deleting spending item');
-      console.error('Error deleting spending:', error);
-      // rollback
-      if (originalItem) {
-        setSpendingData(prev => ({
-          ...prev,
-          [selectedMonth]: [...(prev[selectedMonth] || []), originalItem]
-        }));
-      }
-    }
-  };
-
-  // =====================
-  // Category Handlers
-  // =====================
-  const handleAddCategory = async (name: string, icon: string, color: string) => {
-    return await createCategory({ label: name, icon, color });
-  };
-
-  const handleEditCategory = async (id: string, name: string, icon: string, color: string) => {
-    return await updateCategory(id, { label: name, icon, color });
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    const originalCategory = categories.find(c => c.id === id);
-
-    // optimistic update
-    setCategories(prev => prev.filter(c => c.id !== id));
-
-    // reset selected category if we're deleting the active filter
-    if (originalCategory && selectedCategory === originalCategory.label) {
-      setSelectedCategory("all");
-    }
-
-    try {
-      await deleteCategory(id);
-    } catch (error) {
-      toast.error('Error deleting category');
-      console.error('Error deleting category:', error);
-      // rollback
-      if (originalCategory) {
-        setCategories(prev => [...prev, originalCategory]);
-        // restore selected category if it was reset
-        if (selectedCategory === "all" && originalCategory.label) {
-          setSelectedCategory(originalCategory.label);
-        }
-      }
-    }
-  };
-
-  // =====================
-  // Entry Handlers
-  // =====================
-  const handleAddEntry = async (
-  spendingItemId: string,
-  entry: { name: string; amount: number; receiptUrl?: string; link?: string; date?: string }
-  ) => {
-    return await createEntry({
-      spendingItemId,
-      name: entry.name,
-      amount: entry.amount,
-      receiptUrl: entry.receiptUrl,
-      link: entry.link,
-      date: entry.date,
-    });
-  };
-
-  const handleUpdateEntry = async (
-    spendingItemId: string,
-    entryId: string,
-    updatedData: { name?: string; amount?: number; receiptUrl?: string; link?: string; date?: string }
-  ) => {
-    return await updateEntry(entryId, updatedData);
-  };
-
-  const handleDeleteEntry = async (spendingItemId: string, entryId: string) => {
-    return await deleteEntry(entryId);
+    await deleteSpending(selectedMonth, id);
   };
 
   // =====================
@@ -520,215 +415,52 @@ export default function Home() {
               color: c.color,
             }))}
             onItemUpdate={async (data) => {
-              const cat = categories.find((c) => c.label === data.category);
-              if (!cat) return;
-
-              const optimistic = {
-                ...item,
-                name: data.name,
-                icon: data.icon,
-                categoryId: cat.id,
-                category: cat,
-                budgeted: data.budget,
-                startDate: data.startDate,
-                endDate: data.endDate || null,
-                note: data.note || null,
-              };
-
-              // optimistic update
-              setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].map(s =>
-                  s.id === item.id ? optimistic : s
-                )
-              }));
-
-              try {
-                const realSpending = await updateSpending(item.id, {
-                  name: data.name,
-                  icon: data.icon,
-                  categoryId: cat.id,
-                  budgeted: data.budget,
-                  startDate: data.startDate,
-                  endDate: data.endDate || null,
-                  note: data.note || null,
+                const cat = categories.find((c) => c.label === data.category);
+                if (!cat) return;
+                await updateSpending(selectedMonth, item.id, {
+                    name: data.name,
+                    icon: data.icon,
+                    categoryId: cat.id,
+                    budgeted: data.budget,
+                    startDate: data.startDate,
+                    endDate: data.endDate || null,
+                    note: data.note || null,
+                }, {
+                    ...item,
+                    name: data.name,
+                    icon: data.icon,
+                    categoryId: cat.id,
+                    category: cat,
+                    budgeted: data.budget,
+                    startDate: data.startDate,
+                    endDate: data.endDate || null,
+                    note: data.note || null,
                 });
-                setSpendingData(prev => ({
-                  ...prev,
-                  [selectedMonth]: prev[selectedMonth].map(s =>
-                    s.id === item.id ? realSpending : s
-                  )
-                }));
-              } catch (error) {
-                toast.error('Error updating spending item');
-                console.error("Error updating spending item:", error);
-                // rollback
-                setSpendingData(prev => ({
-                  ...prev,
-                  [selectedMonth]: prev[selectedMonth].map(s =>
-                    s.id === item.id ? item : s
-                  )
-                }));
-              }
             }}
             onItemDelete={() => handleDeleteSpending(item.id)}
             onEntryCreate={async (data) => {
-              
-              const optimisticEntry = {
-                id: `temp-${crypto.randomUUID()}`,
-                name: data.name,
-                amount: data.amount,
-                date: data.date,
-                receiptUrl: data.receipt ?? null,
-                link: data.link ?? null,
-                spendingItemId: item.id,
-              };
-
-              // optimistic update — add entry + update spent
-              setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].map(s =>
-                  s.id === item.id
-                    ? {
-                        ...s,
-                        spent: s.spent + data.amount,
-                        entries: [...(s.entries || []), optimisticEntry],
-                      }
-                    : s
-                )
-              }));
-
-              try {
-                const realEntry = await handleAddEntry(item.id, {
-                  name: data.name,
-                  amount: data.amount,
-                  date: data.date,
-                  receiptUrl: data.receipt ?? undefined,
-                  link: data.link ?? undefined,
+                await createEntry(selectedMonth, item.id, {
+                    name: data.name,
+                    amount: data.amount,
+                    date: data.date,
+                    receiptUrl: data.receipt ?? undefined,
+                    link: data.link ?? undefined,
                 });
-
-                setSpendingData(prev => ({
-                  ...prev,
-                  [selectedMonth]: prev[selectedMonth].map(s =>
-                    s.id === item.id
-                      ? {
-                          ...s,
-                          entries: (s.entries || []).map(e =>
-                            e.id === optimisticEntry.id ? realEntry : e
-                          ),
-                        }
-                      : s
-                  )
-                }));
-              } catch (error) {
-                toast.error('Error creating entry:');
-                console.error("Error creating entry:", error);
-                // rollback
-                setSpendingData(prev => ({
-                  ...prev,
-                  [selectedMonth]: prev[selectedMonth].map(s =>
-                    s.id === item.id 
-                      ? {
-                          ...s,
-                          spent: s.spent - data.amount,
-                          entries: (s.entries || []).filter(e => e.id !== optimisticEntry.id),
-                        }
-                      : s
-                  )
-                }));
-              }
             }}
             onEntryUpdate={async (entryId, data) => {
-              const originalEntry = item.entries?.find(e => e.id === entryId);
-              const amountDiff = data.amount - (originalEntry?.amount ?? 0);
-
-              // optimistic update
-              setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].map(s =>
-                  s.id === item.id
-                    ? {
-                        ...s,
-                        spent: s.spent + amountDiff,
-                        entries: (s.entries || []).map(e =>
-                          e.id === entryId
-                            ? { ...e, name: data.name, amount: data.amount, date: data.date, receiptUrl: data.receipt ?? null, link: data.link ?? null }
-                            : e
-                        ),
-                      }
-                    : s
-                )
-              }));
-
-              try {
-                await handleUpdateEntry(item.id, entryId, {
-                  name: data.name,
-                  amount: data.amount,
-                  date: data.date,
-                  receiptUrl: data.receipt ?? undefined,
-                  link: data.link ?? undefined,
+                await updateEntry(selectedMonth, item.id, entryId, {
+                    name: data.name,
+                    amount: data.amount,
+                    date: data.date,
+                    receiptUrl: data.receipt ?? undefined,
+                    link: data.link ?? undefined,
                 });
-              } catch (error) {
-                toast.error('Error updating entry');
-                console.error("Error updating entry:", error);
-                // rollback
-                setSpendingData(prev => ({
-                  ...prev,
-                  [selectedMonth]: prev[selectedMonth].map(s =>
-                    s.id === item.id
-                      ? {
-                          ...s,
-                          spent: s.spent - amountDiff,
-                          entries: (s.entries || []).map(e =>
-                            e.id === entryId && originalEntry ? originalEntry : e
-                          ),
-                        }
-                      : s
-                  )
-                }));
-              }
             }}
             onEntryDelete={async (entryId) => {
-              const originalEntry = item.entries?.find(e => e.id === entryId);
-
-              // optimistic update — remove entry + update spent
-              setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].map(s =>
-                  s.id === item.id
-                    ? {
-                        ...s,
-                        spent: s.spent - (originalEntry?.amount ?? 0),
-                        entries: (s.entries || []).filter(e => e.id !== entryId),
-                      }
-                    : s
-                )
-              }));
-
-              try {
-                await handleDeleteEntry(item.id, entryId);
-              } catch (error) {
-                toast.error('Error deleting entry');
-                console.error("Error deleting entry:", error);
-                // rollback — restore entry
-                if (originalEntry) {
-                  setSpendingData(prev => ({
-                    ...prev,
-                    [selectedMonth]: prev[selectedMonth].map(s =>
-                      s.id === item.id
-                        ? {
-                            ...s,
-                            spent: s.spent + originalEntry.amount,
-                            entries: [...(s.entries || []), originalEntry],
-                          }
-                        : s
-                    )
-                  }));
-                }
-              }
+                await deleteEntry(selectedMonth, item.id, entryId);
             }}
             onCreateCategory={async (data) => {
-              await handleAddCategory(data.name, data.icon, data.color);
+                await addCategory(data.name, data.icon, data.color);
             }}
           />
         </div>
@@ -784,131 +516,62 @@ export default function Home() {
           setLastCreatedCategoryName(null);
         }}
         onSave={async (data) => {
-          const category = categories.find(c => c.label === data.category);
-          if (!category) return;
+            const category = categories.find(c => c.label === data.category);
+            if (!category) return;
 
-          // case spending item edit
-          if (editingSpendingItem) {
-            const optimisticSpending = {
-              ...editingSpendingItem,
-              name: data.name,
-              icon: data.icon,
-              categoryId: category.id,
-              category: category,
-              budgeted: data.budget,
-              startDate: data.startDate,
-              endDate: data.endDate || null,
-              note: data.note || null,
-            };
-
-            // update state immediately
-            setSpendingData(prev => ({
-              ...prev,
-              [selectedMonth]: prev[selectedMonth].map(item =>
-                item.id === editingSpendingItem.id ? optimisticSpending : item
-              )
-            }));
+            if (editingSpendingItem) {
+                await updateSpending(selectedMonth, editingSpendingItem.id, {
+                    name: data.name,
+                    icon: data.icon,
+                    categoryId: category.id,
+                    budgeted: data.budget,
+                    startDate: data.startDate,
+                    endDate: data.endDate || null,
+                    note: data.note || null,
+                }, {
+                    ...editingSpendingItem,
+                    name: data.name,
+                    icon: data.icon,
+                    categoryId: category.id,
+                    category,
+                    budgeted: data.budget,
+                    startDate: data.startDate,
+                    endDate: data.endDate || null,
+                    note: data.note || null,
+                });
+            } else {
+                const real = await createSpending(selectedMonth, {
+                  name: data.name,
+                  icon: data.icon,
+                  categoryId: category.id,
+                  month: selectedMonth,
+                  budgeted: data.budget,
+                  startDate: data.startDate,
+                  endDate: data.endDate || null,
+                  note: data.note || null,
+              }, category);
+                if (real) {
+                    const items = spendingData[selectedMonth] || [];
+                    setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
+                }
+            }
 
             setIsSpendingPopinOpen(false);
             setEditingSpendingItem(null);
-
-            // update db
-            try {
-              const realSpending = await updateSpending(editingSpendingItem.id, {
-                name: data.name,
-                icon: data.icon,
-                categoryId: category.id,
-                budgeted: data.budget,
-                startDate: data.startDate,
-                endDate: data.endDate || null,
-                note: data.note || null,
-              });
-              setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].map(item =>
-                  item.id === editingSpendingItem.id ? realSpending : item
-                )
-              }));
-            } catch (error) {
-              toast.error('error updating spending item');
-              console.log('error updating spending item:', error);
-              // rollback — restore the original item
-              setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].map(item =>
-                  item.id === editingSpendingItem.id ? editingSpendingItem : item
-                )
-              }));
-            }
-          } else {
-
-            const optimisticSpending: SpendingItem = {
-              id: `temp-${crypto.randomUUID()}`,
-              name: data.name,
-              icon: data.icon,
-              categoryId: category.id,
-              month: selectedMonth,
-              budgeted: data.budget,
-              startDate: data.startDate,
-              endDate: data.endDate || null,
-              note: data.note || null,
-              spent: 0,
-              category: category,
-              entries: []
-            };
-
-            // update state
-            setSpendingData(prev => {
-              const updated = {
-                ...prev,
-                [selectedMonth]: [...(prev[selectedMonth] || []), optimisticSpending]
-              };
-              const newIndex = updated[selectedMonth].length - 1;
-              setTimeout(() => carouselRef.current?.scrollToIndex(newIndex), 100);
-              return updated;
-            });
-
-            setIsSpendingPopinOpen(false);
-            setEditingSpendingItem(null);
-
-            // update db
-            try {
-              const realSpending = await createSpending({
-                name: data.name,
-                icon: data.icon,
-                categoryId: category.id,
-                month: selectedMonth,
-                budgeted: data.budget,
-                startDate: data.startDate,
-                endDate: data.endDate || null,
-                note: data.note || null,
-              });
-              setSpendingData(prev => ({
-              ...prev,
-              [selectedMonth]: prev[selectedMonth].map(item =>
-                item.id === optimisticSpending.id ? realSpending : item
-              )
-            }));
-            } catch (error) {
-              toast.error('an error occurred trying to create spending item');
-              console.log('error occurred trying to create spending item :', error);
-                setSpendingData(prev => ({
-                ...prev,
-                [selectedMonth]: prev[selectedMonth].filter(item => item.id !== optimisticSpending.id)
-              }));
-            }
-          }
         }}
+
         onDelete={editingSpendingItem ? async () => {
           await handleDeleteSpending(editingSpendingItem.id);
           setIsSpendingPopinOpen(false);
           setEditingSpendingItem(null);
         } : undefined}
+
         onCreateCategory={() => {
-          setEditingCategory(null);
-          setCategoryPopinKey(prev => prev + 1);
-          setIsCategoryPopinOpen(true);
+            setEditingCategory(null);
+            setCategoryPopinKey(prev => prev + 1);
+            setIsCategoryPopinOpen(true);
         }}
+
         mode={editingSpendingItem ? "edit" : "create"}
         categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
         initialName={editingSpendingItem?.name ?? ""}
@@ -927,71 +590,15 @@ export default function Home() {
           setIsCategoryPopinOpen(false);
           setEditingCategory(null);
         }}
-        onSave={async (data: { name: string; icon: string; color: string }) => {
-          if (editingCategory) {
-            // --- EDIT PATH ---
-            const optimistic = {
-              ...editingCategory,
-              label: data.name,
-              icon: data.icon,
-              color: data.color,
-            };
-
-            // 1. Update state immediately
-            setCategories(prev =>
-              prev.map(c => c.id === editingCategory.id ? optimistic : c)
-            );
-
-            // 2. Close modal
+        onSave={async (data) => {
+            if (editingCategory) {
+                await updateCategory(editingCategory.id, data.name, data.icon, data.color);
+            } else {
+                const created = await addCategory(data.name, data.icon, data.color);
+                if (created) setLastCreatedCategoryName(data.name);
+            }
             setIsCategoryPopinOpen(false);
             setEditingCategory(null);
-
-            // 3. API call + rollback
-            try {
-              await handleEditCategory(editingCategory.id, data.name, data.icon, data.color);
-            } catch (error) {
-              toast.error("Error updating category");
-              console.log('error updating category: ', error);
-              // Rollback — put the original back
-              setCategories(prev =>
-                prev.map(c => c.id === editingCategory.id ? editingCategory : c)
-              );
-            }
-
-          } else {
-            // --- CREATE PATH ---
-            const optimisticCategory: Category = {
-              id: `temp-${crypto.randomUUID()}`,
-              label: data.name,
-              icon: data.icon,
-              color: data.color,
-            };
-
-            // 1. Update state immediately
-            setCategories(prev => [...prev, optimisticCategory]);
-            setLastCreatedCategoryName(data.name);
-
-            // 2. Close modal
-            setIsCategoryPopinOpen(false);
-            setEditingCategory(null);
-
-            // 3. API call — swap temp for real
-            try {
-              const realCategory = await handleAddCategory(data.name, data.icon, data.color);
-              if (realCategory) {
-                setCategories(prev =>
-                  prev.map(c => c.id === optimisticCategory.id ? realCategory : c)
-                );
-              }
-            } catch (error) {
-              toast.error("Error creating category");
-              console.log('error creating category: ', error);
-              // Rollback — remove the optimistic one
-              setCategories(prev =>
-                prev.filter(c => c.id !== optimisticCategory.id)
-              );
-            }
-          }
         }}
         onDelete={editingCategory ? async () => {
           await handleDeleteCategory(editingCategory.id);
