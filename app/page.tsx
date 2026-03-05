@@ -17,23 +17,21 @@ import { Category, SpendingItem, IncomeSource } from "@/lib/types";
 import { SectionCard } from "@/components/section-card";
 import toast from "react-hot-toast";
 import { useCategories } from "@/components/hooks/use-categories";
-import { createIncomeSource, deleteIncomeSource, getAllIncomeSources, getIncomeSources, updateIncomeSource } from "@/lib/api";
 import { useSpending } from "@/components/hooks/use-spending";
+import { useIncome } from "@/components/hooks/use-income";
 
 export default function Home() {
   // =====================
   // State
   // =====================
   const [isSpendingExpanded, setIsSpendingExpanded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(
     `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-
-  const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
-  const { spendingData, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry } = useSpending();
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories();
+  const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry } = useSpending();
+  const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth);
 
   // Spending Popin
   const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
@@ -52,31 +50,9 @@ export default function Home() {
   const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
   const [isIncomeDetailOpen, setIsIncomeDetailOpen] = useState(false);
   const [viewingIncomeSource, setViewingIncomeSource] = useState<IncomeSource | null>(null);
-  const [allIncomeSources, setAllIncomeSources] = useState<IncomeSource[]>([]);
-
   const [lastCreatedCategoryName, setLastCreatedCategoryName] = useState<string | null>(null);
 
-  // =====================
-  // Data Loading
-  // =====================
-  useEffect(() => {
-      async function loadAllData() {
-        try {
-        const [incomeSourcesData, allIncomeData] = await Promise.all([
-            getIncomeSources(selectedMonth),
-            getAllIncomeSources(),
-        ]);
-        setIncomeSources(incomeSourcesData);
-        setAllIncomeSources(allIncomeData);
-
-        } catch (error) {
-          console.error("Failed to load data:", error);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-      loadAllData();
-    }, []);
+  const isLoading = categoriesLoading || spendingLoading || incomeLoading;
 
   // =====================
   // Derived Values
@@ -141,124 +117,20 @@ export default function Home() {
   };
 
   const handleSaveIncome = async (data: Omit<IncomeSource, 'id' | 'month'>) => {
-    if (editingIncomeSource) {
-      // --- EDIT PATH ---
-      const optimistic: IncomeSource = {
-        ...editingIncomeSource,
-        name: data.name,
-        amount: data.amount,
-        icon: data.icon,
-        type: data.type,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        note: data.note,
-      };
-
-      // 1. Update state immediately
-      setIncomeSources(prev =>
-        prev.map(i => i.id === editingIncomeSource.id ? optimistic : i)
-      );
-
-      // 2. Close modal
+      if (editingIncomeSource) {
+          await updateIncome(editingIncomeSource.id, data);
+      } else {
+          await createIncome(selectedMonth, data);
+      }
       setIsIncomePopinOpen(false);
       setEditingIncomeSource(null);
-
-      // 3. API call
-      try {
-        const updated = await updateIncomeSource(editingIncomeSource.id, {
-          name: data.name,
-          amount: data.amount,
-          icon: data.icon,
-          type: data.type,
-          startDate: data.startDate.toISOString(),
-          endDate: data.endDate?.toISOString(),
-          note: data.note,
-        });
-        setIncomeSources(prev =>
-          prev.map(i => i.id === editingIncomeSource.id ? updated : i)
-        );
-        const refreshed = await getAllIncomeSources();
-        setAllIncomeSources(refreshed);
-      } catch (error) {
-        toast.error('Error updating income source');
-        console.error('Error saving income:', error);
-        // rollback
-        setIncomeSources(prev =>
-          prev.map(i => i.id === editingIncomeSource.id ? editingIncomeSource : i)
-        );
-      }
-
-    } else {
-      // --- CREATE PATH ---
-      const optimisticIncome: IncomeSource = {
-        id: `temp-${crypto.randomUUID()}`,
-        name: data.name,
-        amount: data.amount,
-        icon: data.icon,
-        type: data.type,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        note: data.note,
-        month: selectedMonth,
-      };
-
-      // 1. Update state immediately
-      setIncomeSources(prev => [...prev, optimisticIncome]);
-
-      // 2. Close modal
-      setIsIncomePopinOpen(false);
-      setEditingIncomeSource(null);
-
-      // 3. API call — swap temp for real
-      try {
-        const created = await createIncomeSource({
-          name: data.name,
-          amount: data.amount,
-          icon: data.icon,
-          type: data.type,
-          startDate: data.startDate.toISOString(),
-          endDate: data.endDate?.toISOString(),
-          note: data.note,
-          month: selectedMonth,
-        });
-        setIncomeSources(prev =>
-          prev.map(i => i.id === optimisticIncome.id ? created : i)
-        );
-        const refreshed = await getAllIncomeSources();
-        setAllIncomeSources(refreshed);
-      } catch (error) {
-        toast.error('Error creating income source');
-        console.error('Error saving income:', error);
-        // rollback
-        setIncomeSources(prev =>
-          prev.filter(i => i.id !== optimisticIncome.id)
-        );
-      }
-    }
   };
 
   const handleDeleteIncome = async () => {
     if (!editingIncomeSource) return;
-
-    const original = editingIncomeSource;
-
-    // Update state
-    setIncomeSources(prev => prev.filter(i => i.id !== original.id));
-    setAllIncomeSources(prev => prev.filter(i => i.id !== original.id));
-
-    // Close modal
+    await deleteIncome(editingIncomeSource.id);
     setIsIncomePopinOpen(false);
     setEditingIncomeSource(null);
-
-    try {
-      await deleteIncomeSource(original.id);
-    } catch (error) {
-      toast.error('Error deleting income source');
-      console.error('Error deleting income:', error);
-      // rollback
-      setIncomeSources(prev => [...prev, original]);
-      setAllIncomeSources(prev => [...prev, original]);
-    }
   };
 
   // =====================
