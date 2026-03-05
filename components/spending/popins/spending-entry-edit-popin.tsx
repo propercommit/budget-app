@@ -7,6 +7,8 @@ import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { iconMap } from "@/lib/icon-map";
+import toast from "react-hot-toast";
+import { compressImage } from "@/lib/compress-image";
 
 interface EntryEditPopinProps {
     isOpen: boolean;
@@ -43,16 +45,17 @@ export function EntryEditPopin({
     const isCreate = mode === "create";
     const isFormValid = name.trim() !== "" && amount !== "" && parseFloat(amount) > 0 && date !== "";
 
-    const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                alert("File size must be less than 2MB");
-                return;
+            try {
+                const compressed = await compressImage(file);
+                const reader = new FileReader();
+                reader.onload = (event) => setReceipt(event.target?.result as string);
+                reader.readAsDataURL(compressed);
+            } catch {
+                toast.error("Failed to process image, please try again");
             }
-            const reader = new FileReader();
-            reader.onload = (event) => setReceipt(event.target?.result as string);
-            reader.readAsDataURL(file);
         }
     };
 
