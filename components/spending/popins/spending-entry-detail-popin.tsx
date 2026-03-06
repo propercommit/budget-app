@@ -20,7 +20,7 @@ interface EntryDetailPopinProps {
 
 export function EntryDetailPopin(props: EntryDetailPopinProps) {
     const { isOpen, onClose, onEdit, entry, spendingName, spendingItemIcon, spendingCategoryColor } = props;
-    const { formatDateFull } = useSettings();
+    const { formatDateFull, formatAmount } = useSettings();
     const [isReceiptViewerOpen, setIsReceiptViewerOpen] = useState(false);
 
     if (!entry) return null;
@@ -66,7 +66,7 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                         </div>
                     </div>
                     <p className="text-2xl font-bold" style={{ color: "#FF3B30" }}>
-                        -${entry.amount.toFixed(2)}
+                        -{formatAmount(entry.amount)}
                     </p>
                 </div>
 

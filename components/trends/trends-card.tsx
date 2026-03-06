@@ -63,7 +63,6 @@ export function TrendsCard({ spendingData, incomeData, categoryData, categories 
                             </div>
                             <div>
                                 <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>Trends</h2>
-                                <p className="text-xs" style={{ color: "#6E6E73" }}>Your financial direction</p>
                             </div>
                         </div>
                         <button

@@ -75,9 +75,6 @@ export function TrendsCardExpanded({
                             {spendingStats.change <= 0 ? "↓" : "↑"}{Math.abs(spendingStats.change).toFixed(1)}%
                         </span>
                     </div>
-                    <p className="text-2xl font-bold mb-2" style={{ color: "#1D1D1F" }}>
-                        {formatAmount(spendingStats.current)}
-                    </p>
                     <AreaLineChart
                         data={toChartData(spendingData)}
                         color="#FF3B30"
@@ -103,9 +100,6 @@ export function TrendsCardExpanded({
                             {incomeStats.change >= 0 ? "↑" : "↓"}{Math.abs(incomeStats.change).toFixed(1)}%
                         </span>
                     </div>
-                    <p className="text-2xl font-bold mb-2" style={{ color: "#1D1D1F" }}>
-                        {formatAmount(incomeStats.current)}
-                    </p>
                     <AreaLineChart
                         data={toChartData(incomeData)}
                         color="#34C759"
@@ -199,9 +193,6 @@ export function TrendsCardExpanded({
                                     {selectedCategoryStats.change <= 0 ? "↓" : "↑"}{Math.abs(selectedCategoryStats.change).toFixed(1)}%
                                 </span>
                             </div>
-                            <p className="text-2xl font-bold mb-2" style={{ color: "#1D1D1F" }}>
-                                {formatAmount(selectedCategoryStats.current)}
-                            </p>
                             <AreaLineChart
                                 data={toChartData(selectedCategoryData)}
                                 color={selectedCategoryInfo.color}
