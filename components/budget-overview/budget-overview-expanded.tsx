@@ -263,29 +263,31 @@ export function BudgetOverviewExpanded({
             <div className="px-4 pb-5 sm:px-5">
                 {/* Main Stats Grid */}
                 <div className="grid grid-cols-3 gap-3 mb-6">
-                    <div className="p-3 rounded-2xl text-center bg-gray-100">
-                        <p className="text-xs font-medium mb-1 text-gray-500">Total Income</p>
-                        <p className="text-xl font-bold text-gray-900">{formatAmount(totalIncome)}</p>
-                    </div>
-                    <div 
-                        className="p-3 rounded-2xl text-center"
-                        style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
-                    >
-                        <p className="text-xs font-medium mb-1 text-gray-500">Total Spent</p>
-                        <p className="text-xl font-bold" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
-                    </div>
-                    <div 
-                        className="p-3 rounded-2xl text-center"
-                        style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
-                    >
-                        <p className="text-xs font-medium mb-1 text-gray-500">Remaining</p>
-                        <p 
-                            className="text-xl font-bold"
-                            style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}
+                        <div className="flex-1 p-3 rounded-2xl bg-gray-100">
+                            <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
+                            <p className="text-lg font-bold text-gray-900">{formatAmount(totalIncome)}</p>
+                        </div>
+                        <div 
+                            className="flex-1 p-3 rounded-2xl"
+                            style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
-                            {isOverspent ? '-' : ''}{formatAmount(Math.abs(remaining))}
-                        </p>
-                    </div>
+                            <p className="text-xs font-medium mb-0.5 text-gray-500">Spent</p>
+                            <p className="text-lg font-bold" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
+                        </div>
+                        <div 
+                            className="flex-1 p-3 rounded-2xl"
+                            style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
+                        >
+                            <p className="text-xs font-medium mb-0.5 text-gray-500">
+                                {isOverspent ? 'Over by' : 'Remaining'}
+                            </p>
+                            <p 
+                                className="text-lg font-bold"
+                                style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}
+                            >
+                                {isOverspent ? '-' : ''}{formatAmount(Math.abs(remaining))}
+                            </p>
+                        </div>
                 </div>
                 
                 {/* Income vs Spent Progress */}
