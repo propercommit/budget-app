@@ -1,3 +1,5 @@
+import { useSettings } from "@/lib/settings-context";
+
 interface ChartHeaderProps {
     latestValue: number;
     previousValue: number | null;
@@ -18,12 +20,13 @@ export function ChartHeader({
     const absoluteChange = hasComparison ? latestValue - previousValue : 0;
 
     const isPositiveChange = increaseIsPositive ? change >= 0 : change < 0;
+    const { formatAmount } = useSettings();
 
     return (
         <div className="mb-6 flex items-start justify-between">
             <div>
                 <div className="text-3xl sm:text-4xl font-bold mb-1">
-                    ${latestValue.toLocaleString()}
+                    {formatAmount(latestValue)}
                 </div>
                 {hasComparison ? (
                     <div className="flex items-center gap-2 text-sm">
@@ -32,7 +35,7 @@ export function ChartHeader({
                             {Math.abs(change).toFixed(1)}%
                         </span>
                         <span className="text-muted-foreground">
-                            ${Math.abs(absoluteChange).toLocaleString()} USD
+                            {formatAmount(Math.abs(absoluteChange))}
                         </span>
                     </div>
                 ) : (

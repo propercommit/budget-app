@@ -233,10 +233,6 @@ export function BudgetOverviewExpanded({
                                 className="text-xs"
                                 style={{ color: isOverspent ? '#FF3B30' : '#6E6E73' }}
                             >
-                                {isOverspent 
-                                    ? "You're overspending" 
-                                    : `${(100 - incomeUsedPercent).toFixed(0)}% of income remaining`
-                                }
                             </p>
                         </div>
                     </div>

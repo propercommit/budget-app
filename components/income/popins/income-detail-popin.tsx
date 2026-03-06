@@ -62,9 +62,6 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
                     </div>
                     <div className="flex-1 min-w-0">
                         <h3 className="text-xl font-semibold truncate" style={{ color: "#1D1D1F" }}>{income.name}</h3>
-                        <p className="text-2xl font-bold" style={{ color: typeColor }}>
-                            {formatAmount(income.amount)}
-                        </p>
                     </div>
                 </div>
 
