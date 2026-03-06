@@ -19,6 +19,7 @@ import { SectionCard } from "@/components/section-card";
 import { useCategories } from "@/components/hooks/use-categories";
 import { useSpending } from "@/components/hooks/use-spending";
 import { useIncome } from "@/components/hooks/use-income";
+import { filterActiveCategories } from "@/lib/filter-active-categories";
 
 export default function Home() {
   const [isSpendingExpanded, setIsSpendingExpanded] = useState(false);
@@ -191,7 +192,11 @@ export default function Home() {
 
         <div className="mb-4">
           <CategoryRibbon
-            categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
+            categories={filterActiveCategories({
+              categories,
+              spendingItems: currentSpendingItems,
+              selectedMonth
+            }).map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
             selectedCategory={selectedCategory}
             onSelect={setSelectedCategory}
             onAddCategory={() => {
@@ -314,7 +319,11 @@ export default function Home() {
 
         <BudgetOverviewCard
           totalIncome={totalIncome}
-          categories={categories}
+          categories={filterActiveCategories({
+            categories,
+            spendingItems: currentSpendingItems,
+            selectedMonth
+          })}
           spendingItems={currentSpendingItems}
         />
       </div>
