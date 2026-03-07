@@ -5,14 +5,15 @@ import { getIncomeSources, getAllIncomeSources, createIncomeSource as apiCreate,
 import { IncomeSource } from "@/lib/types";
 import toast from "react-hot-toast";
 
-export function useIncome(selectedMonth: string) {
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
-  const [allIncomeSources, setAllIncomeSources] = useState<IncomeSource[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useIncome(selectedMonth: string, initialIncomeSources?: IncomeSource[], initialAllIncomeSources?: IncomeSource[]) {
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>(initialIncomeSources ?? []);
+  const [allIncomeSources, setAllIncomeSources] = useState<IncomeSource[]>(initialAllIncomeSources ?? []);
+  const [isLoading, setIsLoading] = useState(!initialIncomeSources);
   const incomeRef = useRef(incomeSources);
   incomeRef.current = incomeSources;
 
   useEffect(() => {
+    if (initialIncomeSources) return;
     async function load() {
       try {
         const [monthly, all] = await Promise.all([
