@@ -1,27 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  getSpending,
-  createSpending as apiCreateSpending,
-  updateSpending as apiUpdateSpending,
-  deleteSpending as apiDeleteSpending,
-  createEntry as apiCreateEntry,
-  updateEntry as apiUpdateEntry,
-  deleteEntry as apiDeleteEntry,
-} from "@/lib/api";
+import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from "@/lib/api";
 import { SpendingItem } from "@/lib/types";
 import toast from "react-hot-toast";
 
 type SpendingData = Record<string, SpendingItem[]>;
 
-export function useSpending() {
-  const [spendingData, setSpendingData] = useState<SpendingData>({});
-  const [isLoading, setIsLoading] = useState(true);
+export function useSpending(initialSpendingData?: SpendingData) {
+  const [spendingData, setSpendingData] = useState<SpendingData>(initialSpendingData ?? {});
+  const [isLoading, setIsLoading] = useState(!initialSpendingData);
   const dataRef = useRef(spendingData);
   dataRef.current = spendingData;
 
   useEffect(() => {
+    if (initialSpendingData) return;
     async function load() {
       try {
         setSpendingData(await getSpending());

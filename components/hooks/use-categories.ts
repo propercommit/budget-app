@@ -1,23 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  getCategories,
-  createCategory as apiCreate,
-  updateCategory as apiUpdate,
-  deleteCategory as apiDelete,
-} from "@/lib/api";
+import { getCategories, createCategory as apiCreate, updateCategory as apiUpdate, deleteCategory as apiDelete } from "@/lib/api";
 import { Category } from "@/lib/types";
 import toast from "react-hot-toast";
 
-export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useCategories(initialCategories?: Category[]) {
+  
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
+  const [isLoading, setIsLoading] = useState(!initialCategories);
   const categoriesRef = useRef(categories);
   categoriesRef.current = categories;
 
   // Fetch on mount
   useEffect(() => {
+    if (initialCategories) return;
     async function load() {
       try {
         const data = await getCategories();
@@ -29,6 +26,7 @@ export function useCategories() {
       }
     }
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createCategory = useCallback(async (
