@@ -1,6 +1,7 @@
 "use client";
 
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 
 interface SpendingItemDetailPopinProps {
@@ -73,7 +74,7 @@ export function SpendingItemDetailPopin({
                         className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
                         style={{ backgroundColor: `${spendingCategoryColor}15` }}
                     >
-                        {spendingItemIcon}
+                        {iconMap[spendingItemIcon] || spendingItemIcon}
                     </div>
                     <div className="flex-1">
                         <h3 className="text-xl font-semibold" style={{ color: "#1D1D1F" }}>
@@ -119,8 +120,9 @@ export function SpendingItemDetailPopin({
                             }}
                         >
                             {isOverBudget
-                                ? `$${Math.abs(remaining).toLocaleString()} over`
-                                : `$${remaining.toLocaleString()} left`}
+                                ? `${formatAmount(Math.abs(remaining))} over`
+                                : `${formatAmount(remaining)} left`
+                            }
                         </div>
                     </div>
                 </div>
