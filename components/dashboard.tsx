@@ -111,20 +111,23 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     };
 
     const handleSaveIncome = async (data: Omit<IncomeSource, 'id' | 'month'>) => {
-        if (editingIncomeSource) {
-        await updateIncome(editingIncomeSource.id, data);
-        } else {
-        await createIncome(selectedMonth, data);
-        }
         setIsIncomePopinOpen(false);
         setEditingIncomeSource(null);
+
+        if (editingIncomeSource) {
+            await updateIncome(editingIncomeSource.id, data);
+        } else {
+            await createIncome(selectedMonth, data);
+        }
+        
     };
 
     const handleDeleteIncome = async () => {
         if (!editingIncomeSource) return;
-        await deleteIncome(editingIncomeSource.id);
+
         setIsIncomePopinOpen(false);
         setEditingIncomeSource(null);
+        await deleteIncome(editingIncomeSource.id);
     };
 
     const handleMonthChange = async (newMonth: string) => {
@@ -345,60 +348,66 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             setEditingSpendingItem(null);
             setLastCreatedCategoryName(null);
             }}
+
             onSave={async (data) => {
-            const category = categories.find(c => c.label === data.category);
-            if (!category) return;
+                const category = categories.find(c => c.label === data.category);
+                if (!category) return;
 
-            if (editingSpendingItem) {
-                await updateSpending(selectedMonth, editingSpendingItem.id, {
-                name: data.name,
-                icon: data.icon,
-                categoryId: category.id,
-                budgeted: data.budget,
-                startDate: data.startDate,
-                endDate: data.endDate || null,
-                note: data.note || null,
-                }, {
-                ...editingSpendingItem,
-                name: data.name,
-                icon: data.icon,
-                categoryId: category.id,
-                category,
-                budgeted: data.budget,
-                startDate: data.startDate,
-                endDate: data.endDate || null,
-                note: data.note || null,
-                });
-            } else {
-                const real = await createSpending(selectedMonth, {
-                name: data.name,
-                icon: data.icon,
-                categoryId: category.id,
-                month: selectedMonth,
-                budgeted: data.budget,
-                startDate: data.startDate,
-                endDate: data.endDate || null,
-                note: data.note || null,
-                }, category);
-                if (real) {
-                const items = spendingData[selectedMonth] || [];
-                setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
+                const currentEditing = editingSpendingItem;
+                setIsSpendingPopinOpen(false);
+                setEditingSpendingItem(null);
+
+                if (currentEditing) {
+                    await updateSpending(selectedMonth, currentEditing.id, {
+                        name: data.name,
+                        icon: data.icon,
+                        categoryId: category.id,
+                        budgeted: data.budget,
+                        startDate: data.startDate,
+                        endDate: data.endDate || null,
+                        note: data.note || null,
+                    }, {
+                        ...currentEditing,
+                        name: data.name,
+                        icon: data.icon,
+                        categoryId: category.id,
+                        category,
+                        budgeted: data.budget,
+                        startDate: data.startDate,
+                        endDate: data.endDate || null,
+                        note: data.note || null,
+                    });
+                } else {
+                    const real = await createSpending(selectedMonth, {
+                        name: data.name,
+                        icon: data.icon,
+                        categoryId: category.id,
+                        month: selectedMonth,
+                        budgeted: data.budget,
+                        startDate: data.startDate,
+                        endDate: data.endDate || null,
+                        note: data.note || null,
+                    }, category);
+                    if (real) {
+                        const items = spendingData[selectedMonth] || [];
+                        setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
+                    }
                 }
-            }
-
-            setIsSpendingPopinOpen(false);
-            setEditingSpendingItem(null);
             }}
+
             onDelete={editingSpendingItem ? async () => {
-            await handleDeleteSpending(editingSpendingItem.id);
-            setIsSpendingPopinOpen(false);
-            setEditingSpendingItem(null);
+                const id = editingSpendingItem.id;
+                setIsSpendingPopinOpen(false);
+                setEditingSpendingItem(null);
+                await handleDeleteSpending(id);
             } : undefined}
+
             onCreateCategory={() => {
             setEditingCategory(null);
             setCategoryPopinKey(prev => prev + 1);
             setIsCategoryPopinOpen(true);
             }}
+
             mode={editingSpendingItem ? "edit" : "create"}
             categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
             initialName={editingSpendingItem?.name ?? ""}
@@ -417,21 +426,26 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             setIsCategoryPopinOpen(false);
             setEditingCategory(null);
             }}
+
             onSave={async (data) => {
-            if (editingCategory) {
-                await updateCategory(editingCategory.id, data.name, data.icon, data.color);
-            } else {
-                const created = await addCategory(data.name, data.icon, data.color);
-                if (created) setLastCreatedCategoryName(data.name);
-            }
-            setIsCategoryPopinOpen(false);
-            setEditingCategory(null);
+                const currentEditing = editingCategory;
+                setIsCategoryPopinOpen(false);
+                setEditingCategory(null);
+                if (currentEditing) {
+                    await updateCategory(currentEditing.id, data.name, data.icon, data.color);
+                } else {
+                    const created = await addCategory(data.name, data.icon, data.color);
+                    if (created) setLastCreatedCategoryName(data.name);
+                }
             }}
+
             onDelete={editingCategory ? async () => {
-            await handleDeleteCategory(editingCategory.id);
-            setIsCategoryPopinOpen(false);
-            setEditingCategory(null);
+                const id = editingCategory.id;
+                setIsCategoryPopinOpen(false);
+                setEditingCategory(null);
+                await handleDeleteCategory(id);
             } : undefined}
+
             mode={editingCategory ? "edit" : "create"}
             initialName={editingCategory?.label ?? ""}
             initialIcon={editingCategory?.icon ?? "shopping-cart"}
