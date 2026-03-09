@@ -381,11 +381,11 @@ export function BudgetOverviewExpanded({
                 )}
                 
                 {/* Category Budget Progress (detailed) */}
-                {categoryBreakdown.some(c => c.budget > 0) && (
+                {categoryBreakdown.some(c => c.budget > 0 || c.spent > 0) && (
                     <div className="mt-6 pt-6 border-t border-gray-100">
                         <h3 className="text-sm font-semibold mb-4 text-gray-900">Category Budgets</h3>
                         <div className="space-y-4">
-                            {categoryBreakdown.filter(c => c.budget > 0).map((cat, i) => (
+                            {categoryBreakdown.filter(c => c.budget > 0 || c.spent > 0).map((cat, i) => (
                                 <CategoryRow 
                                     key={i}
                                     category={{ icon: cat.icon, name: cat.name }}

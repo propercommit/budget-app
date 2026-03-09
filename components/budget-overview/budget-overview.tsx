@@ -29,7 +29,7 @@ export function BudgetOverviewCard({ totalIncome, categories, spendingItems }: B
             spent,
             budget
         };
-    }).filter(cat => cat.spent > 0 || cat.budget > 0);
+    });
 
     if (isExpanded) {
         return (
