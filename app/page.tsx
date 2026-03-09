@@ -10,14 +10,17 @@ export default async function Home() {
 
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  const [categories, spendingItems, incomeSources, allIncomeSources] = await Promise.all([
+  const spendingItems = await prisma.spendingItem.findMany({
+    where: { userId: user.id },
+    include: { category: true, spendingEntries: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const spendingMonths = [...new Set(spendingItems.map(i => i.month))];
+
+  const [categories, incomeSources, allIncomeSources] = await Promise.all([
     prisma.category.findMany({
       where: { userId: user.id },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.spendingItem.findMany({
-      where: { userId: user.id },
-      include: { category: true, spendingEntries: true },
       orderBy: { createdAt: "asc" },
     }),
     prisma.incomeSource.findMany({
@@ -25,7 +28,7 @@ export default async function Home() {
       orderBy: { createdAt: "asc" },
     }),
     prisma.incomeSource.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, month: { in: spendingMonths } },
       orderBy: { createdAt: "asc" },
     }),
   ]);

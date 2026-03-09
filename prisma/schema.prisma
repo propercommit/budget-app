@@ -4,7 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DIRECT_URL")
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -34,6 +35,7 @@ model Category {
   spendingItems SpendingItem[]
   
   @@unique([userId, label])
+  @@index([userId])
 }
 
 model SpendingItem {
@@ -56,6 +58,8 @@ model SpendingItem {
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
   @@unique([userId, name, month])
+  @@index([userId])
+  @@index([userId, month])
 }
 
 enum IncomeType {
@@ -79,6 +83,9 @@ model IncomeSource {
   
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([userId, month])
 }
 
 model SpendingEntry {
@@ -90,6 +97,7 @@ model SpendingEntry {
   date            DateTime  @default(now())
   spendingItemId  String
   spendingItem    SpendingItem  @relation(fields: [spendingItemId], references: [id], onDelete: Cascade)
+  @@index([spendingItemId])
 }
 
 model UserSettings {
