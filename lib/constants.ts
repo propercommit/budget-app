@@ -8,7 +8,7 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   USD: "$",
   EUR: "€",
   GBP: "£",
-  CHF: "Fr",
+  CHF: "CHF",
   JPY: "¥",
   CAD: "C$",
   AUD: "A$",
