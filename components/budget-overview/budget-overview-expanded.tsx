@@ -1,5 +1,6 @@
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { CardHeader } from "../ui/card-header";
 
 interface CategoryBreakdown {
     name: string;
@@ -206,6 +207,12 @@ export function BudgetOverviewExpanded({
             value: cat.spent,
             color: cat.color
         }));
+    
+        const icon = (
+        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+    );
 
     return (
         <div 
@@ -213,52 +220,14 @@ export function BudgetOverviewExpanded({
             style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)', border: '1px solid rgba(0, 0, 0, 0.04)' }}
         >
             {/* Header */}
-            <div 
-                className="p-4 sm:p-5 cursor-pointer"
-                onClick={onCollapse}
-            >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div 
-                            className="w-11 h-11 rounded-2xl flex items-center justify-center"
-                            style={{ backgroundColor: 'rgba(0, 122, 255, 0.1)' }}
-                        >
-                            <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 className="text-base font-semibold text-gray-900">Budget Overview</h2>
-                            <p 
-                                className="text-xs"
-                                style={{ color: isOverspent ? '#FF3B30' : '#6E6E73' }}
-                            >
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onCollapse();
-                        }}
-                    >
-                        <svg 
-                            className="w-5 h-5 text-gray-500 rotate-180"
-                            fill="none" 
-                            viewBox="0 0 24 24" 
-                            stroke="currentColor"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                </div>
+            <div className="px-4 pt-4 sm:px-5 sm:pt-5 cursor-pointer" onClick={onCollapse}>
+                <CardHeader isExpanded={true} onToggle={onCollapse} title="Budget Overview" icon={icon} />
             </div>
-            
+                
             {/* Expanded Content */}
             <div className="px-4 pb-5 sm:px-5">
                 {/* Main Stats Grid */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
                         <div className="flex-1 p-3 rounded-2xl bg-gray-100">
                             <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
                             <p className="text-lg font-bold text-gray-900">{formatAmount(totalIncome)}</p>

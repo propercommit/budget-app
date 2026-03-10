@@ -28,9 +28,8 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                 {/* Header */}
                 <CardHeader isExpanded={false} onToggle={onExpand} title="Budget Overview" icon={icon} />
                 
-                <div className="mt-4 space-y-3"></div>
                 {/* Quick Stats Row */}
-                <div className="space-y-3">
+                <div className="mt-4 space-y-3">
                     <div className="flex gap-3">
                         <div className="flex-1 p-3 rounded-2xl bg-gray-100">
                             <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
