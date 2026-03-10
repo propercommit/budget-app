@@ -42,7 +42,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 >
                     Choose Icon
                 </button>
-                <button
+                {/* <button
                     type="button"
                     onClick={() => setIconSource("upload")}
                     className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -52,7 +52,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     }`}
                 >
                     Upload Icon
-                </button>
+                </button> */}
             </div>
             
             {iconSource === "preset" ? (
@@ -92,8 +92,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                         </div>
                     ) : (
                         <>
-                            <Upload className="w-8 h-8 text-gray-400" />
-                            <p className="text-sm text-gray-500">Upload your custom icon</p>
+                            {/* <Upload className="w-8 h-8 text-gray-400" />
+                            <p className="text-sm text-gray-500">Upload your custom icon</p> */}
                         </>
                     )}
                     <Label
