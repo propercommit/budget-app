@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/supabase-server";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 const MAX_NAME_LENGTH = 100;

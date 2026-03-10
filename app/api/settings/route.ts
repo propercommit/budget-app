@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { getAuthenticatedUser } from "@/lib/supabase-server";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { VALID_CURRENCIES, VALID_DATE_FORMATS, Currency, DateFormat } from "@/lib/constants";
 
 // Default settings for new users

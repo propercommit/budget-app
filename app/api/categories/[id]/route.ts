@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/supabase-server";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 // Constants
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;

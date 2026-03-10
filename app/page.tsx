@@ -1,6 +1,6 @@
 import { Dashboard } from "@/components/dashboard";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/supabase-server";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { SpendingItem } from "@/lib/types";
 import { redirect } from "next/navigation";
 
