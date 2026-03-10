@@ -166,7 +166,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-28 sm:pb-24">
         <Header
             title="Budget Planner"
-            legendLabel="Take control of your finances with smart insights and personalized advice"
+            legendLabel=""
         />
 
         <div className="mb-4">
