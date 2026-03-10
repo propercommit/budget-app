@@ -8,15 +8,15 @@ export const revalidate = 30;
 
 export default async function Home() {
   
-  console.time("auth");
+  
   const user = await getAuthenticatedUser();
-  console.timeEnd("auth");
+  
 
   if (!user) redirect("/login");
 
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  console.time("spending");
+  
 
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
@@ -59,11 +59,11 @@ export default async function Home() {
       },
       orderBy: { createdAt: "asc" },
   });
-  console.timeEnd("spending");
+  
 
   const spendingMonths = [...new Set(spendingItems.map(i => i.month))];
 
-  console.time("rest");
+  
   const [categories, incomeSources, allIncomeSources] = await Promise.all([
     prisma.category.findMany({
       where: { userId: user.id },
@@ -78,7 +78,7 @@ export default async function Home() {
       orderBy: { createdAt: "asc" },
     }),
   ]);
-  console.timeEnd("rest");
+  
 
   const mappedCategories = categories.map(c => ({
     id: c.id,
