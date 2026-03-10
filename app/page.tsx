@@ -4,20 +4,66 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { SpendingItem } from "@/lib/types";
 import { redirect } from "next/navigation";
 
+export const revalidate = 30;
+
 export default async function Home() {
+  
+  
   const user = await getAuthenticatedUser();
+  
+
   if (!user) redirect("/login");
 
   const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
+  
+
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const cutoffMonth = `${twelveMonthsAgo.getFullYear()}-${String(twelveMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
+
   const spendingItems = await prisma.spendingItem.findMany({
-    where: { userId: user.id },
-    include: { category: true, spendingEntries: true },
-    orderBy: { createdAt: "asc" },
+      where: { userId: user.id,
+        month: { gte: cutoffMonth }
+       },
+      select: {
+          id: true,
+          name: true,
+          icon: true,
+          budgeted: true,
+          spent: true,
+          month: true,
+          startDate: true,
+          endDate: true,
+          note: true,
+          categoryId: true,
+          category: {
+              select: {
+                  id: true,
+                  label: true,
+                  icon: true,
+                  color: true,
+              }
+          },
+          spendingEntries: {
+              select: {
+                  id: true,
+                  name: true,
+                  amount: true,
+                  date: true,
+                  receiptUrl: true,
+                  link: true,
+                  spendingItemId: true,
+              }
+          }
+      },
+      orderBy: { createdAt: "asc" },
   });
+  
 
   const spendingMonths = [...new Set(spendingItems.map(i => i.month))];
 
+  
   const [categories, incomeSources, allIncomeSources] = await Promise.all([
     prisma.category.findMany({
       where: { userId: user.id },
@@ -32,6 +78,7 @@ export default async function Home() {
       orderBy: { createdAt: "asc" },
     }),
   ]);
+  
 
   const mappedCategories = categories.map(c => ({
     id: c.id,
