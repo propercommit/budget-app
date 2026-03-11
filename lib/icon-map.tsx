@@ -3,7 +3,8 @@ import {
     CreditCard, Phone, Utensils, Plane, Grid2X2, Briefcase, Laptop, 
     TrendingUp, Zap, Coffee, Music, Shield, Dumbbell, Shirt, Monitor, 
     Smartphone, Train, ShoppingBag, Gamepad2,
-    Grid2x2, Rows3
+    Grid2x2, Rows3,
+    BanknoteArrowUp
 } from "lucide-react";
 
 export const iconMap: Record<string, React.ReactNode> = {
@@ -36,6 +37,7 @@ export const iconMap: Record<string, React.ReactNode> = {
     "train": <Train className="w-5 h-5" />,
     "shopping-bag": <ShoppingBag className="w-5 h-5" />,
     "gamepad-2": <Gamepad2 className="w-5 h-5" />,
+    "banknote-arrow-up": <BanknoteArrowUp className="w-5 h-5"/>
 };
 
 export const availableIcons = [
@@ -65,4 +67,5 @@ export const availableIcons = [
     { id: "train", name: "Train" },
     { id: "shopping-bag", name: "Bag" },
     { id: "gamepad-2", name: "Gaming" },
+    { id: "banknote-arrow-up", name: "Banknote"}
 ];

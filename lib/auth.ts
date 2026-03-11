@@ -54,8 +54,6 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
             algorithms: ["ES256"],
         });
 
-        console.log("[Auth] JWT payload:", JSON.stringify(payload, null, 2));
-
         const jti = payload.session_id as string;
         const userId = payload.sub;
         const email = payload.email;

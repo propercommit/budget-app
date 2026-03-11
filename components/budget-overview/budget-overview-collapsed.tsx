@@ -13,12 +13,6 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
     const incomeUsedPercent = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0;
     const { formatAmount } = useSettings();
 
-    const icon = (
-        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-    );
-
     return (
         <div 
             className="bg-white rounded-3xl overflow-hidden transition-all duration-300"
@@ -26,7 +20,7 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
         >
             <div className="p-4 sm:p-5 cursor-pointer" onClick={onExpand}>
                 {/* Header */}
-                <CardHeader isExpanded={false} onToggle={onExpand} title="Budget Overview" icon={icon} />
+                <CardHeader isExpanded={false} onToggle={onExpand} title="Budget Overview" />
                 
                 {/* Quick Stats Row */}
                 <div className="mt-4 space-y-3">

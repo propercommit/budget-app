@@ -2,6 +2,7 @@
 
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { ExpandToggleButton } from "../ui/expand-toggle-button";
 
 interface SpendingCardCollapsedProps {
     spendingName: string;
@@ -68,26 +69,10 @@ export function SpendingCardCollapsed({
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        <button
-                            onClick={onExpand}
-                            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                            style={{ backgroundColor: "#F5F5F7" }}
-                        >
-                            <svg
-                                className="w-5 h-5"
-                                style={{ color: "#6E6E73" }}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </button>
+                        <ExpandToggleButton
+                            isExpanded={false}
+                            onToggle={onExpand}
+                        />
                     </div>
                 </div>
 
