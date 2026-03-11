@@ -3,6 +3,7 @@ import { useState } from "react";
 import { IncomeCardCollapsed } from "./income-card-collapsed";
 import { IncomeCardExpanded } from "./income-card-expanded";
 import { SectionCard } from "../section-card";
+import { ExpandToggleButton } from "../ui/expand-toogle-button";
 
 interface IncomeCardProps {
     incomes: IncomeSource[];
@@ -26,19 +27,11 @@ export function IncomeCard({ incomes, onAdd, onSelect }: IncomeCardProps) {
         <SectionCard className="mt-6">
             <div className="flex items-center justify-between mb-3 px-1">
                 <p className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>Income</p>
-                <button 
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                    <svg 
-                        className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+                <ExpandToggleButton
+                    isExpanded={isExpanded}
+                    onToggle={() => setIsExpanded(!isExpanded)}
+                    className="w-7 h-7"
+                />
             </div>
 
             {isExpanded ? (
