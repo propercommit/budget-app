@@ -27,14 +27,14 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                     <div className="flex gap-3">
                         <div className="flex-1 p-3 rounded-2xl bg-gray-100">
                             <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
-                            <p className="text-lg font-bold text-gray-900">{formatAmount(totalIncome)}</p>
+                            <p className="text-lg font-bold text-gray-900 whitespace-nowrap">{formatAmount(totalIncome)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
                             style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
                             <p className="text-xs font-medium mb-0.5 text-gray-500">Spent</p>
-                            <p className="text-lg font-bold" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
+                            <p className="text-lg font-bold whitespace-nowrap" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
@@ -43,10 +43,7 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                             <p className="text-xs font-medium mb-0.5 text-gray-500">
                                 {isOverspent ? 'Over by' : 'Remaining'}
                             </p>
-                            <p 
-                                className="text-lg font-bold"
-                                style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}
-                            >
+                            <p className="text-lg font-bold whitespace-nowrap" style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}>
                                 {isOverspent ? '-' : ''}{formatAmount(Math.abs(remaining))}
                             </p>
                         </div>

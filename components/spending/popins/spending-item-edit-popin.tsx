@@ -214,7 +214,7 @@ export function SpendingItemEditPopin({
                             onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
                         />
                     </div>
-                    <p className="text-xs" style={{ color: "#6E6E73" }}>Set how much you want to spend per month</p>
+                    <p className="text-xs truncate max-w-[160px]" style={{ color: "#6E6E73" }}>Set how much you want to spend per month</p>
                 </div>
 
                 <fieldset className="space-y-2 max-w-full overflow-hidden">

@@ -7,16 +7,16 @@ export function cn(...inputs: ClassValue[]) {
 
 export const formatAmount = (amount: number, symbol: string = "$") => {
     if (amount >= 1_000_000_000_000) {
-        return `${symbol} ${(amount / 1_000_000_000_000).toFixed(1)}T`;
+        return `${(amount / 1_000_000_000_000).toFixed(1)}T ${symbol}`;
     }
     if (amount >= 1_000_000_000) {
-        return `${symbol} ${(amount / 1_000_000_000).toFixed(1)}B`;
+        return `${(amount / 1_000_000_000).toFixed(1)}B ${symbol}`;
     }
     if (amount >= 1_000_000) {
-        return `${symbol} ${(amount / 1_000_000).toFixed(1)}M`;
+        return `${(amount / 1_000_000).toFixed(1)}M ${symbol}`;
     }
     if (amount >= 10_000) {
-        return `${symbol} ${(amount / 1_000).toFixed(1)}K`;
+        return `${(amount / 1_000).toFixed(1)}K ${symbol}`;
     }
-    return `${symbol} ${amount.toLocaleString()}`;
+    return `${amount.toLocaleString()} ${symbol}`;
 };

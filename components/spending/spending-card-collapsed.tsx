@@ -42,30 +42,30 @@ export function SpendingCardCollapsed({
                 {/* Row 1: Header */}
                 <div className="flex items-center justify-between mb-3">
                     {/* Left — Icon + Name/Category */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                         <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
+                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
                             style={{ backgroundColor: `${spendingCategoryColor}15` }}
                         >
                             {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
-                        <div>
-                            <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>
+                        <div className="min-w-0">
+                            <h2 className="text-base font-semibold truncate" style={{ color: "#1D1D1F" }}>
                                 {spendingName}
                             </h2>
-                            <p className="text-xs" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs truncate" style={{ color: "#6E6E73" }}>
                                 {categoryName}
                             </p>
                         </div>
                     </div>
 
                     {/* Right — Spent/Budget + Chevron */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums" style={{ color: "#1D1D1F" }}>
+                            <p className="text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: "#1D1D1F" }}>
                                {formatAmount(totalSpent)}
                             </p>
-                            <p className="text-xs" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs whitespace-nowrap" style={{ color: "#6E6E73" }}>
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
