@@ -195,7 +195,7 @@ export function IncomeCardExpanded({
                                             <span className="text-xs text-gray-500 capitalize">{income.type}</span>
                                         </div>
                                     </div>
-                                    <p className="font-semibold flex-shrink-0">{formatAmount(income.amount)}</p>
+                                    <p className="font-semibold flex-shrink-0 whitespace-nowrap">{formatAmount(income.amount)}</p>
                                 </div>
                             );
                         })}

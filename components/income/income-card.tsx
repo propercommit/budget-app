@@ -3,7 +3,7 @@ import { useState } from "react";
 import { IncomeCardCollapsed } from "./income-card-collapsed";
 import { IncomeCardExpanded } from "./income-card-expanded";
 import { SectionCard } from "../section-card";
-import { ExpandToggleButton } from "../ui/expand-toogle-button";
+import { CardHeader } from "../ui/card-header";
 
 interface IncomeCardProps {
     incomes: IncomeSource[];
@@ -25,14 +25,11 @@ export function IncomeCard({ incomes, onAdd, onSelect }: IncomeCardProps) {
 
     return (
         <SectionCard className="mt-6">
-            <div className="flex items-center justify-between mb-3 px-1">
-                <p className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>Income</p>
-                <ExpandToggleButton
-                    isExpanded={isExpanded}
-                    onToggle={() => setIsExpanded(!isExpanded)}
-                    className="w-7 h-7"
-                />
-            </div>
+            <CardHeader 
+                isExpanded={isExpanded}
+                onToggle={() => setIsExpanded(!isExpanded)}
+                title="Income"
+            />
 
             {isExpanded ? (
                 <IncomeCardExpanded 

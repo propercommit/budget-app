@@ -157,7 +157,7 @@ function CategoryRow({
                     <span className="text-sm font-medium truncate text-gray-900">
                         {category.name}
                     </span>
-                    <span className="text-sm text-gray-500 flex-shrink-0 ml-2">
+                    <span className="text-sm text-gray-500 flex-shrink-0 ml-2 whitespace-nowrap">
                         {formatAmount(spent)} / {formatAmount(budget)}
                     </span>
                 </div>
@@ -319,7 +319,7 @@ export function BudgetOverviewExpanded({
                                         strokeWidth={12}
                                         centerContent={
                                             <div className="text-center">
-                                                <p className="text-lg font-bold text-gray-900">{formatAmount(totalSpent)}</p>
+                                                <p className="text-sm font-bold text-gray-900 text-center leading-tight">{formatAmount(totalSpent)}</p>
                                                 <p className="text-xs text-gray-500">Total</p>
                                             </div>
                                         }

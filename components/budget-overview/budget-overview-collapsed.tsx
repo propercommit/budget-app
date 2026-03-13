@@ -13,12 +13,6 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
     const incomeUsedPercent = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0;
     const { formatAmount } = useSettings();
 
-    const icon = (
-        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-    );
-
     return (
         <div 
             className="bg-white rounded-3xl overflow-hidden transition-all duration-300"
@@ -26,21 +20,21 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
         >
             <div className="p-4 sm:p-5 cursor-pointer" onClick={onExpand}>
                 {/* Header */}
-                <CardHeader isExpanded={false} onToggle={onExpand} title="Budget Overview" icon={icon} />
+                <CardHeader isExpanded={false} onToggle={onExpand} title="Budget Overview" />
                 
                 {/* Quick Stats Row */}
                 <div className="mt-4 space-y-3">
                     <div className="flex gap-3">
                         <div className="flex-1 p-3 rounded-2xl bg-gray-100">
                             <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
-                            <p className="text-lg font-bold text-gray-900">{formatAmount(totalIncome)}</p>
+                            <p className="text-lg font-bold text-gray-900 whitespace-nowrap">{formatAmount(totalIncome)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
                             style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
                             <p className="text-xs font-medium mb-0.5 text-gray-500">Spent</p>
-                            <p className="text-lg font-bold" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
+                            <p className="text-lg font-bold whitespace-nowrap" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
@@ -49,10 +43,7 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                             <p className="text-xs font-medium mb-0.5 text-gray-500">
                                 {isOverspent ? 'Over by' : 'Remaining'}
                             </p>
-                            <p 
-                                className="text-lg font-bold"
-                                style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}
-                            >
+                            <p className="text-lg font-bold whitespace-nowrap" style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}>
                                 {isOverspent ? '-' : ''}{formatAmount(Math.abs(remaining))}
                             </p>
                         </div>

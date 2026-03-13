@@ -2,6 +2,7 @@
 
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { ExpandToggleButton } from "../ui/expand-toggle-button";
 
 interface SpendingCardCollapsedProps {
     spendingName: string;
@@ -41,53 +42,37 @@ export function SpendingCardCollapsed({
                 {/* Row 1: Header */}
                 <div className="flex items-center justify-between mb-3">
                     {/* Left — Icon + Name/Category */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                         <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
+                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
                             style={{ backgroundColor: `${spendingCategoryColor}15` }}
                         >
                             {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
-                        <div>
-                            <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>
+                        <div className="min-w-0">
+                            <h2 className="text-base font-semibold truncate" style={{ color: "#1D1D1F" }}>
                                 {spendingName}
                             </h2>
-                            <p className="text-xs" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs truncate" style={{ color: "#6E6E73" }}>
                                 {categoryName}
                             </p>
                         </div>
                     </div>
 
                     {/* Right — Spent/Budget + Chevron */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums" style={{ color: "#1D1D1F" }}>
+                            <p className="text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: "#1D1D1F" }}>
                                {formatAmount(totalSpent)}
                             </p>
-                            <p className="text-xs" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs whitespace-nowrap" style={{ color: "#6E6E73" }}>
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        <button
-                            onClick={onExpand}
-                            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                            style={{ backgroundColor: "#F5F5F7" }}
-                        >
-                            <svg
-                                className="w-5 h-5"
-                                style={{ color: "#6E6E73" }}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </button>
+                        <ExpandToggleButton
+                            isExpanded={false}
+                            onToggle={onExpand}
+                        />
                     </div>
                 </div>
 

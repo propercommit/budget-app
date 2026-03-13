@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { TrendsCardCollapsed } from "./trends-card-collapsed";
 import { TrendsCardExpanded } from "./trends-card-expanded";
-import { ExpandToggleButton } from "../ui/expand-toogle-button";
+import { CardHeader } from "../ui/card-header";
 
 interface TrendDataPoint {
     label: string;
@@ -52,26 +52,11 @@ export function TrendsCard({ spendingData, incomeData, categoryData, categories 
             >
                 {/* Header */}
                 <div className="p-4 sm:p-5 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div
-                                className="w-11 h-11 rounded-2xl flex items-center justify-center"
-                                style={{ backgroundColor: "rgba(88, 86, 214, 0.1)" }}
-                            >
-                                <svg className="w-5 h-5" style={{ color: "#5856D6" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>Trends</h2>
-                            </div>
-                        </div>
-                        <ExpandToggleButton
-                            isExpanded={isExpanded}
-                            onToggle={() => setIsExpanded(!isExpanded)}
-                        />
-                    </div>
-
+                    <CardHeader
+                        isExpanded={isExpanded}
+                        onToggle={() => setIsExpanded(!isExpanded)}
+                        title="Trends"
+                    />
                     {!isExpanded && (
                         <TrendsCardCollapsed
                             spendingStats={{ current: spendingStats.current, change: spendingStats.change }}

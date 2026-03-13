@@ -3,6 +3,8 @@
 import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
+import { ExpandToggleButton } from "../ui/expand-toggle-button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 export interface SpendingEntry {
     id: string;
@@ -103,26 +105,10 @@ export function SpendingCardExpanded({
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        <button
-                            onClick={onCollapse}
-                            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                            style={{ backgroundColor: "#F5F5F7" }}
-                        >
-                            <svg
-                                className="w-5 h-5 rotate-180"
-                                style={{ color: "#6E6E73" }}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </button>
+                        <ExpandToggleButton
+                            isExpanded={true}
+                            onToggle={onCollapse}
+                        />
                     </div>
                 </div>
 
@@ -172,7 +158,7 @@ export function SpendingCardExpanded({
                 {/* Search and Sort */}
                 <div className="flex gap-2 mb-3">
                     <div
-                        className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                        className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl"
                         style={{ backgroundColor: "#F5F5F7" }}
                     >
                         <svg
@@ -198,22 +184,17 @@ export function SpendingCardExpanded({
                             style={{ color: "#1D1D1F" }}
                         />
                     </div>
-                        <select
-                            value={sortOrder}
-                            onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-                            className="px-3 pr-8 py-2.5 rounded-xl text-xs font-medium outline-none cursor-pointer appearance-none bg-no-repeat"
-                            style={{
-                                backgroundColor: "#F5F5F7",
-                                color: "#1D1D1F",
-                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E6E73' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                                backgroundPosition: "right 10px center",
-                            }}
-                        >
-                        <option value="newest">Newest</option>
-                        <option value="oldest">Oldest</option>
-                        <option value="highest">Highest</option>
-                        <option value="lowest">Lowest</option>
-                    </select>
+                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as typeof sortOrder)}>
+                        <SelectTrigger className="flex-shrink-0 h-auto px-3 py-2.5 rounded-xl text-xs font-medium border-none bg-[#F5F5F7] text-[#1D1D1F]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest</SelectItem>
+                            <SelectItem value="oldest">Oldest</SelectItem>
+                            <SelectItem value="highest">Highest</SelectItem>
+                            <SelectItem value="lowest">Lowest</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 {/* Entry List */}
@@ -236,12 +217,12 @@ export function SpendingCardExpanded({
                                     <p className="font-medium text-sm" style={{ color: "#1D1D1F" }}>
                                         {entry.name}
                                     </p>
-                                    <p className="text-xs" style={{ color: "#6E6E73" }}>
+                                    <p className="text-xs truncate max-w-[160px]" style={{ color: "#6E6E73" }}>
                                         {formatDateShort(entry.date)}
                                     </p>
                                 </div>
                             </div>
-                            <p className="font-semibold text-sm tabular-nums" style={{ color: "#1D1D1F" }}>
+                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: "#1D1D1F" }}>
                                 -{formatAmount(entry.amount)}
                             </p>
                         </button>
