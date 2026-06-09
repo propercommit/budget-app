@@ -203,11 +203,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
             <div className="mb-4">
             <CategoryRibbon
-                categories={filterActiveCategories({
-                categories,
-                spendingItems: currentSpendingItems,
-                selectedMonth
-                }).map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
+                categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
                 selectedCategory={selectedCategory}
                 onSelect={setSelectedCategory}
                 onAddCategory={() => {
