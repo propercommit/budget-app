@@ -12,8 +12,8 @@ async function fetchAPI(url: string, options?: RequestInit) {
   });
 
   if (response.ok === false) {
-    const error = await response.json();
-    throw new Error(error.message || "API request failed");
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || body.message || "API request failed");
   }
 
   if (response.status === 204) {
