@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
@@ -89,6 +89,15 @@ export async function POST(request: Request) {
 
         return NextResponse.json(category, { status: 201 });
     } catch (error) {
+        // Duplicate (userId, label) violates @@unique — surface a friendly 409
+        // instead of a generic 500 so the client can show "already exists".
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+            return NextResponse.json(
+                { error: "A category with this name already exists" },
+                { status: 409 }
+            );
+        }
+
         console.error("[Categories POST] Failed to create:", error);
         return NextResponse.json(
             { error: "Failed to create category" },
