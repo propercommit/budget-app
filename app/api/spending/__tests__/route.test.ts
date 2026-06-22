@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
   FAKE_USER,
   jsonRequest,
@@ -193,18 +194,20 @@ describe("POST /api/spending", () => {
     expect((body as { entries: unknown[] }).entries).toEqual([{ id: "e1" }]);
   });
 
-  // FLAGGED: SpendingItem has @@unique([userId, name, month]); a duplicate raises
-  // a Prisma P2002. This route has no P2002 catch, so the response is a generic
-  // 500 — not the friendly 409 the task expected. Documents ACTUAL behavior.
-  it("returns generic 500 on duplicate (name,month) P2002 (no friendly 409 — see PR notes)", async () => {
+  // SpendingItem has @@unique([userId, name, month]); a duplicate raises a Prisma
+  // P2002, which the route translates into a friendly 409 rather than a 500.
+  it("translates a duplicate (name,month) P2002 into a 409", async () => {
     prismaMock.category.findFirst.mockResolvedValue({ id: "cat-1" });
-    const p2002 = Object.assign(new Error("Unique constraint failed"), {
+    const p2002 = new PrismaClientKnownRequestError("Unique constraint failed", {
       code: "P2002",
+      clientVersion: "6",
     });
     prismaMock.spendingItem.create.mockRejectedValue(p2002);
 
     const { status, body } = await readJson(await POST(jsonRequest(validBody)));
-    expect(status).toBe(500);
-    expect(body).toEqual({ error: "Failed to create spending item" });
+    expect(status).toBe(409);
+    expect(body).toEqual({
+      error: "A spending item with this name already exists for this month",
+    });
   });
 });

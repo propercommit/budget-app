@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { FAKE_USER, jsonRequest, readJson } from "../../__tests__/helpers";
 
 // --- Boundary mocks -------------------------------------------------------
@@ -163,14 +164,13 @@ describe("POST /api/categories", () => {
     });
   });
 
-  // FLAGGED: per CLAUDE.md + commit ae1d74c this route is supposed to translate
-  // a Prisma P2002 (duplicate [userId,label]) into a friendly 409. The current
-  // handler has no such catch, so a duplicate falls through to the generic 500.
-  // This test documents the ACTUAL behavior (500), not the intended one.
-  it("returns generic 500 on duplicate-label P2002 (no friendly 409 — see PR notes)", async () => {
+  // A duplicate [userId, label] violates @@unique and raises a Prisma P2002;
+  // the route translates that into a friendly 409 rather than a generic 500.
+  it("translates a duplicate-label P2002 into a 409", async () => {
     prismaMock.user.upsert.mockResolvedValue({});
-    const p2002 = Object.assign(new Error("Unique constraint failed"), {
+    const p2002 = new PrismaClientKnownRequestError("Unique constraint failed", {
       code: "P2002",
+      clientVersion: "6",
     });
     prismaMock.category.create.mockRejectedValue(p2002);
 
@@ -178,7 +178,7 @@ describe("POST /api/categories", () => {
       await POST(jsonRequest({ label: "Food", icon: "x", color: "#FF5733" }))
     );
 
-    expect(status).toBe(500);
-    expect(body).toEqual({ error: "Failed to create category" });
+    expect(status).toBe(409);
+    expect(body).toEqual({ error: "A category with this name already exists" });
   });
 });

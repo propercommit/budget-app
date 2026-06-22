@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
@@ -210,6 +211,15 @@ export async function POST(request: Request) {
 
         return NextResponse.json(response, { status: 201 });
     } catch (error) {
+        // Duplicate (userId, name, month) violates @@unique — surface a friendly
+        // 409 instead of a generic 500 so the client can show "already exists".
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+            return NextResponse.json(
+                { error: "A spending item with this name already exists for this month" },
+                { status: 409 }
+            );
+        }
+
         console.error("[Spending POST] Failed to create:", error);
         return NextResponse.json({ error: "Failed to create spending item" }, { status: 500 });
     }
