@@ -17,5 +17,9 @@ export default defineConfig({
     include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", ".next", "dist"],
     pool: "forks",
+    // Removes jsdom's non-delivering MessageChannel (so React 19's scheduler
+    // doesn't hang) and registers @testing-library/jest-dom matchers. See
+    // vitest.setup.ts for the why.
+    setupFiles: ["./vitest.setup.ts"],
   },
 });
