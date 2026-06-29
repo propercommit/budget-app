@@ -69,6 +69,13 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Amount</span>
+                        <span className="text-base font-bold" style={{ color: "#1D1D1F" }}>
+                            {formatAmount(income.amount)}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
                         <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Type</span>
                         <div className="flex items-center gap-2">
                             <div
