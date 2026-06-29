@@ -317,14 +317,17 @@ export default function AccountPage() {
 
     const handleLogout = async () => {
         setIsSaving(true)
-
         try {
-            await supabase.auth.signOut()
-            router.push("/login")
+            // Authoritative: clears the (possibly chunked) auth cookies via
+            // Set-Cookie headers from the server.
+            await fetch("/auth/signout", { method: "POST" })
         } catch {
-            setError("Failed to logout. Please try again.")
-            setIsSaving(false)
+            // Network fallback — clear whatever the browser client can.
+            await supabase.auth.signOut().catch(() => {})
         }
+        // Hard reload guarantees a fresh cookie jar and a brand-new Supabase
+        // client, so no stale session can leak into the next sign-in.
+        window.location.assign("/login")
     }
 
     const handleDeleteAccount = async () => {
