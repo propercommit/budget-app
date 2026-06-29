@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { Logo } from "@/components/logo"
+import toast from "react-hot-toast"
 
 type AuthMode = "login" | "signup"
 
@@ -109,9 +110,11 @@ export default function LoginPage() {
                 },
             });
             if (error) {
+                toast.error('Failed to connect to Google. Please try again.')
                 setError("Failed to connect to Google. Please try again.");
             }
         } catch {
+            toast.error('Failed to connect to Google. Please try again.')
             setError("Failed to connect to Google. Please try again.");
         } finally {
             setIsGoogleLoading(false);
