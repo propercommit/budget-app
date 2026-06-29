@@ -1,6 +1,7 @@
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { CardHeader } from "../ui/card-header";
+import { DonutChart } from "../ui/donut-chart";
 
 interface CategoryBreakdown {
     name: string;
@@ -16,81 +17,6 @@ interface BudgetOverviewExpandedProps {
     totalBudgeted: number;
     categoryBreakdown: CategoryBreakdown[];
     onCollapse: () => void;
-}
-
-// ============================================
-// DONUT CHART COMPONENT
-// ============================================
-function DonutChart({ 
-    segments, 
-    size = 120, 
-    strokeWidth = 12, 
-    centerContent 
-}: { 
-    segments: { value: number; color: string }[];
-    size?: number;
-    strokeWidth?: number;
-    centerContent?: React.ReactNode;
-}) {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = 2 * Math.PI * radius;
-    const center = size / 2;
-    
-    const total = segments.reduce((sum, s) => sum + s.value, 0);
-    
-    // Pre-calculate offsets for each segment
-    const segmentsWithOffsets = segments.reduce<{ segment: typeof segments[0]; offset: number; length: number }[]>(
-        (acc, segment) => {
-            const percentage = total > 0 ? segment.value / total : 0;
-            const segmentLength = percentage * circumference;
-            const previousOffset = acc.length > 0 ? acc[acc.length - 1].offset + acc[acc.length - 1].length : 0;
-            
-            acc.push({
-                segment,
-                offset: previousOffset,
-                length: segmentLength
-            });
-            
-            return acc;
-        },
-        []
-    );
-    
-    return (
-        <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size}>
-                <circle
-                    cx={center}
-                    cy={center}
-                    r={radius}
-                    fill="none"
-                    stroke="#F5F5F7"
-                    strokeWidth={strokeWidth}
-                />
-                {segmentsWithOffsets.map(({ segment, offset, length }, i) => (
-                    <circle
-                        key={i}
-                        cx={center}
-                        cy={center}
-                        r={radius}
-                        fill="none"
-                        stroke={segment.color}
-                        strokeWidth={strokeWidth}
-                        strokeDasharray={`${length} ${circumference - length}`}
-                        strokeDashoffset={-offset}
-                        strokeLinecap="round"
-                        transform={`rotate(-90 ${center} ${center})`}
-                        style={{ transition: 'stroke-dasharray 0.5s ease' }}
-                    />
-                ))}
-            </svg>
-            {centerContent && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    {centerContent}
-                </div>
-            )}
-        </div>
-    );
 }
 
 // ============================================
@@ -307,10 +233,11 @@ export function BudgetOverviewExpanded({
                             {/* Donut Chart */}
                             {donutSegments.length > 0 && (
                                 <div className="flex-shrink-0 flex justify-center sm:justify-start">
-                                    <DonutChart 
+                                    <DonutChart
                                         segments={donutSegments}
                                         size={120}
                                         strokeWidth={12}
+                                        trackColor="#F5F5F7"
                                         centerContent={
                                             <div className="text-center">
                                                 <p className="text-sm font-bold text-gray-900 text-center leading-tight">{formatAmount(totalSpent)}</p>
