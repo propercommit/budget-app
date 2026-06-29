@@ -1,6 +1,7 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { DonutChart } from "../ui/donut-chart";
 
 interface IncomeCardExpandedProps {
     incomes: IncomeSource[];
@@ -27,11 +28,27 @@ export function IncomeCardExpanded({
     hoveredItemId,
     setHoveredItemId
 }: IncomeCardExpandedProps) {
-    const circumference = 2 * Math.PI * 30;
-    const activeLength = circumference * (activePercentage / 100);
-    const passiveLength = circumference * (passivePercentage / 100);
     const isEmpty = incomes.length === 0;
     const { formatAmount } = useSettings();
+
+    const segments = [
+        {
+            value: activePercentage,
+            color: '#007AFF',
+            style: {
+                transition: 'opacity 0.2s ease-out',
+                opacity: hoveredType === 'passive' ? 0.4 : 1,
+            },
+        },
+        {
+            value: passivePercentage,
+            color: '#FF9500',
+            style: {
+                transition: 'opacity 0.2s ease-out',
+                opacity: hoveredType === 'active' ? 0.4 : 1,
+            },
+        },
+    ];
 
     const renderIcon = (iconId: string) => {
         if (iconId.startsWith("data:")) {
@@ -45,9 +62,13 @@ export function IncomeCardExpanded({
         <div className="flex flex-col gap-4">
             {/* Header row: small donut + total */}
             <div className="flex items-center gap-4">
-                <div className="relative w-[80px] h-[80px] flex-shrink-0">
-                    <svg width="80" height="80" viewBox="0 0 80 80" className="-rotate-90">
-                        {isEmpty ? (
+                <div className="flex-shrink-0">
+                    <DonutChart
+                        segments={segments}
+                        size={80}
+                        strokeWidth={8}
+                        radius={30}
+                        emptyContent={
                             <circle
                                 cx="40"
                                 cy="40"
@@ -57,46 +78,8 @@ export function IncomeCardExpanded({
                                 strokeWidth="8"
                                 strokeDasharray="6 3"
                             />
-                        ) : (
-                            <>
-                                {activePercentage > 0 && (
-                                    <circle
-                                        cx="40"
-                                        cy="40"
-                                        r="30"
-                                        fill="none"
-                                        stroke="#007AFF"
-                                        strokeWidth="8"
-                                        strokeDasharray={`${activeLength} ${circumference}`}
-                                        style={{
-                                            transform: hoveredType === 'active' ? 'scale(1.08)' : 'scale(1)',
-                                            transformOrigin: 'center',
-                                            transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
-                                            opacity: hoveredType === 'passive' ? 0.4 : 1
-                                        }}
-                                    />
-                                )}
-                                {passivePercentage > 0 && (
-                                    <circle
-                                        cx="40"
-                                        cy="40"
-                                        r="30"
-                                        fill="none"
-                                        stroke="#FF9500"
-                                        strokeWidth="8"
-                                        strokeDasharray={`${passiveLength} ${circumference}`}
-                                        strokeDashoffset={-activeLength}
-                                        style={{
-                                            transform: hoveredType === 'passive' ? 'scale(1.08)' : 'scale(1)',
-                                            transformOrigin: 'center',
-                                            transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
-                                            opacity: hoveredType === 'active' ? 0.4 : 1
-                                        }}
-                                    />
-                                )}
-                            </>
-                        )}
-                    </svg>
+                        }
+                    />
                 </div>
                 <div className="min-w-0">
                     <p className="text-2xl font-bold">{formatAmount(totalIncome)}</p>
