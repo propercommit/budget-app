@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,17 @@ import { Logo } from "@/components/logo"
 import toast from "react-hot-toast"
 
 type AuthMode = "login" | "signup"
+
+// Maps the `?error=` codes produced by /auth/callback to user-facing messages.
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+    auth_failed: "We couldn't complete your sign-in. Please try again.",
+    no_code: "Sign-in was interrupted. Please try again.",
+    access_denied: "Sign-in was cancelled.",
+}
+
+function oauthErrorMessage(code: string): string {
+    return OAUTH_ERROR_MESSAGES[code] ?? "Sign-in failed. Please try again."
+}
 
 export default function LoginPage() {
     // Form state
@@ -29,6 +40,24 @@ export default function LoginPage() {
 
     const supabase = createClient()
     const isFormDisabled = isLoading || isGoogleLoading
+
+    // Surface OAuth callback failures (redirected here as ?error=...) as a toast,
+    // then strip the param so a refresh doesn't re-trigger it.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search)
+        const errorCode = params.get("error")
+        if (!errorCode) return
+
+        toast.error(oauthErrorMessage(errorCode))
+
+        params.delete("error")
+        const query = params.toString()
+        window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}${query ? `?${query}` : ""}`
+        )
+    }, [])
 
     const validateSignupForm = (): string | null => {
         if (firstName.trim().length < 1) {
@@ -103,19 +132,23 @@ export default function LoginPage() {
         setIsGoogleLoading(true);
         setError(null);
         try {
+            // Preserve the original destination (set by proxy.ts as ?redirect=)
+            // so Google users land where they were headed, like password users do.
+            const redirect = new URLSearchParams(window.location.search).get("redirect")
+            const callbackUrl = new URL(`${window.location.origin}/auth/callback`)
+            if (redirect) callbackUrl.searchParams.set("next", redirect)
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                    redirectTo: `${window.location.origin}/auth/callback`,
+                    redirectTo: callbackUrl.toString(),
                 },
             });
             if (error) {
-                toast.error('Failed to connect to Google. Please try again.')
-                setError("Failed to connect to Google. Please try again.");
+                toast.error("Failed to connect to Google. Please try again.")
             }
         } catch {
-            toast.error('Failed to connect to Google. Please try again.')
-            setError("Failed to connect to Google. Please try again.");
+            toast.error("Failed to connect to Google. Please try again.")
         } finally {
             setIsGoogleLoading(false);
         }
