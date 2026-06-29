@@ -13,6 +13,18 @@ function isAuthRoute(pathname: string): boolean {
     return AUTH_ROUTES.some(route => pathname.startsWith(route))
 }
 
+/**
+ * Build a redirect that carries over any auth cookies Supabase refreshed
+ * during getUser(). A bare NextResponse.redirect drops the cookies set on
+ * `supabaseResponse`, desyncing the browser and server session — which
+ * surfaces as OAuth needing a second click.
+ */
+function redirectWithAuthCookies(url: URL, from: NextResponse): NextResponse {
+    const response = NextResponse.redirect(url)
+    from.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+    return response
+}
+
 export async function proxy(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -49,14 +61,14 @@ export async function proxy(request: NextRequest) {
         }
 
         const pathname = request.nextUrl.pathname
-
+        
         // Redirect unauthenticated users to login (except public routes)
         if (!user && !isPublicRoute(pathname)) {
             const url = request.nextUrl.clone()
             url.pathname = "/login"
             // Preserve the original URL to redirect back after login
             url.searchParams.set("redirect", pathname)
-            return NextResponse.redirect(url)
+            return redirectWithAuthCookies(url, supabaseResponse)
         }
 
         // Redirect authenticated users away from auth pages
@@ -65,7 +77,7 @@ export async function proxy(request: NextRequest) {
             const redirect = url.searchParams.get("redirect") || "/"
             url.pathname = redirect
             url.searchParams.delete("redirect")
-            return NextResponse.redirect(url)
+            return redirectWithAuthCookies(url, supabaseResponse)
         }
 
         return supabaseResponse
