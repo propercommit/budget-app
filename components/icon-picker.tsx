@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Upload } from "lucide-react";
 import { availableIcons, iconMap } from "@/lib/icon-map";
 
 interface IconPickerProps {
