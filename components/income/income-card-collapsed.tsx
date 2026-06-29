@@ -37,9 +37,7 @@ export function IncomeCardCollapsed({
             value: activePercentage,
             color: '#007AFF',
             style: {
-                transform: hoveredType === 'active' ? 'scale(1.05)' : 'scale(1)',
-                transformOrigin: 'center' as const,
-                transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
+                transition: 'opacity 0.2s ease-out',
                 opacity: hoveredType === 'passive' ? 0.4 : 1,
             },
         },
@@ -47,9 +45,7 @@ export function IncomeCardCollapsed({
             value: passivePercentage,
             color: '#FF9500',
             style: {
-                transform: hoveredType === 'passive' ? 'scale(1.05)' : 'scale(1)',
-                transformOrigin: 'center' as const,
-                transition: 'transform 0.2s ease-out, opacity 0.2s ease-out',
+                transition: 'opacity 0.2s ease-out',
                 opacity: hoveredType === 'active' ? 0.4 : 1,
             },
         },
