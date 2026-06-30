@@ -9,6 +9,22 @@ const MIN_PASSWORD_LENGTH = 8
 // an oversized body can't be used to abuse the upstream auth provider.
 const MAX_PASSWORD_LENGTH = 128
 
+// Revocation must actually be recorded, so retry a transient Redis hiccup before
+// giving up. The whole app already hard-depends on Redis for auth, so treating a
+// persistent failure as fatal (below) adds no new failure surface.
+async function revokeWithRetry(userId: string, attempts = 3): Promise<void> {
+    let lastError: unknown
+    for (let i = 0; i < attempts; i++) {
+        try {
+            await revokeUserSessions(userId)
+            return
+        } catch (error) {
+            lastError = error
+        }
+    }
+    throw lastError
+}
+
 /**
  * Completes a password reset. This endpoint deliberately requires BOTH:
  *  1. An active Supabase session.
@@ -65,6 +81,23 @@ export async function POST(request: Request) {
             )
         }
 
+        // Evict any access token issued before this reset — including a stolen
+        // one an attacker may be holding — so recovering the account actually
+        // locks everyone else out, not just after the token's natural expiry.
+        // Done BEFORE the password change and treated as a hard precondition: if
+        // we can't record the revocation we abort, rather than silently leaving a
+        // stolen token valid after telling the user their account is secured. The
+        // fresh post-reset sign-in mints a newer token, so the user is unaffected.
+        try {
+            await revokeWithRetry(user.id)
+        } catch (revokeError) {
+            console.error("[Reset Password] Session revocation failed:", revokeError)
+            return NextResponse.json(
+                { error: "Could not complete the reset. Please try again." },
+                { status: 500 }
+            )
+        }
+
         const { error: updateError } = await supabase.auth.updateUser({ password })
         if (updateError) {
             console.error("[Reset Password] Update failed:", updateError.message)
@@ -73,16 +106,6 @@ export async function POST(request: Request) {
                 { error: "Could not update password. Please try again." },
                 { status: 400 }
             )
-        }
-
-        // Evict any access token issued before this reset — including a stolen
-        // one an attacker may be holding — so recovering the account actually
-        // locks everyone else out, not just after the token's natural expiry.
-        // Best-effort: a Redis hiccup must not fail a completed password change.
-        try {
-            await revokeUserSessions(user.id)
-        } catch (revokeError) {
-            console.error("[Reset Password] Session revocation failed:", revokeError)
         }
 
         // Invalidate the recovery session and clear the marker so the link can't

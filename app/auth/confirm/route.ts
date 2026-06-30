@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { RECOVERY_COOKIE, RECOVERY_COOKIE_MAX_AGE, signRecoveryToken } from "@/lib/recovery"
+import { markRecoverySession } from "@/lib/auth"
+import { decodeJwt } from "jose"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -37,6 +39,22 @@ export async function GET(request: Request) {
             if (!userId) {
                 console.error("[Auth Confirm] Recovery verified but no user on session")
                 return NextResponse.redirect(`${origin}/auth/forgot-password?error=invalid_link`)
+            }
+
+            // Contain this recovery session server-side: record its session_id so
+            // getAuthenticatedUser denies it on every normal route, even if the
+            // pw_recovery cookie is stripped. Best-effort — the signed cookie and
+            // proxy containment still apply if this write fails.
+            const accessToken = data.session?.access_token
+            if (accessToken) {
+                try {
+                    const sessionId = decodeJwt(accessToken).session_id
+                    if (typeof sessionId === "string") {
+                        await markRecoverySession(sessionId)
+                    }
+                } catch (markError) {
+                    console.error("[Auth Confirm] Failed to mark recovery session:", markError)
+                }
             }
 
             const response = NextResponse.redirect(`${origin}/auth/reset-password`)
