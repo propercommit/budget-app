@@ -76,11 +76,27 @@ export async function proxy(request: NextRequest) {
         const pathname = request.nextUrl.pathname
 
         // Contain password-recovery sessions: if the recovery marker is present
-        // but the user is heading anywhere other than the reset flow, end the
-        // session so an abandoned (or leaked) reset link can't become a roaming
-        // full login. Runs before the auth redirects below so it also catches a
-        // recovery session bouncing off /login into the app.
+        // but the request is for anything other than the reset flow, keep the
+        // session from being used to roam the app. Runs before the auth
+        // redirects below so it also catches a recovery session bouncing off
+        // /login into the app.
         if (request.cookies.get(RECOVERY_COOKIE) && !isRecoveryAllowedRoute(pathname)) {
+            // Distinguish a real top-level navigation (the user actually trying
+            // to roam to /account etc.) from a background request fired by the
+            // app shell. The root layout's SettingsProvider does GET /api/settings
+            // on EVERY page — including /auth/reset-password — so tearing the
+            // session down on every disallowed request would kill the recovery
+            // session a second after the reset page loads, and the reset POST
+            // would always 401 ("link expired"). Sec-Fetch-Dest is a
+            // browser-set, JS-unforgeable header, "document" only for navigations.
+            const isNavigation = request.headers.get("sec-fetch-dest") === "document"
+            if (!isNavigation) {
+                // Block background/API access via a leaked recovery link without
+                // destroying the session the legitimate reset POST still needs.
+                return NextResponse.json({ error: "recovery_context" }, { status: 401 })
+            }
+            // A genuine navigation away from the reset flow — end the session so
+            // an abandoned (or leaked) reset link can't become a roaming login.
             try {
                 await supabase.auth.signOut()
             } catch (signOutError) {
