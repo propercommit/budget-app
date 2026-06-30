@@ -1,9 +1,16 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { RECOVERY_COOKIE } from "@/lib/recovery-cookie"
 
 // Route configuration
 const PUBLIC_ROUTES = ["/login", "/auth"]
 const AUTH_ROUTES = ["/login"]
+
+// A password-recovery session (carrying the pw_recovery cookie) may ONLY reach
+// the reset flow. Any other navigation means the recovery link is being used to
+// roam the account — we tear the session down instead of letting it act as a
+// full login (see F1).
+const RECOVERY_ALLOWED_ROUTES = ["/auth/reset-password", "/api/auth/reset-password"]
 
 function isPublicRoute(pathname: string): boolean {
     return PUBLIC_ROUTES.some(route => pathname.startsWith(route))
@@ -11,6 +18,12 @@ function isPublicRoute(pathname: string): boolean {
 
 function isAuthRoute(pathname: string): boolean {
     return AUTH_ROUTES.some(route => pathname.startsWith(route))
+}
+
+function isRecoveryAllowedRoute(pathname: string): boolean {
+    return RECOVERY_ALLOWED_ROUTES.some(
+        route => pathname === route || pathname.startsWith(`${route}/`)
+    )
 }
 
 /**
@@ -61,7 +74,26 @@ export async function proxy(request: NextRequest) {
         }
 
         const pathname = request.nextUrl.pathname
-        
+
+        // Contain password-recovery sessions: if the recovery marker is present
+        // but the user is heading anywhere other than the reset flow, end the
+        // session so an abandoned (or leaked) reset link can't become a roaming
+        // full login. Runs before the auth redirects below so it also catches a
+        // recovery session bouncing off /login into the app.
+        if (request.cookies.get(RECOVERY_COOKIE) && !isRecoveryAllowedRoute(pathname)) {
+            try {
+                await supabase.auth.signOut()
+            } catch (signOutError) {
+                console.error("[Middleware] Recovery sign-out failed:", signOutError)
+            }
+            const url = request.nextUrl.clone()
+            url.pathname = "/login"
+            url.search = ""
+            const response = redirectWithAuthCookies(url, supabaseResponse)
+            response.cookies.set(RECOVERY_COOKIE, "", { maxAge: 0, path: "/" })
+            return response
+        }
+
         // Redirect unauthenticated users to login (except public routes)
         if (!user && !isPublicRoute(pathname)) {
             const url = request.nextUrl.clone()

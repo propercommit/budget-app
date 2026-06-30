@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,11 +47,18 @@ export default function LoginPage() {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
         const errorCode = params.get("error")
-        if (!errorCode) return
+        const resetStatus = params.get("reset")
+        if (!errorCode && !resetStatus) return
 
-        toast.error(oauthErrorMessage(errorCode))
+        if (errorCode) {
+            toast.error(oauthErrorMessage(errorCode))
+        }
+        if (resetStatus === "success") {
+            toast.success("Password updated. Please sign in with your new password.")
+        }
 
         params.delete("error")
+        params.delete("reset")
         const query = params.toString()
         window.history.replaceState(
             null,
@@ -326,15 +334,12 @@ export default function LoginPage() {
                                             Password
                                         </Label>
                                         {mode === "login" && (
-                                            <button
-                                                type="button"
+                                            <Link
+                                                href="/auth/forgot-password"
                                                 className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium transition-colors touch-manipulation"
-                                                onClick={() => {
-                                                    // TODO: Implement forgot password
-                                                }}
                                             >
                                                 Forgot password?
-                                            </button>
+                                            </Link>
                                         )}
                                     </div>
                                     <Input
