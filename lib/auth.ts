@@ -76,6 +76,34 @@ export async function revokeUserSessions(userId: string): Promise<void> {
     });
 }
 
+// A password-recovery session is a full Supabase session, but it must only ever
+// be usable to COMPLETE the reset — never to act as a normal login. We record
+// its `session_id` here when the recovery link is verified, and getAuthenticatedUser
+// then denies any request bearing that session_id. This contains the recovery
+// session server-side, by session, rather than via the `pw_recovery` cookie a
+// request-level attacker could simply drop. It is scoped to the one session, so
+// other devices and any future fresh login (different session_id) are unaffected;
+// it outlives the access-token TTL so a token refresh (which keeps the same
+// session_id) stays contained. The reset endpoints don't go through
+// getAuthenticatedUser, so the legitimate reset still works.
+const RECOVERY_SESSION_PREFIX = "recovery-session:";
+const RECOVERY_SESSION_TTL_SECONDS = 24 * 60 * 60;
+
+/**
+ * Mark a Supabase `session_id` as recovery-only, so getAuthenticatedUser refuses
+ * to treat it as a normal login. Call right after a recovery `verifyOtp`.
+ */
+export async function markRecoverySession(sessionId: string): Promise<void> {
+    await redis.set(`${RECOVERY_SESSION_PREFIX}${sessionId}`, 1, {
+        ex: RECOVERY_SESSION_TTL_SECONDS,
+    });
+}
+
+async function isRecoverySession(sessionId: string): Promise<boolean> {
+    const result = await redis.exists(`${RECOVERY_SESSION_PREFIX}${sessionId}`);
+    return result === 1;
+}
+
 export async function getAuthenticatedUser(): Promise<AuthUser | null> {
     const token = await extractTokenFromCookies();
     if (!token) return null;
@@ -107,6 +135,15 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
         const revokedBefore = await revokedBeforeSeconds(userId);
         if (revokedBefore !== null && typeof issuedAt === "number" && issuedAt < revokedBefore) {
             console.warn(`[Auth] Token predates a credential reset — user: ${userId}`);
+            return null;
+        }
+
+        // Refuse to treat a password-recovery session as a normal login. The
+        // reset endpoints bypass getAuthenticatedUser, so this only blocks the
+        // recovery session from roaming the app / API — even if the pw_recovery
+        // cookie was stripped.
+        if (await isRecoverySession(jti)) {
+            console.warn(`[Auth] Recovery session used outside reset flow — session: ${jti}`);
             return null;
         }
 
