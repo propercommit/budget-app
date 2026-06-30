@@ -63,6 +63,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         ? currentSpendingItems
         : currentSpendingItems.filter(item => item.category?.label === selectedCategory);
     const totalIncome = incomeSources.reduce((sum, i) => sum + i.amount, 0);
+    const [incomePopinKey, setIncomePopinKey] = useState(0);
 
     const historicalData = Object.entries(spendingData)
         .filter(([month]) => month <= selectedMonth)
@@ -91,6 +92,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
     const handleOpenAddIncome = () => {
         setEditingIncomeSource(null);
+        setIncomePopinKey(prev => prev + 1)
         setIsIncomePopinOpen(true);
     };
 
@@ -449,7 +451,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         />
 
         <IncomePopin
-            key={editingIncomeSource?.id ?? 'add'}
+            key={editingIncomeSource?.id ?? `add-${incomePopinKey}`}
             isOpen={isIncomePopinOpen}
             onClose={() => {
             setIsIncomePopinOpen(false);
