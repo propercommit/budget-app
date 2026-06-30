@@ -180,3 +180,10 @@ Live under `app/api/{categories,spending,income,entries,settings,account}/`. Con
 - Money: stored as `Float` (not Decimal) — be aware of float math when summing, and of mid-session `spent` drift.
 - Apple HIG colors used throughout: `#007AFF` (blue), `#34C759` (green), `#FF3B30` (red).
 - Mobile-first; assume thumb-zone layouts then adapt up.
+
+## Code rules (binding — apply to ALL code produced by any agent or subagent)
+
+- **No truthy/falsy-vulnerable tests.** Assertions and conditionals must check the exact thing they mean. Don't lean on the truthiness of a value where `0`, `""`, `NaN`, `false`, or `null` vs `undefined` would change the outcome. In tests use explicit assertions (`toBe(0)`, `toEqual([])`, `toBeNull()`, `toBeDefined()`, `.toHaveLength(n)`) rather than `expect(x).toBeTruthy()`/`toBeFalsy()`; in code use `x === undefined`, `x == null`, `Number.isNaN(x)`, `arr.length === 0`, etc. instead of bare `if (x)` when `x` can legitimately be a falsy value.
+- **Everything is typed; `any` is banned.** Never introduce the `any` type (explicit or implicit). If a type is genuinely unknowable at a boundary (truly external/untrusted data — network responses, `JSON.parse`, third-party payloads), use `unknown`, and narrow it to a concrete type as early as possible (validation/parsing/type guard) before it flows further into the code. `unknown` is a temporary state at the edge, never a resting type passed around. Prefer explicit type annotations and discriminated unions over loose objects.
+- **Clean indentation & formatting.** Consistent indentation matching the surrounding file; no mixed tabs/spaces, no ragged blocks, no leftover dead code or stray whitespace.
+- **JSDoc following best practices.** Document exported functions, types, hooks, and non-obvious logic with JSDoc that explains intent, contracts, parameters/returns that aren't self-evident, edge cases, and gotchas. Do NOT write JSDoc that merely restates the code or the obvious (e.g. `/** Gets the name */ getName()`). If a comment adds no information beyond the signature, omit it.
