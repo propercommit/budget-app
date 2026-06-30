@@ -6,6 +6,8 @@ import { NextResponse } from "next/server"
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>
+
 // Establishing containment is a hard precondition (see the recovery branch), so
 // retry a transient Redis hiccup with a short backoff before giving up.
 async function markRecoverySessionWithRetry(sessionId: string, attempts = 3): Promise<void> {
@@ -13,6 +15,25 @@ async function markRecoverySessionWithRetry(sessionId: string, attempts = 3): Pr
     for (let i = 0; i < attempts; i++) {
         try {
             await markRecoverySession(sessionId)
+            return
+        } catch (error) {
+            lastError = error
+            if (i < attempts - 1) await delay(50 * (i + 1))
+        }
+    }
+    throw lastError
+}
+
+// Tearing down an uncontained session is the only thing standing between a
+// containment failure and a live roaming session, so a transient signOut blip
+// must not leave it up. verifyOtp just succeeded (Supabase auth is reachable),
+// so a retry reliably lands. Treats a returned `error` as a failure to retry.
+async function signOutWithRetry(supabase: SupabaseServerClient, attempts = 3): Promise<void> {
+    let lastError: unknown
+    for (let i = 0; i < attempts; i++) {
+        try {
+            const { error } = await supabase.auth.signOut()
+            if (error) throw error
             return
         } catch (error) {
             lastError = error
@@ -89,8 +110,10 @@ export async function GET(request: Request) {
 
             if (!contained) {
                 // Tear down the just-established session so it can't roam uncontained.
+                // Retried so a transient signOut blip can't leave a live, uncontained
+                // session on the very path meant to deny it.
                 try {
-                    await supabase.auth.signOut()
+                    await signOutWithRetry(supabase)
                 } catch (signOutError) {
                     console.error("[Auth Confirm] Sign-out after containment failure failed:", signOutError)
                 }

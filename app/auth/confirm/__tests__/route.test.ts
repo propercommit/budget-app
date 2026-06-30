@@ -38,6 +38,8 @@ let errorSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Supabase signOut resolves the `{ error }` shape; default to success.
+  signOut.mockResolvedValue({ error: null });
   logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -133,6 +135,30 @@ describe("GET /auth/confirm — recovery", () => {
 
     expect(markRecoverySession).toHaveBeenCalledTimes(3);
     expect(signOut).toHaveBeenCalledTimes(1);
+    expect(res.headers.get("location")).toBe(
+      `${ORIGIN}/auth/forgot-password?error=try_again`
+    );
+  });
+
+  it("retries the teardown signOut on the hard-fail path before redirecting", async () => {
+    verifyOtp.mockResolvedValue({
+      data: {
+        user: { id: "user-1" },
+        session: { access_token: "access-jwt" },
+      },
+      error: null,
+    });
+    decodeJwt.mockReturnValue({ session_id: "sess-9" });
+    markRecoverySession.mockRejectedValue(new Error("redis down"));
+    // signOut blips once (returns an error) then succeeds — must not leave a
+    // live session up, so it's retried.
+    signOut
+      .mockResolvedValueOnce({ error: { message: "blip" } })
+      .mockResolvedValueOnce({ error: null });
+
+    const res = await GET(confirmRequest("?token_hash=abc&type=recovery"));
+
+    expect(signOut).toHaveBeenCalledTimes(2);
     expect(res.headers.get("location")).toBe(
       `${ORIGIN}/auth/forgot-password?error=try_again`
     );
