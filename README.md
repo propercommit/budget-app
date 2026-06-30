@@ -154,6 +154,62 @@ pnpm lint         # Run ESLint
 
 ---
 
+## Seeding Demo Data
+
+`prisma/inject-demo-data.ts` populates an account with realistic, randomized data so you can demo or test the app with a full dashboard. It is **not** wired into `package.json` — run it manually with `tsx`.
+
+It generates, for the **last 6 months** (ending the current month):
+
+- 8 spending **categories** (Housing, Food & Dining, Transport, Entertainment, Health, Shopping, Subscriptions, Savings)
+- ~15 **spending items** per month, each with 1–7 **spending entries** at randomized amounts and dates
+- 1–3 **income sources** per month (salary, occasional freelance, occasional dividends)
+- a **CHF** settings row (`DD/MM/YYYY`, light mode)
+
+Amounts, entry counts, and dates are randomized on every run, so each account looks organic.
+
+### Prerequisites
+
+The script reads from `.env` (auto-loaded from the repo root) and needs:
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE` | Service-role key (also accepts `SUPABASE_SERVICE_ROLE_KEY`) — used to create/look up the auth user |
+| `DATABASE_URL` | Prisma connection (pooled) |
+
+### Inject data
+
+```bash
+# Prompts for the email if omitted; prompts before touching a user that already has data
+pnpm dlx tsx prisma/inject-demo-data.ts user@example.com
+
+# Skip all confirmations (non-interactive / CI)
+pnpm dlx tsx prisma/inject-demo-data.ts user@example.com --yes
+
+# Set the password for a freshly created auth user (otherwise a random one is generated and printed)
+pnpm dlx tsx prisma/inject-demo-data.ts user@example.com --password 'Secret123'
+```
+
+Behaviour:
+
+- **Identifies the user by email.** If no Supabase auth user exists for that email, one is **created** (email pre-confirmed).
+- **Appends — never wipes.** Existing data is left untouched. Categories are reused by label if they already exist, and spending-item names get a `#2`, `#3`… suffix when they would collide with an existing item in the same month.
+- **Double confirmation when data already exists.** The script lists the current row counts, then asks you to confirm (`yes`) and to retype the email before writing. Use `--yes` to bypass.
+
+### Roll back a run
+
+Every injection writes a manifest to `prisma/.demo-injections/` listing exactly the rows it created. To undo a run, pass that manifest:
+
+```bash
+pnpm dlx tsx prisma/inject-demo-data.ts --rollback prisma/.demo-injections/inject-user-example-com-<timestamp>.json
+```
+
+Rollback deletes **only** the records from that manifest (in FK-safe order), and removes the settings row, the `User` row, and the Supabase auth user **only if that same run created them**. Pre-existing data is never deleted. The `prisma/.demo-injections/` directory is git-ignored.
+
+> The script is destructive against your live Supabase project (it writes real rows and can create/delete auth users). Run it against a development or staging project, not production.
+
+---
+
 ## Design Principles
 
 - **Mobile-first** — built for thumb-friendly interaction, adapted for desktop

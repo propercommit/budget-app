@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# demo-data injection manifests (rollback metadata)
+/prisma/.demo-injections/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
