@@ -1,47 +1,9 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { RECOVERY_COOKIE, RECOVERY_COOKIE_MAX_AGE, signRecoveryToken } from "@/lib/recovery"
 import { markRecoverySession } from "@/lib/auth"
+import { withRetry } from "@/lib/retry"
 import { decodeJwt } from "jose"
 import { NextResponse } from "next/server"
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-type SupabaseServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>
-
-// Establishing containment is a hard precondition (see the recovery branch), so
-// retry a transient Redis hiccup with a short backoff before giving up.
-async function markRecoverySessionWithRetry(sessionId: string, attempts = 3): Promise<void> {
-    let lastError: unknown
-    for (let i = 0; i < attempts; i++) {
-        try {
-            await markRecoverySession(sessionId)
-            return
-        } catch (error) {
-            lastError = error
-            if (i < attempts - 1) await delay(50 * (i + 1))
-        }
-    }
-    throw lastError
-}
-
-// Tearing down an uncontained session is the only thing standing between a
-// containment failure and a live roaming session, so a transient signOut blip
-// must not leave it up. verifyOtp just succeeded (Supabase auth is reachable),
-// so a retry reliably lands. Treats a returned `error` as a failure to retry.
-async function signOutWithRetry(supabase: SupabaseServerClient, attempts = 3): Promise<void> {
-    let lastError: unknown
-    for (let i = 0; i < attempts; i++) {
-        try {
-            const { error } = await supabase.auth.signOut()
-            if (error) throw error
-            return
-        } catch (error) {
-            lastError = error
-            if (i < attempts - 1) await delay(50 * (i + 1))
-        }
-    }
-    throw lastError
-}
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
@@ -101,7 +63,7 @@ export async function GET(request: Request) {
             let contained = false
             if (sessionId) {
                 try {
-                    await markRecoverySessionWithRetry(sessionId)
+                    await withRetry(() => markRecoverySession(sessionId))
                     contained = true
                 } catch (markError) {
                     console.error("[Auth Confirm] Failed to record recovery containment:", markError)
@@ -113,7 +75,10 @@ export async function GET(request: Request) {
                 // Retried so a transient signOut blip can't leave a live, uncontained
                 // session on the very path meant to deny it.
                 try {
-                    await signOutWithRetry(supabase)
+                    await withRetry(async () => {
+                        const { error: signOutError } = await supabase.auth.signOut()
+                        if (signOutError) throw signOutError
+                    })
                 } catch (signOutError) {
                     console.error("[Auth Confirm] Sign-out after containment failure failed:", signOutError)
                 }
