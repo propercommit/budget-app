@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { RECOVERY_COOKIE, verifyRecoveryToken } from "@/lib/recovery"
 import { revokeUserSessions } from "@/lib/auth"
+import { withRetry } from "@/lib/retry"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
@@ -8,22 +9,6 @@ const MIN_PASSWORD_LENGTH = 8
 // Match the rest of the app's amount/string caps philosophy: bound the input so
 // an oversized body can't be used to abuse the upstream auth provider.
 const MAX_PASSWORD_LENGTH = 128
-
-// Revocation must actually be recorded, so retry a transient Redis hiccup before
-// giving up. The whole app already hard-depends on Redis for auth, so treating a
-// persistent failure as fatal (below) adds no new failure surface.
-async function revokeWithRetry(userId: string, attempts = 3): Promise<void> {
-    let lastError: unknown
-    for (let i = 0; i < attempts; i++) {
-        try {
-            await revokeUserSessions(userId)
-            return
-        } catch (error) {
-            lastError = error
-        }
-    }
-    throw lastError
-}
 
 /**
  * Completes a password reset. This endpoint deliberately requires BOTH:
@@ -88,8 +73,11 @@ export async function POST(request: Request) {
         // we can't record the revocation we abort, rather than silently leaving a
         // stolen token valid after telling the user their account is secured. The
         // fresh post-reset sign-in mints a newer token, so the user is unaffected.
+        // (If updateUser below then fails, the revocation still stands — that is
+        // fail-secure and recoverable, since the user can sign in with their still
+        // valid old password to mint a fresh token; do not "fix" it by reordering.)
         try {
-            await revokeWithRetry(user.id)
+            await withRetry(() => revokeUserSessions(user.id))
         } catch (revokeError) {
             console.error("[Reset Password] Session revocation failed:", revokeError)
             return NextResponse.json(
