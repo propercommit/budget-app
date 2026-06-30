@@ -15,6 +15,7 @@ import toast from "react-hot-toast"
 const RESET_ERROR_MESSAGES: Record<string, string> = {
     invalid_link: "That password reset link is invalid or has expired. Request a new one below.",
     expired: "That password reset link has expired. Request a new one below.",
+    try_again: "We couldn't start your password reset. Please request a new link below.",
 }
 
 export default function ForgotPasswordPage() {

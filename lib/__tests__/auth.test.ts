@@ -37,7 +37,7 @@ vi.mock("jose", async (importOriginal) => {
 // Imported after mocks are registered.
 import { getAuthenticatedUser, markRecoverySession } from "@/lib/auth";
 
-const RECOVERY_TTL_SECONDS = 24 * 60 * 60;
+const RECOVERY_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 // A signature-verified payload. `session_id` (read as `jti`), `sub`, `email`
 // and `iat` are the claims the gate inspects.
@@ -88,6 +88,11 @@ describe("getAuthenticatedUser — recovery-session gate", () => {
 
     expect(result).toBeNull();
     expect(redisMock.exists).toHaveBeenCalledWith("recovery-session:sess-1");
+    // The flag is re-armed on every hit so an actively-used recovery session
+    // can't outlive its own containment.
+    expect(redisMock.set).toHaveBeenCalledWith("recovery-session:sess-1", 1, {
+      ex: RECOVERY_TTL_SECONDS,
+    });
   });
 
   it("returns the user when the same token is NOT flagged as a recovery session", async () => {
