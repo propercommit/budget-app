@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server"
 import { RECOVERY_COOKIE, RECOVERY_COOKIE_MAX_AGE, signRecoveryToken } from "@/lib/recovery"
 import { markRecoverySession } from "@/lib/auth"
+import { withRetry } from "@/lib/retry"
 import { decodeJwt } from "jose"
 import { NextResponse } from "next/server"
 
@@ -41,20 +42,47 @@ export async function GET(request: Request) {
                 return NextResponse.redirect(`${origin}/auth/forgot-password?error=invalid_link`)
             }
 
-            // Contain this recovery session server-side: record its session_id so
-            // getAuthenticatedUser denies it on every normal route, even if the
-            // pw_recovery cookie is stripped. Best-effort — the signed cookie and
-            // proxy containment still apply if this write fails.
+            // Contain this recovery session server-side BEFORE issuing it: record
+            // its session_id so getAuthenticatedUser denies it on every normal
+            // route, even if the pw_recovery cookie is stripped. This is a HARD
+            // precondition — if we can't decode the session_id or record the flag
+            // (Redis down), we refuse to hand out a session that would only be
+            // leashed by the deletable cookie: sign it out and send the user back
+            // to request a fresh link.
             const accessToken = data.session?.access_token
+            let sessionId: string | undefined
             if (accessToken) {
                 try {
-                    const sessionId = decodeJwt(accessToken).session_id
-                    if (typeof sessionId === "string") {
-                        await markRecoverySession(sessionId)
-                    }
-                } catch (markError) {
-                    console.error("[Auth Confirm] Failed to mark recovery session:", markError)
+                    const decoded = decodeJwt(accessToken).session_id
+                    if (typeof decoded === "string") sessionId = decoded
+                } catch (decodeError) {
+                    console.error("[Auth Confirm] Failed to decode recovery session token:", decodeError)
                 }
+            }
+
+            let contained = false
+            if (sessionId) {
+                try {
+                    await withRetry(() => markRecoverySession(sessionId))
+                    contained = true
+                } catch (markError) {
+                    console.error("[Auth Confirm] Failed to record recovery containment:", markError)
+                }
+            }
+
+            if (!contained) {
+                // Tear down the just-established session so it can't roam uncontained.
+                // Retried so a transient signOut blip can't leave a live, uncontained
+                // session on the very path meant to deny it.
+                try {
+                    await withRetry(async () => {
+                        const { error: signOutError } = await supabase.auth.signOut()
+                        if (signOutError) throw signOutError
+                    })
+                } catch (signOutError) {
+                    console.error("[Auth Confirm] Sign-out after containment failure failed:", signOutError)
+                }
+                return NextResponse.redirect(`${origin}/auth/forgot-password?error=try_again`)
             }
 
             const response = NextResponse.redirect(`${origin}/auth/reset-password`)

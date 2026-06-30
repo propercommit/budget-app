@@ -87,7 +87,11 @@ export async function revokeUserSessions(userId: string): Promise<void> {
 // session_id) stays contained. The reset endpoints don't go through
 // getAuthenticatedUser, so the legitimate reset still works.
 const RECOVERY_SESSION_PREFIX = "recovery-session:";
-const RECOVERY_SESSION_TTL_SECONDS = 24 * 60 * 60;
+// Re-armed on every hit (see getAuthenticatedUser), so an actively-used recovery
+// session stays contained indefinitely; this base TTL only bounds a fully dormant
+// session and keeps the key from lingering forever. Set well beyond any plausible
+// Supabase session lifetime so a normally-paced flow never loses containment.
+const RECOVERY_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 /**
  * Mark a Supabase `session_id` as recovery-only, so getAuthenticatedUser refuses
@@ -125,14 +129,21 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
             return null;
         }
 
-        const blocked = await isTokenBlocked(jti);
+        // The three revocation checks are independent reads — run them as one
+        // round-trip batch rather than three sequential Upstash hops on the auth
+        // hot path (the common valid-session case needs all three anyway).
+        const [blocked, revokedBefore, isRecovery] = await Promise.all([
+            isTokenBlocked(jti),
+            revokedBeforeSeconds(userId),
+            isRecoverySession(jti),
+        ]);
+
         if (blocked) {
             console.warn(`[Auth] Blocked token used — jti: ${jti}`);
             return null;
         }
 
         // Reject tokens issued before a password reset/change for this user.
-        const revokedBefore = await revokedBeforeSeconds(userId);
         if (revokedBefore !== null && typeof issuedAt === "number" && issuedAt < revokedBefore) {
             console.warn(`[Auth] Token predates a credential reset — user: ${userId}`);
             return null;
@@ -142,7 +153,10 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
         // reset endpoints bypass getAuthenticatedUser, so this only blocks the
         // recovery session from roaming the app / API — even if the pw_recovery
         // cookie was stripped.
-        if (await isRecoverySession(jti)) {
+        if (isRecovery) {
+            // Re-arm the flag so an actively-used recovery session can never
+            // outlive its own containment; the base TTL only bounds a dormant one.
+            await markRecoverySession(jti);
             console.warn(`[Auth] Recovery session used outside reset flow — session: ${jti}`);
             return null;
         }
