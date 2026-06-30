@@ -62,7 +62,7 @@ Env keys actually present (`.env`):
 - `DATABASE_URL` — Prisma runtime (pooled connection)
 - `DIRECT_URL` — Prisma migrations (direct connection, not pooler)
 - `SUPABASE_JWT_PUBLIC_KEY` — ES256 JWK JSON used by `lib/auth.ts` to locally verify Supabase JWTs
-- `REDIS_URL`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis (intended JWT blocklist; see Auth notes — currently inert)
+- `REDIS_URL`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` — Upstash Redis. Backs live token revocation: the `revoked-before` epoch (password reset) and `recovery-session` containment. `getAuthenticatedUser` reads it on every request, so the app hard-depends on Redis for auth. (The separate `blockToken` blocklist is inert — see Auth notes.)
 - `SITE_PASSWORD`
 
 The README documents only a few of these and is stale on env vars — trust this list.
@@ -85,7 +85,13 @@ There are **two `getAuthenticatedUser` functions** with different return shapes 
 
 When adding a new authenticated API route, import from `@/lib/auth`, not `@/lib/supabase-server`.
 
-**The Redis JWT blocklist is currently inert.** `blockToken()` in `lib/auth.ts` is the only writer and **has no callers**, so no `blocklist:<key>` entries are ever created and `isTokenBlocked()` always returns false. Logout (`app/account/page.tsx`) only calls `supabase.auth.signOut()` and account deletion never blocks the token either — so a stolen/active token stays valid until natural expiry. If you wire up revocation, note the key is built from the JWT **`session_id`** claim (despite the local var being misleadingly named `jti`) — pass `session_id` to `blockToken`.
+**There are TWO Redis revocation mechanisms in `lib/auth.ts`; some are live, one is inert — don't confuse them.**
+
+1. **`revoked-before:<userId>` epoch — LIVE.** `revokeUserSessions(userId)` stamps a per-user "revoked before" timestamp; `getAuthenticatedUser` rejects any token whose `iat` predates it (signature-valid or not, unexpired or not). It is **called by the password-reset flow** (`app/api/auth/reset-password`), so completing a reset evicts every previously-issued token (including a stolen one) immediately. A fresh post-reset sign-in mints a newer `iat`, so the legitimate user is unaffected.
+2. **`recovery-session:<session_id>` containment — LIVE.** `markRecoverySession(session_id)` (called by `/auth/confirm` on a recovery `verifyOtp`) flags the recovery session; `getAuthenticatedUser` then refuses to treat that session as a normal login. This contains the recovery session **server-side, by session id** — so dropping the `pw_recovery` cookie doesn't let it roam (the reset endpoints bypass `getAuthenticatedUser`, so they still work). Scoped per-session, so other devices / future logins are unaffected.
+3. **`blocklist:<session_id>` per-session blocklist — INERT.** `blockToken()` is the only writer and **has no callers**, so no `blocklist:*` entries are ever created and `isTokenBlocked()` always returns false. Logout (`app/account/page.tsx`) only calls `supabase.auth.signOut()`, and **account deletion does NOT revoke** — so after deletion a stolen/active token stays valid until natural expiry (account deletion should call `revokeUserSessions`). If you wire `blockToken` up, note its key is the JWT **`session_id`** claim despite the misleadingly named `jti` local var.
+
+All three reads fail **closed** (a Redis throw is caught and yields `null`).
 
 ### Routing & route protection — `proxy.ts`, not `middleware.ts`
 
