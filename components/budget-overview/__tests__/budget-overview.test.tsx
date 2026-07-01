@@ -54,21 +54,22 @@ beforeEach(() => {
 describe("BudgetOverviewCard — collapsed totals", () => {
   it("sums spent across items and shows the income remainder", () => {
     renderCard({
-      totalIncome: 3000,
+      totalIncome: 300_000,
       categories: [cat()],
-      spendingItems: [item({ spent: 500 }), item({ id: "s2", spent: 250 })],
+      spendingItems: [item({ spent: 50_000 }), item({ id: "s2", spent: 25_000 })],
     });
-    // totalSpent = 750, remaining = 3000 - 750 = 2250.
+    // totalSpent = 75_000c, remaining = 300_000 - 75_000 = 225_000c -> "2,250 $".
     expect(screen.getByText("Remaining")).toBeInTheDocument();
     expect(screen.getByText("2,250 $")).toBeInTheDocument();
   });
 
   it("sums realistic decimal spends without float drift in the displayed total", () => {
-    // 0.1 + 0.2 is the classic float case. remaining = 1000 - 0.3 = 999.7.
+    // The classic 0.1 + 0.2 case, now integer cents: 10c + 20c = 30c exactly,
+    // no IEEE-754 drift. remaining = 100_000c - 30c = 99_970c -> "999.7 $".
     renderCard({
-      totalIncome: 1000,
+      totalIncome: 100_000,
       categories: [cat()],
-      spendingItems: [item({ spent: 0.1 }), item({ id: "s2", spent: 0.2 })],
+      spendingItems: [item({ spent: 10 }), item({ id: "s2", spent: 20 })],
     });
     expect(screen.getByText("999.7 $")).toBeInTheDocument();
   });

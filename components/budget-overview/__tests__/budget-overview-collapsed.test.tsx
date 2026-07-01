@@ -26,17 +26,17 @@ beforeEach(() => {
 
 describe("BudgetOverviewCollapsed — remaining vs overspent", () => {
   it("shows 'Remaining' and a positive remainder when under budget", () => {
-    renderCollapsed({ totalIncome: 5000, totalSpent: 2000 });
+    renderCollapsed({ totalIncome: 500_000, totalSpent: 200_000 });
     expect(screen.getByText("Remaining")).toBeInTheDocument();
     expect(screen.queryByText("Over by")).not.toBeInTheDocument();
-    // remaining = 5000 - 2000 = 3000 -> "3,000 $"
+    // remaining = 500_000 - 200_000 = 300_000c -> "3,000 $"
     expect(screen.getByText("3,000 $")).toBeInTheDocument();
   });
 
   it("switches to 'Over by' with a negative sign when spent exceeds income", () => {
-    renderCollapsed({ totalIncome: 1000, totalSpent: 1500 });
+    renderCollapsed({ totalIncome: 100_000, totalSpent: 150_000 });
     expect(screen.getByText("Over by")).toBeInTheDocument();
-    // |remaining| = 500, prefixed with '-'
+    // |remaining| = 50_000c ($500), prefixed with '-'
     expect(screen.getByText("-500 $")).toBeInTheDocument();
   });
 });
