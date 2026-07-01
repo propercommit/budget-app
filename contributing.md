@@ -1,8 +1,6 @@
 # Contributing
 
-Conventions for working on PlanBudget. Solo project, so the audience is
-future-you — these are written down so the workflow stays consistent over time
-instead of living in memory.
+Conventions for working on PlanBudget.
 
 ## Workflow at a glance
 
