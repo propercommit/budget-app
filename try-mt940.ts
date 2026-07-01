@@ -53,6 +53,28 @@ function renderTable(transactions: BankTransaction[]): string {
   return [header, "-".repeat(header.length), ...rows].join("\n");
 }
 
+/**
+ * Map a transaction onto an object with every `BankTransaction` field present.
+ *
+ * `JSON.stringify` silently drops optional fields the parser left `undefined`
+ * (`counterparty`, `reference`, `externalId`, `currency`), so a raw dump hides
+ * the true shape of the type. Coalescing absent optionals to `null` makes the
+ * serialized output reflect the complete `BankTransaction` structure — you can
+ * see which fields the parser populated and which it genuinely left empty.
+ */
+function toExplicitShape(t: BankTransaction): Record<keyof BankTransaction, string | number | null> {
+  return {
+    date: t.date,
+    amount: t.amount,
+    direction: t.direction,
+    description: t.description,
+    counterparty: t.counterparty ?? null,
+    reference: t.reference ?? null,
+    externalId: t.externalId ?? null,
+    currency: t.currency ?? null,
+  };
+}
+
 /** Parse one statement file and return the full report text written to disk. */
 function buildReport(fileName: string, raw: string): string {
 
@@ -74,9 +96,9 @@ function buildReport(fileName: string, raw: string): string {
       "",
       renderTable(transactions),
       "",
-      "Full JSON:",
+      "Full BankTransaction data (every type field; null = parser left it empty):",
       "",
-      JSON.stringify(transactions, null, 2),
+      JSON.stringify(transactions.map(toExplicitShape), null, 2),
       "",
     );
 
