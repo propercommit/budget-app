@@ -38,7 +38,7 @@ describe("Mt940Parser.parse", () => {
     const [debit] = parser.parse(SIMPLE_STATEMENT);
     expect(debit).toEqual({
       date: "2026-06-02",
-      amount: 54.3,
+      amount: 5430,
       direction: "debit",
       description: "MIGROS SUPERMARKT ZUERICH",
       externalId: "BANKREF001",
@@ -49,7 +49,7 @@ describe("Mt940Parser.parse", () => {
   it("maps a credit line with no :86: and no reference, falling back to an empty description", () => {
     const [, credit] = parser.parse(SIMPLE_STATEMENT);
     expect(credit.direction).toBe("credit");
-    expect(credit.amount).toBe(2500);
+    expect(credit.amount).toBe(250000);
     expect(credit.reference).toBe("SALARY");
     expect(credit.externalId).toBe("BANKREF002");
     // No :86: and a usable reference -> reference becomes the description.
@@ -66,14 +66,34 @@ describe("Mt940Parser.parse", () => {
 // --- amount & date parsing ------------------------------------------------
 
 describe("amount and date parsing", () => {
-  it("reads the comma as the decimal separator", () => {
+  it("reads the comma as the decimal separator, into integer minor units", () => {
     const doc = mt940(
       ":20:R",
       ":60F:C260601CHF0,00",
       ":61:260602D1234,56NTRFNONREF",
       ":62F:D260602CHF1234,56",
     );
-    expect(parser.parse(doc)[0].amount).toBe(1234.56);
+    expect(parser.parse(doc)[0].amount).toBe(123456);
+  });
+
+  it("right-pads a single fractional digit to whole cents", () => {
+    const doc = mt940(
+      ":20:R",
+      ":60F:C260601CHF0,00",
+      ":61:260602C10,1NTRFNONREF",
+      ":62F:C260602CHF10,10",
+    );
+    expect(parser.parse(doc)[0].amount).toBe(1010);
+  });
+
+  it("half-up rounds an amount carrying more than two fractional digits", () => {
+    const doc = mt940(
+      ":20:R",
+      ":60F:C260601CHF0,00",
+      ":61:260602C10,999NTRFNONREF",
+      ":62F:C260602CHF11,00",
+    );
+    expect(parser.parse(doc)[0].amount).toBe(1100);
   });
 
   it("parses a line without an entry date", () => {
@@ -85,7 +105,7 @@ describe("amount and date parsing", () => {
     );
     const [txn] = parser.parse(doc);
     expect(txn.date).toBe("2026-06-02");
-    expect(txn.amount).toBe(10);
+    expect(txn.amount).toBe(1000);
     expect(txn.direction).toBe("credit");
   });
 
@@ -131,9 +151,9 @@ describe("debit/credit marks", () => {
     );
     const [reversalOfDebit, reversalOfCredit] = parser.parse(doc);
     expect(reversalOfDebit.direction).toBe("credit");
-    expect(reversalOfDebit.amount).toBe(20);
+    expect(reversalOfDebit.amount).toBe(2000);
     expect(reversalOfCredit.direction).toBe("debit");
-    expect(reversalOfCredit.amount).toBe(30);
+    expect(reversalOfCredit.amount).toBe(3000);
   });
 });
 
@@ -277,5 +297,147 @@ describe("edge cases and format detection", () => {
   it("exposes a shared singleton with the mt940 format id", () => {
     expect(mt940Parser).toBeInstanceOf(Mt940Parser);
     expect(mt940Parser.format).toBe("mt940");
+  });
+});
+
+// --- statement balances ---------------------------------------------------
+
+describe("parseStatements exposes balances", () => {
+  it("attaches the opening and closing balances (in cents) to the statement", () => {
+    const [statement] = parser.parseStatements(SIMPLE_STATEMENT);
+    expect(statement.openingBalance).toEqual({
+      direction: "credit",
+      amount: 100000,
+      currency: "CHF",
+      date: "2026-06-01",
+    });
+    expect(statement.closingBalance).toEqual({
+      direction: "credit",
+      amount: 344570,
+      currency: "CHF",
+      date: "2026-06-03",
+    });
+  });
+
+  it("splits a multi-statement file, each with its own balances", () => {
+    const doc = mt940(
+      ":20:STMT-1",
+      ":60F:C260601CHF0,00",
+      ":61:260602D5,00NTRFNONREF",
+      ":86:FIRST",
+      ":62F:D260602CHF5,00",
+      ":20:STMT-2",
+      ":60F:C260701EUR0,00",
+      ":61:260702C9,00NTRFNONREF",
+      ":86:SECOND",
+      ":62F:C260702EUR9,00",
+    );
+    const statements = parser.parseStatements(doc);
+    expect(statements).toHaveLength(2);
+    expect(statements[0].closingBalance?.currency).toBe("CHF");
+    expect(statements[1].closingBalance?.currency).toBe("EUR");
+  });
+});
+
+// --- reconciliation in integer cents --------------------------------------
+
+describe("reconcile", () => {
+  it("reconciles a clean statement: opening + movements === closing", () => {
+    // C1000,00 opening; −54,30 debit; +2500,00 credit -> C3445,70 closing.
+    const [result] = parser.reconcile(SIMPLE_STATEMENT);
+    expect(result.reconciled).toBe(true);
+    expect(result.movement).toBe(244570);
+    expect(result.expectedClosing).toBe(344570);
+    expect(result.actualClosing).toBe(344570);
+    expect(result.difference).toBe(0);
+  });
+
+  it("reconciles amounts that would drift when summed as floats", () => {
+    const doc = mt940(
+      ":20:DRIFT",
+      ":60F:C260601CHF0,00",
+      ":61:260602C10,10NTRFNONREF",
+      ":61:260602C20,20NTRFNONREF",
+      ":61:260602C0,30NTRFNONREF",
+      ":62F:C260602CHF30,60",
+    );
+    const [result] = parser.reconcile(doc);
+    expect(result.reconciled).toBe(true);
+    expect(result.movement).toBe(3060);
+    expect(result.difference).toBe(0);
+
+    // The very same amounts summed as major-unit floats miss 30.60 exactly —
+    // an equality check on that basis would spuriously reject a clean import.
+    expect(10.1 + 20.2 + 0.3).not.toBe(30.6);
+  });
+
+  it("handles a debit (overdrawn) closing balance", () => {
+    const doc = mt940(
+      ":20:OD",
+      ":60F:C260601CHF10,00",
+      ":61:260602D25,00NTRFNONREF",
+      ":62F:D260602CHF15,00",
+    );
+    const [result] = parser.reconcile(doc);
+    expect(result.reconciled).toBe(true);
+    expect(result.expectedClosing).toBe(-1500);
+    expect(result.actualClosing).toBe(-1500);
+  });
+
+  it("flags a statement whose closing balance does not match the movements", () => {
+    const doc = mt940(
+      ":20:BAD",
+      ":60F:C260601CHF100,00",
+      ":61:260602D30,00NTRFNONREF",
+      ":62F:C260602CHF80,00", // should be 70,00
+    );
+    const [result] = parser.reconcile(doc);
+    expect(result.reconciled).toBe(false);
+    expect(result.expectedClosing).toBe(7000);
+    expect(result.actualClosing).toBe(8000);
+    expect(result.difference).toBe(-1000);
+  });
+
+  it("counts reversals (RD/RC) with their effective direction", () => {
+    const doc = mt940(
+      ":20:REV",
+      ":60F:C260601CHF0,00",
+      ":61:260602RD20,00NTRFNONREF", // reversal of a debit -> +20,00
+      ":61:260603RC30,00NTRFNONREF", // reversal of a credit -> −30,00
+      ":62F:D260603CHF10,00",
+    );
+    const [result] = parser.reconcile(doc);
+    expect(result.reconciled).toBe(true);
+    expect(result.movement).toBe(-1000);
+    expect(result.actualClosing).toBe(-1000);
+  });
+
+  it("does not reconcile when the closing balance is absent", () => {
+    const doc = mt940(
+      ":20:NOCLOSE",
+      ":60F:C260601CHF0,00",
+      ":61:260602C10,00NTRFNONREF",
+    );
+    const [result] = parser.reconcile(doc);
+    expect(result.reconciled).toBe(false);
+    expect(result.actualClosing).toBeUndefined();
+    expect(result.difference).toBe(1000);
+  });
+
+  it("returns one result per statement in a multi-statement file", () => {
+    const doc = mt940(
+      ":20:STMT-1",
+      ":60F:C260601CHF0,00",
+      ":61:260602D5,00NTRFNONREF",
+      ":62F:D260602CHF5,00",
+      ":20:STMT-2",
+      ":60F:C260701EUR100,00",
+      ":61:260702C9,00NTRFNONREF",
+      ":62F:C260702EUR109,00",
+    );
+    const results = parser.reconcile(doc);
+    expect(results).toHaveLength(2);
+    expect(results[0].reconciled).toBe(true);
+    expect(results[1].reconciled).toBe(true);
   });
 });

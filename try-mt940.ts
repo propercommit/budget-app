@@ -17,7 +17,11 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 
 import { mt940Parser } from "./lib/import/mt940-parser";
-import type { BankTransaction } from "./lib/import/types";
+import type {
+  BankTransaction,
+  ReconciliationResult,
+  StatementBalance,
+} from "./lib/import/types";
 
 const INPUT_DIR = join(process.cwd(), "mt940-input");
 const OUTPUT_DIR = join(process.cwd(), "mt940-output");
@@ -33,7 +37,7 @@ const TYPE_DECLARATION = `type TransactionDirection = "debit" | "credit";
 
 interface BankTransaction {
   date: string;                    // zero-padded YYYY-MM-DD (value date)
-  amount: number;                  // always positive; direction carries the sign
+  amount: number;                  // integer minor units (cents); always positive; direction carries the sign
   direction: TransactionDirection; // "debit" = money out, "credit" = money in
   description: string;             // never undefined; may be ""
   counterparty?: string;           // optional
@@ -45,6 +49,25 @@ interface BankTransaction {
 /** Right-pad `value` to `width` columns so the plain-text table lines up. */
 function pad(value: string, width: number): string {
   return value.length >= width ? value : value + " ".repeat(width - value.length);
+}
+
+/** Render integer minor units (cents) back to a signed major-unit string, e.g. `-30.60`. */
+function formatCents(cents: number): string {
+
+  const sign = cents < 0 ? "-" : "";
+  const abs = Math.abs(cents);
+
+  return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}
+
+/** Render a balance as `<CUR> <signed major-unit amount>`, e.g. `CHF 3445.70`. */
+function formatBalance(balance: StatementBalance): string {
+  return `${balance.currency} ${formatCents(signedCents(balance))}`;
+}
+
+/** Signed value of a balance in cents (mirrors the parser: credit `+`, debit `−`). */
+function signedCents(balance: StatementBalance): number {
+  return balance.direction === "credit" ? balance.amount : -balance.amount;
 }
 
 /** Render parsed transactions as a fixed-width, human-scannable table. */
@@ -63,7 +86,7 @@ function renderTable(transactions: BankTransaction[]): string {
     [
       pad(t.date, 12),
       pad(t.direction, 8),
-      pad(t.amount.toFixed(2), 12),
+      pad(formatCents(t.amount), 12),
       pad(t.currency ?? "", 5),
       pad(t.description.slice(0, 40), 42),
       pad((t.counterparty ?? "").slice(0, 22), 24),
@@ -95,6 +118,38 @@ function toExplicitShape(t: BankTransaction): Record<keyof BankTransaction, stri
   };
 }
 
+/**
+ * Render the per-statement reconciliation check so a real UBS export can be
+ * eyeballed for correctness: does the sum of parsed movements match the bank's
+ * own closing balance? All figures are exact integer cents, shown here as
+ * major units. `MISMATCH` means the parse dropped/misread a line or the file
+ * is inconsistent — either way the import should not be trusted.
+ */
+function renderReconciliation(results: ReconciliationResult[]): string {
+
+  const blocks = results.map((result, index) => {
+
+    const status = result.reconciled ? "OK" : "MISMATCH";
+
+    const opening =
+      result.openingBalance !== undefined ? formatBalance(result.openingBalance) : "(none)";
+
+    const closing =
+      result.closingBalance !== undefined ? formatBalance(result.closingBalance) : "(none)";
+
+    return [
+      `statement ${index + 1}: ${status}`,
+      `  opening:  ${opening}`,
+      `  movement: ${formatCents(result.movement)}`,
+      `  expected: ${formatCents(result.expectedClosing)}`,
+      `  closing:  ${closing}`,
+      `  diff:     ${formatCents(result.difference)}`,
+    ].join("\n");
+  });
+
+  return blocks.join("\n\n");
+}
+
 /** Parse one statement file and return the full report text written to disk. */
 function buildReport(fileName: string, raw: string): string {
 
@@ -110,11 +165,16 @@ function buildReport(fileName: string, raw: string): string {
 
   try {
     const transactions = mt940Parser.parse(raw);
+    const reconciliation = mt940Parser.reconcile(raw);
 
     lines.push(
       `parsed ${transactions.length} transaction(s):`,
       "",
       renderTable(transactions),
+      "",
+      "Reconciliation (opening + movements vs. closing balance, exact integer cents):",
+      "",
+      renderReconciliation(reconciliation),
       "",
       "Type declaration:",
       "",

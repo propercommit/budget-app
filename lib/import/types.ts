@@ -26,7 +26,17 @@ export interface BankTransaction {
    * the app keys spending/income months on.
    */
   date: string;
-  /** Magnitude of the transaction, always positive. Direction is in {@link direction}. */
+  /**
+   * Magnitude of the transaction in **integer minor units** (e.g. Rappen/cents),
+   * always positive — `10.10` CHF is `1010`. Direction is in {@link direction}.
+   *
+   * Money is carried as integer minor units, not a floating-point major-unit
+   * value, throughout the import pipeline. IEEE-754 doubles cannot represent
+   * most decimal fractions, so summing many amounts drifts and an equality
+   * check against a statement balance can spuriously fail on clean data.
+   * Integers sum and compare exactly; the `/ 100` back to major units happens
+   * only at the display/persistence boundary.
+   */
   amount: number;
   /** Whether the amount left (`debit`) or entered (`credit`) the account. */
   direction: TransactionDirection;
@@ -51,6 +61,59 @@ export interface BankTransaction {
   externalId?: string;
   /** ISO 4217 currency code when the source states one (e.g. `CHF`). */
   currency?: string;
+}
+
+/**
+ * A statement balance line (MT940 `:60F:`/`:60M:` opening, `:62F:`/`:62M:`
+ * closing). The reconciliation seam: the sum of a statement's transaction
+ * movements plus the opening balance must equal the closing balance.
+ */
+export interface StatementBalance {
+  /** `credit` for a positive (in-credit) balance, `debit` for an overdrawn one. */
+  direction: TransactionDirection;
+  /** Balance magnitude in integer minor units (cents), always positive — sign is in {@link direction}. */
+  amount: number;
+  /** ISO 4217 currency code of the balance (e.g. `CHF`). */
+  currency: string;
+  /** Balance date as a zero-padded `YYYY-MM-DD` string. */
+  date: string;
+}
+
+/**
+ * One statement within a bank-statement file: its transactions and, when the
+ * source provides them, its opening and closing balances. A single file may
+ * hold several statements; each reconciles independently.
+ */
+export interface BankStatement {
+  transactions: BankTransaction[];
+  /** Opening balance (MT940 `:60F:`/`:60M:`), when present. */
+  openingBalance?: StatementBalance;
+  /** Closing balance (MT940 `:62F:`/`:62M:`), when present. */
+  closingBalance?: StatementBalance;
+}
+
+/**
+ * Outcome of reconciling one {@link BankStatement}: does `openingBalance +
+ * Σ movements` equal `closingBalance`? All figures are **signed integer minor
+ * units** (credits positive, debits negative), so the equality is exact — no
+ * floating-point tolerance is involved or needed.
+ */
+export interface ReconciliationResult {
+  /**
+   * `true` only when both balances are present and `expectedClosing` exactly
+   * equals `actualClosing`. `false` if either balance is missing or they differ.
+   */
+  reconciled: boolean;
+  openingBalance?: StatementBalance;
+  closingBalance?: StatementBalance;
+  /** Signed sum of transaction movements in cents (credits `+`, debits `−`). */
+  movement: number;
+  /** `signed(openingBalance) + movement` in cents — what the closing balance should be (0 opening if absent). */
+  expectedClosing: number;
+  /** `signed(closingBalance)` in cents, or `undefined` when no closing balance was found. */
+  actualClosing?: number;
+  /** `expectedClosing − actualClosing` in cents; `0` exactly when reconciled. Falls back to `expectedClosing` when there is no closing balance. */
+  difference: number;
 }
 
 /**

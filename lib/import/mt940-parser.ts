@@ -1,5 +1,8 @@
 import type {
+  BankStatement,
   BankTransaction,
+  ReconciliationResult,
+  StatementBalance,
   StatementParser,
   TransactionDirection,
 } from "./types";
@@ -69,6 +72,18 @@ interface Mt940Field {
   content: string;
 }
 
+/**
+ * A statement under construction while walking fields. Carries the running
+ * `currency` (from the opening balance) so transactions can be tagged as they
+ * are built; it is dropped when converting to the public {@link BankStatement}.
+ */
+interface DraftStatement {
+  transactions: BankTransaction[];
+  openingBalance?: StatementBalance;
+  closingBalance?: StatementBalance;
+  currency?: string;
+}
+
 /** Matches the start of a field line, e.g. `:61:` or `:60F:`, capturing tag and inline content. */
 const FIELD_TAG_RE = /^:(\d{2}[A-Z]?):(.*)$/;
 
@@ -82,8 +97,8 @@ const FIELD_TAG_RE = /^:(\d{2}[A-Z]?):(.*)$/;
 const STATEMENT_LINE_RE =
   /^(\d{6})(\d{4})?(R?[CD])([A-Z])?(\d[\d,]*)([A-Z][A-Z0-9]{3})([\s\S]*)$/;
 
-/** Matches `:60F:`/`:62F:` balance content, capturing the 3-letter currency code. */
-const BALANCE_RE = /^[CD]\d{6}([A-Z]{3})[\d,]*$/;
+/** Matches `:60F:`/`:62F:` balance content: D/C mark, `YYMMDD` date, currency, amount. */
+const BALANCE_RE = /^([CD])(\d{6})([A-Z]{3})(\d+(?:,\d+)?)$/;
 
 /**
  * Converts an MT940 `YYMMDD` date to `YYYY-MM-DD`.
@@ -110,17 +125,38 @@ function parseSwiftDate(yymmdd: string): string {
 }
 
 /**
- * Parses a SWIFT amount (comma decimal, no thousands grouping) into a number.
+ * Parses a SWIFT amount (comma decimal separator, no thousands grouping) into
+ * **integer minor units** — `"1234,56"` → `123456`, `"10,1"` → `1010`.
  *
- * @throws {Mt940ParseError} if the value is not a finite number.
+ * Parsing goes string → integer directly (never through a float) so no rounding
+ * error is introduced at the boundary: the whole and fractional digit groups
+ * are combined arithmetically. This is what lets many amounts be summed and
+ * compared against a statement balance exactly (see {@link BankTransaction}).
+ *
+ * Assumes two fractional digits — the minor-unit scale of CHF/EUR/USD and the
+ * currencies this budgeting app handles. A value with more than two fractional
+ * digits is half-up rounded to the cent; fewer digits are right-padded.
+ *
+ * @throws {Mt940ParseError} if `raw` is not a well-formed SWIFT amount or the
+ * result exceeds the safe-integer range.
  */
 function parseSwiftAmount(raw: string): number {
 
-  const value = Number(raw.replace(",", "."));
+  const match = /^(\d+)(?:,(\d*))?$/.exec(raw);
 
-  if (!Number.isFinite(value)) throw new Mt940ParseError(`Invalid amount "${raw}" in :61: line`);
+  if (match === null) throw new Mt940ParseError(`Invalid amount "${raw}" in MT940 field`);
 
-  return value;
+  const whole = Number(match[1]);
+  const fraction = match[2] ?? "";
+
+  const cents =
+    fraction.length <= 2
+      ? whole * 100 + Number(fraction.padEnd(2, "0"))
+      : whole * 100 + Number(fraction.slice(0, 2)) + (Number(fraction[2]) >= 5 ? 1 : 0);
+
+  if (!Number.isSafeInteger(cents)) throw new Mt940ParseError(`Amount "${raw}" is out of safe integer range`);
+
+  return cents;
 }
 
 /**
@@ -344,12 +380,70 @@ function buildTransaction(
   return transaction;
 }
 
-/** Reads the currency code out of a `:60F:`/`:62F:` balance field, or `undefined`. */
-function parseBalanceCurrency(content: string): string | undefined {
+/**
+ * Parses a `:60F:`/`:60M:`/`:62F:`/`:62M:` balance field into a
+ * {@link StatementBalance}, or `undefined` when the content is not a balance.
+ * The amount is integer minor units, like every other amount in this parser.
+ */
+function parseBalance(content: string): StatementBalance | undefined {
 
   const match = BALANCE_RE.exec(content.trim());
 
-  return match === null ? undefined : match[1];
+  if (match === null) return undefined;
+
+  const [, mark, yymmdd, currency, amount] = match;
+
+  return {
+    direction: mark === "C" ? "credit" : "debit",
+    amount: parseSwiftAmount(amount),
+    currency,
+    date: parseSwiftDate(yymmdd),
+  };
+}
+
+/** Signed value of a balance in minor units: credits positive, debits negative. */
+function signedBalanceCents(balance: StatementBalance): number {
+  return balance.direction === "credit" ? balance.amount : -balance.amount;
+}
+
+/** Signed sum of a statement's transaction movements in minor units (credits `+`, debits `−`). */
+function movementCents(transactions: BankTransaction[]): number {
+  return transactions.reduce(
+    (sum, txn) => sum + (txn.direction === "credit" ? txn.amount : -txn.amount),
+    0,
+  );
+}
+
+/**
+ * Reconciles one statement: checks that `openingBalance + Σ movements` equals
+ * `closingBalance`. Because every figure is an integer minor-unit value, the
+ * equality is exact — clean statements never fail the way a float sum would.
+ */
+function reconcileStatement(statement: BankStatement): ReconciliationResult {
+
+  const { openingBalance, closingBalance, transactions } = statement;
+
+  const movement = movementCents(transactions);
+  const opening = openingBalance !== undefined ? signedBalanceCents(openingBalance) : 0;
+  const expectedClosing = opening + movement;
+
+  const actualClosing =
+    closingBalance !== undefined ? signedBalanceCents(closingBalance) : undefined;
+
+  const reconciled =
+    openingBalance !== undefined && actualClosing !== undefined && expectedClosing === actualClosing;
+
+  const difference = actualClosing !== undefined ? expectedClosing - actualClosing : expectedClosing;
+
+  return {
+    reconciled,
+    openingBalance,
+    closingBalance,
+    movement,
+    expectedClosing,
+    actualClosing,
+    difference,
+  };
 }
 
 /**
@@ -370,58 +464,124 @@ export class Mt940Parser implements StatementParser {
   }
 
   /**
-   * Parses MT940 text into normalized transactions.
-   *
-   * Walks the fields in order: each `:61:` opens a transaction, an immediately
-   * following `:86:` supplies its details, and any of `:62F:`/`:62M:`/`:20:` (or
-   * end of input) closes the current transaction even when no `:86:` followed.
-   * The currency from the most recent `:60F:`/`:60M:` opening balance is attached
-   * to subsequent transactions.
+   * Parses MT940 text into a flat list of normalized transactions, discarding
+   * statement grouping and balances. Convenience wrapper over
+   * {@link parseStatements} for callers that only need the transactions.
    *
    * @throws {Mt940ParseError} if a `:61:` line is structurally invalid.
    */
   parse(raw: string): BankTransaction[] {
+    return this.parseStatements(raw).flatMap((statement) => statement.transactions);
+  }
+
+  /**
+   * Parses MT940 text into its constituent statements, each carrying its
+   * transactions plus opening/closing balances when present.
+   *
+   * Walks the fields in order: `:20:` opens a new statement; `:60F:`/`:60M:`
+   * records the opening balance (its currency is attached to the statement's
+   * transactions); each `:61:` opens a transaction, an immediately following
+   * `:86:` supplies its details, and any of `:62F:`/`:62M:`/`:20:` (or end of
+   * input) closes the current transaction even when no `:86:` followed;
+   * `:62F:`/`:62M:` records the closing balance and ends the statement.
+   *
+   * @throws {Mt940ParseError} if a `:61:` line is structurally invalid.
+   */
+  parseStatements(raw: string): BankStatement[] {
 
     const fields = tokenizeFields(extractBody(raw));
-    const transactions: BankTransaction[] = [];
-    let currency: string | undefined;
+    const statements: BankStatement[] = [];
+
+    let draft: DraftStatement | null = null;
     let pending: StatementLine | null = null;
+
+    const ensureDraft = (): DraftStatement => {
+      if (draft === null) draft = { transactions: [] };
+
+      return draft;
+    };
 
     const flushPending = (): void => {
       if (pending !== null) {
-        transactions.push(buildTransaction(pending, currency, undefined));
+        const target = ensureDraft();
+
+        target.transactions.push(buildTransaction(pending, target.currency, undefined));
         pending = null;
+      }
+    };
+
+    const finalize = (): void => {
+      if (draft !== null) {
+        statements.push({
+          transactions: draft.transactions,
+          openingBalance: draft.openingBalance,
+          closingBalance: draft.closingBalance,
+        });
+        draft = null;
       }
     };
 
     for (const field of fields) {
       switch (field.tag) {
-        case "60F":
-        case "60M":
-          currency = parseBalanceCurrency(field.content) ?? currency;
+        case "20":
+          flushPending();
+          finalize();
+          draft = { transactions: [] };
           break;
+        case "60F":
+        case "60M": {
+          const opening = parseBalance(field.content);
+
+          if (opening !== undefined) {
+            const target = ensureDraft();
+
+            target.openingBalance = opening;
+            target.currency = opening.currency;
+          }
+          break;
+        }
         case "61":
           flushPending();
+          ensureDraft();
           pending = parseStatementLine(field.content);
           break;
         case "86":
           if (pending !== null) {
-            transactions.push(buildTransaction(pending, currency, parse86(field.content)));
+            const target = ensureDraft();
+
+            target.transactions.push(buildTransaction(pending, target.currency, parse86(field.content)));
             pending = null;
           }
           break;
-        case "20":
         case "62F":
-        case "62M":
+        case "62M": {
           flushPending();
+          const closing = parseBalance(field.content);
+
+          if (closing !== undefined) ensureDraft().closingBalance = closing;
           break;
+        }
         default:
           break;
       }
     }
-    flushPending();
 
-    return transactions;
+    flushPending();
+    finalize();
+
+    return statements;
+  }
+
+  /**
+   * Reconciles each statement in `raw`, returning one {@link ReconciliationResult}
+   * per statement (in file order). Use this after {@link parse}/
+   * {@link parseStatements} to verify an import against the bank's own balances
+   * before persisting — a `reconciled: false` result means the parsed movements
+   * do not add up to the stated closing balance and the import should be halted
+   * for review rather than silently trusted.
+   */
+  reconcile(raw: string): ReconciliationResult[] {
+    return this.parseStatements(raw).map(reconcileStatement);
   }
 }
 
