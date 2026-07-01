@@ -1,7 +1,32 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 
 const prisma = new PrismaClient();
+
+// Demo money below is authored in major units (e.g. 1850 = CHF 1,850.00); the
+// DB stores integer cents. These thin wrappers convert every amount/budgeted/
+// spent at the write boundary, so the literals stay readable in major units.
+const cents = (major: number) => Math.round(major * 100);
+
+const seedIncomeMany = (args: { data: Prisma.IncomeSourceCreateManyInput[] }) =>
+  prisma.incomeSource.createMany({
+    data: args.data.map((r) => ({ ...r, amount: cents(r.amount ?? 0) })),
+  });
+
+const seedItem = (args: { data: Prisma.SpendingItemUncheckedCreateInput }) =>
+  prisma.spendingItem.create({
+    data: { ...args.data, budgeted: cents(args.data.budgeted ?? 0), spent: cents(args.data.spent ?? 0) },
+  });
+
+const seedEntry = (args: { data: Prisma.SpendingEntryUncheckedCreateInput }) =>
+  prisma.spendingEntry.create({
+    data: { ...args.data, amount: cents(args.data.amount ?? 0) },
+  });
+
+const seedEntries = (args: { data: Prisma.SpendingEntryCreateManyInput[] }) =>
+  prisma.spendingEntry.createMany({
+    data: args.data.map((r) => ({ ...r, amount: cents(r.amount ?? 0) })),
+  });
 
 // ============================================
 // CONFIG
@@ -148,7 +173,7 @@ async function main() {
     // -------------------------------------------
     console.log("   💰 Income...");
 
-    await prisma.incomeSource.createMany({
+    await seedIncomeMany({
       data: [
         {
           name: "Software Engineer Salary",
@@ -186,23 +211,23 @@ async function main() {
     console.log("   🛒 Spending items & entries...");
 
     // --- Housing ---
-    const rent = await prisma.spendingItem.create({
+    const rent = await seedItem({
       data: {
         name: "Rent", icon: "home", budgeted: 1850, spent: 1850,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Housing"],
       },
     });
-    await prisma.spendingEntry.create({
+    await seedEntry({
       data: { name: "Monthly rent", amount: 1850, date: date(year, month, 1), spendingItemId: rent.id },
     });
 
-    const utilities = await prisma.spendingItem.create({
+    const utilities = await seedItem({
       data: {
         name: "Utilities", icon: "zap", budgeted: 200, spent: month === 12 ? 220 : month === 1 ? 195 : 180,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Housing"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Electricity (EWZ)", amount: month === 12 ? 95 : month === 1 ? 85 : 78, date: date(year, month, 5), spendingItemId: utilities.id },
         { name: "Internet (Swisscom)", amount: 65, date: date(year, month, 8), spendingItemId: utilities.id },
@@ -211,7 +236,7 @@ async function main() {
     });
 
     // --- Food & Dining ---
-    const groceries = await prisma.spendingItem.create({
+    const groceries = await seedItem({
       data: {
         name: "Groceries", icon: "shopping-cart", budgeted: 600, spent: month === 12 ? 680 : month === 1 ? 545 : 520,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Food & Dining"],
@@ -225,17 +250,17 @@ async function main() {
       { name: "Coop weekend shop", amount: month === 12 ? 156 : month === 1 ? 98 : 78, date: date(year, month, 22) },
       ...(month === 12 ? [{ name: "Holiday groceries", amount: 110, date: date(year, month, 24) }] : []),
     ];
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: groceryEntries.map((e) => ({ ...e, spendingItemId: groceries.id })),
     });
 
-    const restaurants = await prisma.spendingItem.create({
+    const restaurants = await seedItem({
       data: {
         name: "Restaurants & Takeout", icon: "utensils", budgeted: 300, spent: month === 12 ? 380 : month === 1 ? 260 : 245,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Food & Dining"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Lunch with colleagues", amount: 32, date: date(year, month, 4), spendingItemId: restaurants.id },
         { name: "Sushi takeout", amount: 45, date: date(year, month, 9), spendingItemId: restaurants.id },
@@ -246,13 +271,13 @@ async function main() {
       ],
     });
 
-    const coffee = await prisma.spendingItem.create({
+    const coffee = await seedItem({
       data: {
         name: "Coffee", icon: "coffee", budgeted: 80, spent: month === 12 ? 92 : month === 1 ? 76 : 68,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Food & Dining"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Starbucks", amount: 6.5, date: date(year, month, 2), spendingItemId: coffee.id },
         { name: "Local café", amount: 5.2, date: date(year, month, 5), spendingItemId: coffee.id },
@@ -265,24 +290,24 @@ async function main() {
     });
 
     // --- Transport ---
-    const transport = await prisma.spendingItem.create({
+    const transport = await seedItem({
       data: {
         name: "Public Transport", icon: "train", budgeted: 120, spent: month === 1 ? 100 : 120,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Transport"],
         note: "GA Travelcard monthly installment",
       },
     });
-    await prisma.spendingEntry.create({
+    await seedEntry({
       data: { name: "SBB GA monthly", amount: month === 1 ? 100 : 120, date: date(year, month, 1), spendingItemId: transport.id },
     });
 
-    const fuel = await prisma.spendingItem.create({
+    const fuel = await seedItem({
       data: {
         name: "Car Expenses", icon: "fuel", budgeted: 250, spent: month === 12 ? 310 : month === 1 ? 230 : 195,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Transport"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Shell fuel", amount: month === 12 ? 95 : 78, date: date(year, month, 6), spendingItemId: fuel.id },
         { name: "Parking Zurich HB", amount: 25, date: date(year, month, 11), spendingItemId: fuel.id },
@@ -297,13 +322,13 @@ async function main() {
     });
 
     // --- Entertainment ---
-    const entertainment = await prisma.spendingItem.create({
+    const entertainment = await seedItem({
       data: {
         name: "Going Out", icon: "music", budgeted: 200, spent: month === 12 ? 280 : month === 1 ? 150 : 175,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Entertainment"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Cinema tickets", amount: 38, date: date(year, month, 8), spendingItemId: entertainment.id },
         { name: "Drinks with friends", amount: month === 12 ? 85 : 52, date: date(year, month, 14), spendingItemId: entertainment.id },
@@ -314,24 +339,24 @@ async function main() {
     });
 
     // --- Health ---
-    const health = await prisma.spendingItem.create({
+    const health = await seedItem({
       data: {
         name: "Health Insurance", icon: "shield", budgeted: 380, spent: 380,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Health"],
         note: "CSS Grundversicherung",
       },
     });
-    await prisma.spendingEntry.create({
+    await seedEntry({
       data: { name: "CSS monthly premium", amount: 380, date: date(year, month, 1), spendingItemId: health.id },
     });
 
-    const gym = await prisma.spendingItem.create({
+    const gym = await seedItem({
       data: {
         name: "Gym & Fitness", icon: "dumbbell", budgeted: 100, spent: month === 1 ? 135 : 89,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Health"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Gym membership", amount: 79, date: date(year, month, 1), spendingItemId: gym.id },
         { name: "Protein powder", amount: month === 1 ? 56 : 0, date: date(year, month, 10), spendingItemId: gym.id },
@@ -340,13 +365,13 @@ async function main() {
     });
 
     // --- Shopping ---
-    const shopping = await prisma.spendingItem.create({
+    const shopping = await seedItem({
       data: {
         name: "Clothing & Personal", icon: "shirt", budgeted: 200, spent: month === 12 ? 350 : month === 1 ? 120 : 85,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Shopping"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         ...(month === 12
           ? [
@@ -367,13 +392,13 @@ async function main() {
     });
 
     // --- Subscriptions ---
-    const subs = await prisma.spendingItem.create({
+    const subs = await seedItem({
       data: {
         name: "Digital Subscriptions", icon: "monitor", budgeted: 80, spent: 72,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Subscriptions"],
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "Spotify Premium", amount: 12.90, date: date(year, month, 1), spendingItemId: subs.id },
         { name: "Netflix", amount: 15.90, date: date(year, month, 1), spendingItemId: subs.id },
@@ -384,36 +409,36 @@ async function main() {
       ],
     });
 
-    const phone = await prisma.spendingItem.create({
+    const phone = await seedItem({
       data: {
         name: "Phone Plan", icon: "smartphone", budgeted: 40, spent: 39,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Subscriptions"],
       },
     });
-    await prisma.spendingEntry.create({
+    await seedEntry({
       data: { name: "Swisscom mobile", amount: 39, date: date(year, month, 3), spendingItemId: phone.id },
     });
 
     // --- Savings ---
-    const savings = await prisma.spendingItem.create({
+    const savings = await seedItem({
       data: {
         name: "Emergency Fund", icon: "piggy-bank", budgeted: 500, spent: month === 12 ? 300 : 500,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Savings"],
         note: "Target: 6 months expenses",
       },
     });
-    await prisma.spendingEntry.create({
+    await seedEntry({
       data: { name: "Transfer to savings", amount: month === 12 ? 300 : 500, date: date(year, month, 1), spendingItemId: savings.id },
     });
 
-    const investing = await prisma.spendingItem.create({
+    const investing = await seedItem({
       data: {
         name: "ETF Investing", icon: "trending-up", budgeted: 400, spent: 400,
         month: m, startDate: date(year, month, 1), userId, categoryId: categories["Savings"],
         note: "VWRL + CHSPI monthly DCA",
       },
     });
-    await prisma.spendingEntry.createMany({
+    await seedEntries({
       data: [
         { name: "VWRL (Vanguard All-World)", amount: 300, date: date(year, month, 5), spendingItemId: investing.id },
         { name: "CHSPI (Swiss equities)", amount: 100, date: date(year, month, 5), spendingItemId: investing.id },
