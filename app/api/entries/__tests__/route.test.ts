@@ -28,7 +28,7 @@ vi.mock("@/lib/auth", () => ({ getAuthenticatedUser }));
 
 import { GET, POST } from "@/app/api/entries/route";
 
-const validBody = { spendingItemId: "s1", name: "Coffee", amount: 4.5 };
+const validBody = { spendingItemId: "s1", name: "Coffee", amount: 450 };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -112,7 +112,7 @@ describe("POST /api/entries", () => {
   it("accepts a valid https link", async () => {
     prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
     prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });
-    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 4.5 }]);
+    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 450 }]);
     prismaMock.spendingItem.update.mockResolvedValue({});
     const { status } = await readJson(
       await POST(jsonRequest({ ...validBody, link: "https://shop.example.com/x" }))
@@ -138,25 +138,25 @@ describe("POST /api/entries", () => {
 
   it("creates the entry and recomputes spent from the sum of all entries", async () => {
     prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
-    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e2", amount: 4.5 });
-    // Two existing entries summing with float error: 0.1 + 0.2 = 0.30000000000000004
+    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e2", amount: 450 });
+    // Amounts are integer cents: 10 + 20 = 30 exactly (the classic 0.1 + 0.2
+    // float case, now drift-free).
     prismaMock.spendingEntry.findMany.mockResolvedValue([
-      { amount: 0.1 },
-      { amount: 0.2 },
+      { amount: 10 },
+      { amount: 20 },
     ]);
     prismaMock.spendingItem.update.mockResolvedValue({});
 
     const { status } = await readJson(await POST(jsonRequest(validBody)));
     expect(status).toBe(201);
 
-    // The handler writes the raw float sum back to `spent`; assert the actual
-    // (float-error-carrying) value it computes, not a rounded ideal.
+    // The handler writes the exact integer-cent sum back to `spent`.
     const updateArg = prismaMock.spendingItem.update.mock.calls[0][0];
     expect(updateArg).toEqual({
       where: { id: "s1" },
-      data: { spent: 0.1 + 0.2 },
+      data: { spent: 30 },
     });
-    expect(updateArg.data.spent).toBeCloseTo(0.3, 10);
+    expect(updateArg.data.spent).toBe(30);
   });
 
   it("defaults date to now when omitted", async () => {

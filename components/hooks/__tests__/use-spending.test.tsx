@@ -23,10 +23,11 @@ import type { SpendingItem, SpendingEntry } from "@/lib/types";
 
 const MONTH = "2026-06";
 
+// All money is integer cents (e.g. 425 = $4.25), matching the app's storage.
 const entry = (over: Partial<SpendingEntry> = {}): SpendingEntry => ({
   id: "e1",
   name: "Coffee",
-  amount: 4.25,
+  amount: 425,
   receiptUrl: null,
   link: null,
   date: "2026-06-02",
@@ -38,7 +39,7 @@ const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
   id: "s1",
   name: "Eating out",
   icon: "fork",
-  budgeted: 200,
+  budgeted: 20000,
   spent: 0,
   month: MONTH,
   startDate: "2026-06-01",
@@ -152,25 +153,25 @@ describe("useSpending — spending item update / delete", () => {
 
 describe("useSpending — entry create recomputes spent", () => {
   it("bumps spent optimistically and replaces the temp entry on success", async () => {
-    const realEntry = entry({ id: "real", amount: 4.25 });
+    const realEntry = entry({ id: "real", amount: 425 });
     let resolve!: (v: SpendingEntry) => void;
     vi.mocked(api.createEntry).mockReturnValue(
       new Promise<SpendingEntry>((r) => { resolve = r; }) as ReturnType<typeof api.createEntry>
     );
 
-    const { result } = renderHook(() => useSpending(data([item({ spent: 10 })])));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 1000 })])));
 
     let pending!: Promise<void>;
     act(() => {
       pending = result.current.createEntry(MONTH, "s1", {
         name: "Coffee",
-        amount: 4.25,
+        amount: 425,
         date: "2026-06-02",
       });
     });
 
     // spent moved up by the entry amount and a temp entry was appended.
-    expect(result.current.spendingData[MONTH][0].spent).toBe(14.25);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1425);
     expect(result.current.spendingData[MONTH][0].entries?.[0].id).toMatch(/^temp-/);
 
     await act(async () => {
@@ -180,31 +181,31 @@ describe("useSpending — entry create recomputes spent", () => {
 
     // Temp entry replaced; spent unchanged.
     expect(result.current.spendingData[MONTH][0].entries?.[0]).toEqual(realEntry);
-    expect(result.current.spendingData[MONTH][0].spent).toBe(14.25);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1425);
   });
 
-  it("realistic decimal amounts: spent sums float inputs without losing the entry", async () => {
-    // 0.1 + 0.2 is the classic float case; assert with toBeCloseTo since spent
-    // is a Float and exact equality would be brittle.
-    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real", amount: 0.2 }));
-    const { result } = renderHook(() => useSpending(data([item({ spent: 0.1, entries: [] })])));
+  it("sums entry cents exactly with no accumulated float error", async () => {
+    // The classic 0.1 + 0.2 case, now integer cents: spent 10c + entry 20c =
+    // 30c exactly, asserted with toBe (the migration removed the float drift).
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real", amount: 20 }));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 10, entries: [] })])));
 
     await act(async () => {
-      await result.current.createEntry(MONTH, "s1", { name: "x", amount: 0.2, date: "2026-06-02" });
+      await result.current.createEntry(MONTH, "s1", { name: "x", amount: 20, date: "2026-06-02" });
     });
 
-    expect(result.current.spendingData[MONTH][0].spent).toBeCloseTo(0.3, 10);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(30);
   });
 
   it("rolls back the spent bump and temp entry on failure", async () => {
     vi.mocked(api.createEntry).mockRejectedValue(new Error("x"));
-    const { result } = renderHook(() => useSpending(data([item({ spent: 10 })])));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 1000 })])));
 
     await act(async () => {
-      await result.current.createEntry(MONTH, "s1", { name: "Coffee", amount: 4.25, date: "2026-06-02" });
+      await result.current.createEntry(MONTH, "s1", { name: "Coffee", amount: 425, date: "2026-06-02" });
     });
 
-    expect(result.current.spendingData[MONTH][0].spent).toBe(10);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
     expect(toast.error).toHaveBeenCalledWith("Failed to create entry");
   });
@@ -213,33 +214,33 @@ describe("useSpending — entry create recomputes spent", () => {
 describe("useSpending — entry update recomputes spent by diff", () => {
   it("applies the amount delta to spent on success", async () => {
     vi.mocked(api.updateEntry).mockResolvedValue(undefined);
-    const start = item({ spent: 4.25, entries: [entry({ amount: 4.25 })] });
+    const start = item({ spent: 425, entries: [entry({ amount: 425 })] });
     const { result } = renderHook(() => useSpending(data([start])));
 
     await act(async () => {
       await result.current.updateEntry(MONTH, "s1", "e1", {
-        name: "Coffee", amount: 10, date: "2026-06-02",
+        name: "Coffee", amount: 1000, date: "2026-06-02",
       });
     });
 
-    // diff = 10 - 4.25 => spent becomes 10
-    expect(result.current.spendingData[MONTH][0].spent).toBeCloseTo(10, 10);
-    expect(result.current.spendingData[MONTH][0].entries?.[0].amount).toBe(10);
+    // diff = 1000 - 425 => spent becomes 1000
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].amount).toBe(1000);
   });
 
   it("rolls back the diff and restores the original entry on failure", async () => {
     vi.mocked(api.updateEntry).mockRejectedValue(new Error("x"));
-    const original = entry({ amount: 4.25 });
-    const start = item({ spent: 4.25, entries: [original] });
+    const original = entry({ amount: 425 });
+    const start = item({ spent: 425, entries: [original] });
     const { result } = renderHook(() => useSpending(data([start])));
 
     await act(async () => {
       await result.current.updateEntry(MONTH, "s1", "e1", {
-        name: "Changed", amount: 10, date: "2026-06-09",
+        name: "Changed", amount: 1000, date: "2026-06-09",
       });
     });
 
-    expect(result.current.spendingData[MONTH][0].spent).toBeCloseTo(4.25, 10);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(425);
     expect(result.current.spendingData[MONTH][0].entries?.[0]).toEqual(original);
     expect(toast.error).toHaveBeenCalledWith("Failed to update entry");
   });
@@ -248,28 +249,28 @@ describe("useSpending — entry update recomputes spent by diff", () => {
 describe("useSpending — entry delete recomputes spent", () => {
   it("subtracts the entry amount from spent and removes it on success", async () => {
     vi.mocked(api.deleteEntry).mockResolvedValue(undefined);
-    const start = item({ spent: 14.25, entries: [entry({ amount: 4.25 })] });
+    const start = item({ spent: 1425, entries: [entry({ amount: 425 })] });
     const { result } = renderHook(() => useSpending(data([start])));
 
     await act(async () => {
       await result.current.deleteEntry(MONTH, "s1", "e1");
     });
 
-    expect(result.current.spendingData[MONTH][0].spent).toBeCloseTo(10, 10);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
   });
 
   it("restores the entry and spent on failure", async () => {
     vi.mocked(api.deleteEntry).mockRejectedValue(new Error("x"));
-    const original = entry({ amount: 4.25 });
-    const start = item({ spent: 14.25, entries: [original] });
+    const original = entry({ amount: 425 });
+    const start = item({ spent: 1425, entries: [original] });
     const { result } = renderHook(() => useSpending(data([start])));
 
     await act(async () => {
       await result.current.deleteEntry(MONTH, "s1", "e1");
     });
 
-    expect(result.current.spendingData[MONTH][0].spent).toBeCloseTo(14.25, 10);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1425);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([original]);
     expect(toast.error).toHaveBeenCalledWith("Failed to delete entry");
   });
