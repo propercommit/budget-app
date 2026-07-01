@@ -22,6 +22,26 @@ import type { BankTransaction } from "./lib/import/types";
 const INPUT_DIR = join(process.cwd(), "mt940-input");
 const OUTPUT_DIR = join(process.cwd(), "mt940-output");
 
+/**
+ * The `BankTransaction` type declaration, printed above the parsed data so the
+ * output is self-describing — you can read the shape (which fields are optional)
+ * without opening `lib/import/types.ts`. Kept as a literal string on purpose:
+ * types are erased at runtime, so the declaration cannot be reflected from the
+ * imported type. If `lib/import/types.ts` changes, update this to match.
+ */
+const TYPE_DECLARATION = `type TransactionDirection = "debit" | "credit";
+
+interface BankTransaction {
+  date: string;                    // zero-padded YYYY-MM-DD (value date)
+  amount: number;                  // always positive; direction carries the sign
+  direction: TransactionDirection; // "debit" = money out, "credit" = money in
+  description: string;             // never undefined; may be ""
+  counterparty?: string;           // optional
+  reference?: string;              // optional; account-owner reference (not NONREF)
+  externalId?: string;             // optional; bank reference, dedup hint
+  currency?: string;               // optional; ISO 4217 (e.g. CHF)
+}`;
+
 /** Right-pad `value` to `width` columns so the plain-text table lines up. */
 function pad(value: string, width: number): string {
   return value.length >= width ? value : value + " ".repeat(width - value.length);
@@ -95,6 +115,10 @@ function buildReport(fileName: string, raw: string): string {
       `parsed ${transactions.length} transaction(s):`,
       "",
       renderTable(transactions),
+      "",
+      "Type declaration:",
+      "",
+      TYPE_DECLARATION,
       "",
       "Full BankTransaction data (every type field; null = parser left it empty):",
       "",
