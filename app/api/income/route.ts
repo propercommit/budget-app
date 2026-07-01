@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       if (note.length > 500)
         return NextResponse.json({ error: "note field is too long, maximum 500 characters allowed" }, { status: 400 });
     }
-    if (amount > 1000000000000)
+    if (amount > 100000000000000) // = 1,000,000,000,000.00 major units; amount is integer cents
       return NextResponse.json({ error: "max amount bound reached" }, { status: 400 });
 
     const income = await prisma.incomeSource.create({
