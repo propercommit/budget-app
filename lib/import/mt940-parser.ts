@@ -1,3 +1,5 @@
+import { decimalPartsToCents } from "@/lib/money";
+
 import type {
   BankStatement,
   BankTransaction,
@@ -146,13 +148,7 @@ function parseSwiftAmount(raw: string): number {
 
   if (match === null) throw new Mt940ParseError(`Invalid amount "${raw}" in MT940 field`);
 
-  const whole = Number(match[1]);
-  const fraction = match[2] ?? "";
-
-  const cents =
-    fraction.length <= 2
-      ? whole * 100 + Number(fraction.padEnd(2, "0"))
-      : whole * 100 + Number(fraction.slice(0, 2)) + (Number(fraction[2]) >= 5 ? 1 : 0);
+  const cents = decimalPartsToCents(Number(match[1]), match[2] ?? "");
 
   if (!Number.isSafeInteger(cents)) throw new Mt940ParseError(`Amount "${raw}" is out of safe integer range`);
 
