@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decimalPartsToCents, parseAmountToCents, centsToAmount, parseMoneyInput } from "@/lib/money";
+import { decimalPartsToCents, parseAmountToCents, centsToAmount } from "@/lib/money";
 
 describe("decimalPartsToCents", () => {
   it("combines whole and fractional digit groups into exact cents", () => {
@@ -91,24 +91,5 @@ describe("centsToAmount", () => {
     expect(centsToAmount(1010)).toBe(10.1);
     expect(centsToAmount(123456)).toBe(1234.56);
     expect(centsToAmount(29)).toBe(0.29);
-  });
-});
-
-describe("parseMoneyInput", () => {
-  it("returns a validated major-unit number for well-formed input", () => {
-    expect(parseMoneyInput("10.10")).toBe(10.1);
-    expect(parseMoneyInput("19.99")).toBe(19.99);
-    expect(parseMoneyInput(".5")).toBe(0.5);
-  });
-
-  it("rounds sub-cent input to whole cents", () => {
-    expect(parseMoneyInput("10.999")).toBe(11);
-  });
-
-  it("returns null for invalid or non-positive input, so it doubles as the validity check", () => {
-    expect(parseMoneyInput("")).toBeNull();
-    expect(parseMoneyInput("0")).toBeNull();
-    expect(parseMoneyInput("abc")).toBeNull();
-    expect(parseMoneyInput("-1")).toBeNull();
   });
 });

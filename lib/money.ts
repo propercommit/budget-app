@@ -73,28 +73,12 @@ export function parseAmountToCents(raw: string): number | null {
 }
 
 /**
- * Convert integer minor units back to a major-unit number — the boundary into
- * the app's legacy `Float` money columns (and display). A single exact-integer
- * division; the residual float imprecision is the storage format's, not this
- * conversion's, and disappears once the columns move to integer cents.
+ * Convert integer minor units (cents) back to a major-unit number — the "convert
+ * out" edge that mirrors {@link parseAmountToCents}. A single exact-integer
+ * division, so `1010` → `10.1`. Used to seed an edit form's amount input with an
+ * editable major-unit string, and (via `formatAmount`) to render money for
+ * display. `÷100` happens only here; never in the arithmetic in between.
  */
 export function centsToAmount(cents: number): number {
   return cents / 100;
-}
-
-/**
- * Parse a user-entered amount string into a validated **major-unit** number for
- * the app's current `Float`-backed APIs, or `null` when the input is invalid or
- * not strictly positive. Rounds to whole cents via integer math, so `"10.999"`
- * becomes `11` and no `parseFloat` sub-cent noise reaches the database.
- *
- * Drop-in replacement for the scattered `parseFloat(x)` / `parseFloat(x) > 0`
- * money handling in the edit popins: `parseMoneyInput(x) !== null` is the
- * validity check, and the same value is the amount to save.
- */
-export function parseMoneyInput(raw: string): number | null {
-
-  const cents = parseAmountToCents(raw);
-
-  return cents === null ? null : centsToAmount(cents);
 }
