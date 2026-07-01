@@ -146,7 +146,7 @@ describe("POST /api/spending", () => {
 
   it("400 when budgeted is out of range", async () => {
     const { status, body } = await readJson(
-      await POST(jsonRequest({ ...validBody, budgeted: 100_000_001 }))
+      await POST(jsonRequest({ ...validBody, budgeted: 10_000_000_001 }))
     );
     expect(status).toBe(400);
     expect(body).toEqual({

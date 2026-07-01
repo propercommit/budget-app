@@ -9,6 +9,7 @@ import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { iconMap } from "@/lib/icon-map";
 import toast from "react-hot-toast";
 import { compressImage } from "@/lib/compress-image";
+import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
 interface EntryEditPopinProps {
     isOpen: boolean;
@@ -36,14 +37,15 @@ export function EntryEditPopin({
     spendingCategoryColor,
 }: EntryEditPopinProps) {
     const [name, setName] = useState(entry?.name || "");
-    const [amount, setAmount] = useState(entry?.amount?.toString() || "");
+    const [amount, setAmount] = useState(entry?.amount === undefined ? "" : centsToAmount(entry.amount).toString());
     const [date, setDate] = useState(entry?.date || new Date().toISOString().split("T")[0]);
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
     const { settings } = useSettings();
 
     const isCreate = mode === "create";
-    const isFormValid = name.trim() !== "" && amount !== "" && parseFloat(amount) > 0 && date !== "";
+    const parsedAmount = parseAmountToCents(amount);
+    const isFormValid = name.trim() !== "" && parsedAmount !== null && date !== "";
 
     const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -76,15 +78,17 @@ export function EntryEditPopin({
                             Cancel
                         </button>
                         <button
-                            onClick={() =>
+                            onClick={() => {
+                                if (parsedAmount === null) return;
+
                                 onSave({
                                     name,
-                                    amount: parseFloat(amount),
+                                    amount: parsedAmount,
                                     date,
                                     receipt,
                                     link: link || null,
-                                })
-                            }
+                                });
+                            }}
                             disabled={!isFormValid}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={{

@@ -4,8 +4,8 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
-const MAX_AMOUNT = 100_000_000;
-const MIN_AMOUNT = 0;
+const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
+const MIN_AMOUNT_CENTS = 0;
 const MAX_LINK_LENGTH = 2048;
 const MAX_RECEIPT_SIZE = 5_000_000; // ~5MB base64
 
@@ -115,9 +115,9 @@ export async function POST(request: Request) {
             );
         }
 
-        if (amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
+        if (amount < MIN_AMOUNT_CENTS || amount > MAX_AMOUNT_CENTS) {
             return NextResponse.json(
-                { error: `Amount must be between ${MIN_AMOUNT} and ${MAX_AMOUNT.toLocaleString()}` },
+                { error: `Amount must be between ${MIN_AMOUNT_CENTS / 100} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` },
                 { status: 400 }
             );
         }

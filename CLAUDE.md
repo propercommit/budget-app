@@ -181,9 +181,79 @@ Live under `app/api/{categories,spending,income,entries,settings,account}/`. Con
 - Apple HIG colors used throughout: `#007AFF` (blue), `#34C759` (green), `#FF3B30` (red).
 - Mobile-first; assume thumb-zone layouts then adapt up.
 
+## Code style (formatting — apply to ALL code produced by any agent or subagent)
+
+- **Blank line before a condition that follows a statement.** When a variable declaration/assignment (or any statement) is immediately followed by a conditional (`if`, `switch`, ternary guard, `while`, etc.) that consumes it, insert one blank line between them:
+
+  ```ts
+  const total = items.reduce((sum, i) => sum + i.amount, 0);
+
+  if (total > limit) {
+    // ...
+  }
+  ```
+
+  Match the file's dominant convention where it clearly packs tightly-coupled lines; default to the blank line for new code.
+
+- **Single-line `if`/loop when the body is one statement.** If the body is a single statement, keep the whole thing on one line with no braces — **regardless of line length**:
+
+  ```ts
+  if (info?.counterparty) transaction.counterparty = info.counterparty;
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) throw new Mt940ParseError(`Invalid date "${yymmdd}" in :61: line`);
+
+  for (let code = 20; code <= 29; code++) remittance += subfields.get(String(code).padStart(2, "0")) ?? "";
+  ```
+
+  not the braced multi-line form. **The only trigger for braces is the body being more than one statement; line length is NEVER a reason to add braces** — a long single `throw`/`return`/assignment stays on one line even past the usual wrap width. There is no "too long to read on one line" exception. Applies to `if`, `for`, `while`, `for…of`, etc.
+
+- **Blank line between consecutive standalone statements.** Separate consecutive one-line guards/assignments with a blank line so each operation stands on its own:
+
+  ```ts
+  if (line.reference) transaction.reference = line.reference;
+
+  if (line.externalId) transaction.externalId = line.externalId;
+
+  if (currency) transaction.currency = currency;
+
+  return transaction;
+  ```
+
+  not the packed braced form.
+
+- **Let the code breathe — group with blank lines.** Don't write dense walls of statements. Separate a function body into small logical groups with blank lines. **A blank line after the opening brace before the first real work, and a blank line before a trailing `return`, are mandatory whenever the body is more than one statement** — not optional. Also blank-separate a setup/parsing block from the loop that consumes it, and set off any distinct computation. Each group should read as one "paragraph" doing one thing:
+
+  ```ts
+  function parseStructured86(content: string): AccountOwnerInfo {
+
+    const joined = content.replace(/\n/g, "");
+    const segments = joined.split(/\?(\d{2})/);
+    const subfields = new Map<string, string>();
+
+    for (let i = 1; i < segments.length; i += 2) {
+      const code = segments[i];
+      const value = segments[i + 1] ?? "";
+
+      subfields.set(code, (subfields.get(code) ?? "") + value);
+    }
+
+    const bookingText = (subfields.get("00") ?? "").trim();
+
+    let remittance = "";
+
+    for (let code = 20; code <= 29; code++) remittance += subfields.get(String(code).padStart(2, "0")) ?? "";
+
+    remittance = remittance.trim();
+
+    return { description: bookingText, remittance };
+  }
+  ```
+
+  Readability wins over compactness; match the file's dominant convention where it's clearly tight, but default to breathing room for new code.
+
 ## Code rules (binding — apply to ALL code produced by any agent or subagent)
 
-- **No truthy/falsy-vulnerable tests.** Assertions and conditionals must check the exact thing they mean. Don't lean on the truthiness of a value where `0`, `""`, `NaN`, `false`, or `null` vs `undefined` would change the outcome. In tests use explicit assertions (`toBe(0)`, `toEqual([])`, `toBeNull()`, `toBeDefined()`, `.toHaveLength(n)`) rather than `expect(x).toBeTruthy()`/`toBeFalsy()`; in code use `x === undefined`, `x == null`, `Number.isNaN(x)`, `arr.length === 0`, etc. instead of bare `if (x)` when `x` can legitimately be a falsy value.
+- **Never a bare truthiness check — always compare against something explicit.** A condition must state exactly what it tests. **Do not write `if (x)`, `if (!x)`, `x ? … : …`, `x && …`, or `x || …` as a truthiness test — ever, for any value, even when it is provably safe** (e.g. an object-or-`null` like a regex match). Always compare explicitly: `if (match !== null)`, `if (value === undefined)`, `if (str.length > 0)`, `if (count === 0)`, `if (isReady === true)`, `Number.isNaN(x)`. This is a hard rule, not a "when it could be falsy" rule: `if (match)` is banned even though `match` can only be an array or `null`; write `if (match !== null)`. Two narrow, deliberate exceptions, and only these: (a) an already-boolean-typed value or predicate call reads fine on its own (`if (isStructured86(x))`, `if (canParse(raw))`) — prefer that over `=== true`; (b) a `||`/`??` **value-production** fallback chain that intentionally coalesces (`const name = a || b || ""`), which produces a value rather than branching. In tests, likewise use explicit assertions (`toBe(0)`, `toEqual([])`, `toBeNull()`, `toBeDefined()`, `.toHaveLength(n)`) — never `expect(x).toBeTruthy()`/`toBeFalsy()`.
 - **Everything is typed; `any` is banned.** Never introduce the `any` type (explicit or implicit). If a type is genuinely unknowable at a boundary (truly external/untrusted data — network responses, `JSON.parse`, third-party payloads), use `unknown`, and narrow it to a concrete type as early as possible (validation/parsing/type guard) before it flows further into the code. `unknown` is a temporary state at the edge, never a resting type passed around. Prefer explicit type annotations and discriminated unions over loose objects.
 - **Do money arithmetic in integer minor units, never in floats.** This app stores money as Prisma `Float` (`SpendingItem.budgeted`/`spent`, `IncomeSource.amount`, `SpendingEntry.amount`) — that is legacy storage, **not** a pattern to extend. IEEE-754 can't represent most decimal fractions, so summing amounts drifts and equality/threshold checks fail on clean data (`0.1 + 0.2 !== 0.3`). Rules for new code:
   - **Any new hot path — the MT940/statement import, reconciliation, or summed aggregates — must sum and compare in integer minor units (cents).** The import layer already does this: `lib/import/mt940-parser.ts` parses SWIFT amounts string→integer cents, `BankTransaction.amount` is documented as cents, and `Mt940Parser.reconcile()` checks `signed(opening) + Σ movements === signed(closing)` as an exact integer equality. Keep it that way — never reconcile a total against a bank balance with float `===` or an epsilon tolerance.

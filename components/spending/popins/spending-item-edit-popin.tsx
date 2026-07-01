@@ -7,6 +7,7 @@ import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
+import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
 interface Category {
     name: string;
@@ -61,7 +62,7 @@ export function SpendingItemEditPopin({
     const [name, setName] = useState(initialName);
     const [selectedIcon, setSelectedIcon] = useState(initialIcon);
     const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-    const [budget, setBudget] = useState(initialBudget?.toString() ?? "");
+    const [budget, setBudget] = useState(initialBudget === undefined ? "" : centsToAmount(initialBudget).toString());
     const [startDate, setStartDate] = useState(initialStartDate);
     const [endDate, setEndDate] = useState(initialEndDate);
     const [note, setNote] = useState(initialNote);
@@ -74,10 +75,10 @@ export function SpendingItemEditPopin({
     }
 
     const isCreate = mode === "create";
+    const parsedBudget = parseAmountToCents(budget);
     const isFormValid =
         name.trim() !== "" &&
-        budget !== "" &&
-        parseFloat(budget) > 0 &&
+        parsedBudget !== null &&
         selectedCategory !== "" &&
         startDate !== "";
 
@@ -101,18 +102,20 @@ export function SpendingItemEditPopin({
                             Cancel
                         </button>
                         <button
-                            onClick={() =>
+                            onClick={() => {
+                                if (parsedBudget === null) return;
+
                                 onSave({
                                     name,
                                     icon: selectedIcon,
                                     category: selectedCategory,
                                     categoryColor: selectedCategoryColor,
-                                    budget: parseFloat(budget),
+                                    budget: parsedBudget,
                                     startDate,
                                     endDate,
                                     note,
-                                })
-                            }
+                                });
+                            }}
                             disabled={!isFormValid}
                             aria-disabled={!isFormValid}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"

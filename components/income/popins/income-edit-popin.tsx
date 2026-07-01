@@ -5,6 +5,7 @@ import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
+import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
 interface IncomePopinProps {
     isOpen: boolean;
@@ -17,7 +18,7 @@ interface IncomePopinProps {
 
 export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialData }: IncomePopinProps) {
     const [name, setName] = useState(initialData?.name || '');
-    const [amount, setAmount] = useState(initialData?.amount?.toString() || '');
+    const [amount, setAmount] = useState(initialData?.amount === undefined ? '' : centsToAmount(initialData.amount).toString());
     const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'piggy-bank');
     const [incomeType, setIncomeType] = useState<'active' | 'passive'>(initialData?.type || 'active');
     const [startDate, setStartDate] = useState(initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '');
@@ -26,7 +27,8 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
     const { settings } = useSettings();
 
     const isEdit = mode === 'edit';
-    const isFormValid = name.trim() !== '' && amount !== '' && parseFloat(amount) > 0 && startDate !== '';
+    const parsedAmount = parseAmountToCents(amount);
+    const isFormValid = name.trim() !== '' && parsedAmount !== null && startDate !== '';
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -36,10 +38,11 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
     };
 
     const handleSave = () => {
-        if (!isFormValid) return;
+        if (!isFormValid || parsedAmount === null) return;
+
         onSave({
             name,
-            amount: parseFloat(amount),
+            amount: parsedAmount,
             icon: selectedIcon,
             type: incomeType,
             startDate: new Date(startDate),
