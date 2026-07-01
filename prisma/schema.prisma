@@ -42,8 +42,8 @@ model SpendingItem {
   id        String   @id @default(cuid())
   name      String
   icon      String
-  budgeted  Float    @default(0)
-  spent     Float    @default(0)
+  budgeted  Int      @default(0) // integer minor units (cents)
+  spent     Int      @default(0) // integer minor units (cents)
   month     String   // Format: "2025-01" — keeping for backwards compat
   startDate DateTime @default(now())
   endDate   DateTime?
@@ -70,7 +70,7 @@ enum IncomeType {
 model IncomeSource {
   id        String   @id @default(cuid())
   name      String   @db.VarChar(100)
-  amount    Float    @default(0)
+  amount    Int      @default(0) // integer minor units (cents)
   icon      String
   type      IncomeType
   startDate DateTime @default(now())
@@ -91,7 +91,7 @@ model IncomeSource {
 model SpendingEntry {
   id              String    @id             @default(cuid())
   name            String
-  amount          Float     @default(0)
+  amount          Int       @default(0) // integer minor units (cents)
   receiptUrl      String?
   link            String?
   date            DateTime  @default(now())
