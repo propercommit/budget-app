@@ -281,10 +281,22 @@ function parseStructured86(content: string): AccountOwnerInfo {
   return { description, counterparty };
 }
 
+/**
+ * Strips a leading SWIFT business-transaction-type code from a `:86:` free-text
+ * body. UBS prefixes unstructured details with a 3-character type code and a `?`
+ * separator — e.g. `Z04?Gewerkschaft Unia`, `K70?SBB EASYRIDE`. The code is
+ * bookkeeping metadata, not part of the human-readable description, so it is
+ * removed. Anchoring to the start and requiring the `?` separator keeps it from
+ * touching legitimate text that merely happens to contain a `?`.
+ */
+function stripTransactionTypeCode(content: string): string {
+  return content.replace(/^[A-Z0-9]{3}\?/, "");
+}
+
 /** Collapses an unstructured (free-text) `:86:` body into a single-line description. */
 function parseUnstructured86(content: string): AccountOwnerInfo {
 
-  const description = content
+  const description = stripTransactionTypeCode(content)
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)

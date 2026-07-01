@@ -173,6 +173,34 @@ describe("structured :86: subfields", () => {
   });
 });
 
+// --- unstructured :86: type-code stripping --------------------------------
+
+describe("unstructured :86: transaction-type code", () => {
+  it("strips a leading UBS type code (e.g. Z04?) from the description", () => {
+    const doc = mt940(
+      ":20:R",
+      ":60F:C260601CHF0,00",
+      ":61:2607010701C3737,12NTRFNONREF//9999182ZC1852230",
+      ":86:Z04?Gewerkschaft Unia",
+      ":62F:C260701CHF3737,12",
+    );
+    const [txn] = parser.parse(doc);
+    expect(txn.description).toBe("Gewerkschaft Unia");
+  });
+
+  it("leaves a description without a type-code prefix untouched", () => {
+    const doc = mt940(
+      ":20:R",
+      ":60F:C260601CHF0,00",
+      ":61:260602D7,50NTRFNONREF//BANKREF",
+      ":86:ATM WITHDRAWAL CENTRAL STATION",
+      ":62F:D260602CHF7,50",
+    );
+    const [txn] = parser.parse(doc);
+    expect(txn.description).toBe("ATM WITHDRAWAL CENTRAL STATION");
+  });
+});
+
 // --- SWIFT envelope & continuation ---------------------------------------
 
 describe("SWIFT block envelope and multi-statement input", () => {
