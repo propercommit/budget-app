@@ -8,7 +8,7 @@ import { SpendingCardExpanded, SpendingEntry } from "./spending-card-expanded";
 import { SpendingItemDetailPopin } from "./popins/spending-item-detail-popin";
 import { SpendingItemEditPopin } from "./popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "./popins/spending-entry-detail-popin";
-import { EntryEditPopin } from "./popins/spending-entry-edit-popin";
+import { EntryEditPopin, EntrySavePayload } from "./popins/spending-entry-edit-popin";
 import { CategoryPopin } from "../category/popins/category-popin";
 
 interface Category {
@@ -39,8 +39,8 @@ interface SpendingCardProps {
         note: string;
     }) => void;
     onItemDelete: () => void;
-    onEntryCreate: (data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => void;
-    onEntryUpdate: (entryId: string, data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => void;
+    onEntryCreate: (data: EntrySavePayload) => void;
+    onEntryUpdate: (entryId: string, data: EntrySavePayload) => void;
     onEntryDelete: (entryId: string) => void;
     onCreateCategory: (data: { name: string; icon: string; color: string }) => void;
     isExpanded: boolean;
@@ -123,7 +123,7 @@ export function SpendingCard({
         setShowEntryEdit(true);
     };
 
-    const handleEntrySave = (data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => {
+    const handleEntrySave = (data: EntrySavePayload) => {
         if (entryMode === "create") {
             onEntryCreate(data);
         } else if (selectedEntry) {

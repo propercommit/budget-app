@@ -12,11 +12,26 @@ import toast from "react-hot-toast";
 import { compressImage } from "@/lib/compress-image";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
+/**
+ * What the entry form emits on save, in both create and edit mode — the single
+ * payload type shared by the whole save chain (popin → SpendingCard → Dashboard).
+ * `amount` is integer cents; `direction` is always sent explicitly — the API's
+ * default-to-debit is backward compat only, not a second definition of this
+ * form's intent.
+ */
+export interface EntrySavePayload {
+    name: string;
+    amount: number;
+    direction: "debit" | "credit";
+    date: string;
+    receipt: string | null;
+    link: string | null;
+}
+
 interface EntryEditPopinProps {
     isOpen: boolean;
     onClose: () => void;
-    // `direction` is always sent explicitly (both modes); the API's default-to-debit is backward compat only.
-    onSave: (data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => void;
+    onSave: (data: EntrySavePayload) => void;
     onDelete?: () => void;
     mode: "create" | "edit";
     entry?: SpendingEntry | null;
