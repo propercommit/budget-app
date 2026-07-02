@@ -18,6 +18,7 @@ import type {
   SpendingEntry,
   SpendingItem,
 } from "@/lib/types";
+import { applyEntry } from "@/lib/spending/math";
 
 /** The month the Dashboard opens on in tests. */
 export const SELECTED_MONTH = "2026-06";
@@ -41,9 +42,9 @@ export const categories: Category[] = [
   { id: "cat-fun", icon: "film", label: "Entertainment", color: "#AF52DE" },
 ];
 
-/** Sums entry amounts exactly so `spent` never drifts from the entry list. */
+/** Derives `spent` from the entries via the shared signed-sum rule so it never drifts from the entry list. */
 function sumEntries(entries: SpendingEntry[]): number {
-  return entries.reduce((total, entry) => total + entry.amount, 0);
+  return entries.reduce((total, entry) => applyEntry(total, entry), 0);
 }
 
 function entry(
@@ -52,12 +53,13 @@ function entry(
   name: string,
   amount: number,
   date: string,
-  extras: Partial<Pick<SpendingEntry, "link">> = {},
+  extras: Partial<Pick<SpendingEntry, "link" | "direction">> = {},
 ): SpendingEntry {
   return {
     id: `${itemId}-e${index}`,
     name,
     amount,
+    direction: extras.direction ?? "debit",
     date,
     receiptUrl: null,
     link: extras.link ?? null,

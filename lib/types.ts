@@ -1,7 +1,8 @@
 export interface SpendingEntry {
   id: string;
   name: string;
-  amount: number;
+  amount: number; // integer cents, always a positive magnitude
+  direction: "debit" | "credit"; // sign of the entry's effect on spent
   receiptUrl: string | null;
   link: string | null;
   date: string;

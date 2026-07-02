@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from "@/lib/api";
 import { SpendingItem } from "@/lib/types";
+import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import toast from "react-hot-toast";
 
 type SpendingData = Record<string, SpendingItem[]>;
@@ -138,12 +139,13 @@ export function useSpending(initialSpendingData?: SpendingData) {
   const createEntry = useCallback(async (
     month: string,
     spendingItemId: string,
-    data: { name: string; amount: number; date: string; receiptUrl?: string; link?: string }
+    data: { name: string; amount: number; date: string; direction?: "debit" | "credit"; receiptUrl?: string; link?: string }
   ): Promise<void> => {
     const optimistic = {
       id: `temp-${crypto.randomUUID()}`,
       name: data.name,
       amount: data.amount,
+      direction: data.direction ?? "debit",
       date: data.date,
       receiptUrl: data.receiptUrl ?? null,
       link: data.link ?? null,
@@ -152,7 +154,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
 
     updateMonth(month, items => items.map(s =>
       s.id === spendingItemId
-        ? { ...s, spent: s.spent + data.amount, entries: [...(s.entries || []), optimistic] }
+        ? { ...s, spent: applyEntry(s.spent, optimistic), entries: [...(s.entries || []), optimistic] }
         : s
     ));
 
@@ -168,7 +170,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
       console.error("Error creating entry:", error);
       updateMonth(month, items => items.map(s =>
         s.id === spendingItemId
-          ? { ...s, spent: s.spent - data.amount, entries: (s.entries || []).filter(e => e.id !== optimistic.id) }
+          ? { ...s, spent: unapplyEntry(s.spent, optimistic), entries: (s.entries || []).filter(e => e.id !== optimistic.id) }
           : s
       ));
     }
@@ -178,22 +180,30 @@ export function useSpending(initialSpendingData?: SpendingData) {
     month: string,
     spendingItemId: string,
     entryId: string,
-    data: { name: string; amount: number; date: string; receiptUrl?: string; link?: string }
+    data: { name: string; amount: number; date: string; direction?: "debit" | "credit"; receiptUrl?: string; link?: string }
   ): Promise<void> => {
     const item = dataRef.current[month]?.find(s => s.id === spendingItemId);
     const original = item?.entries?.find(e => e.id === entryId);
-    const amountDiff = data.amount - (original?.amount ?? 0);
+
+    if (original === undefined) return;
+
+    // A form that doesn't expose direction keeps the entry's stored one.
+    const updated = {
+      ...original,
+      name: data.name,
+      amount: data.amount,
+      direction: data.direction ?? original.direction,
+      date: data.date,
+      receiptUrl: data.receiptUrl ?? null,
+      link: data.link ?? null,
+    };
 
     updateMonth(month, items => items.map(s =>
       s.id === spendingItemId
         ? {
             ...s,
-            spent: s.spent + amountDiff,
-            entries: (s.entries || []).map(e =>
-              e.id === entryId
-                ? { ...e, name: data.name, amount: data.amount, date: data.date, receiptUrl: data.receiptUrl ?? null, link: data.link ?? null }
-                : e
-            ),
+            spent: applyEntry(unapplyEntry(s.spent, original), updated),
+            entries: (s.entries || []).map(e => e.id === entryId ? updated : e),
           }
         : s
     ));
@@ -207,8 +217,9 @@ export function useSpending(initialSpendingData?: SpendingData) {
         s.id === spendingItemId
           ? {
               ...s,
-              spent: s.spent - amountDiff,
-              entries: (s.entries || []).map(e => e.id === entryId && original ? original : e),
+              // Exact inverse of the optimistic step: remove `updated`, restore `original`.
+              spent: applyEntry(unapplyEntry(s.spent, updated), original),
+              entries: (s.entries || []).map(e => e.id === entryId ? original : e),
             }
           : s
       ));
@@ -223,11 +234,14 @@ export function useSpending(initialSpendingData?: SpendingData) {
     const item = dataRef.current[month]?.find(s => s.id === spendingItemId);
     const original = item?.entries?.find(e => e.id === entryId);
 
+    if (original === undefined) return;
+
     updateMonth(month, items => items.map(s =>
       s.id === spendingItemId
         ? {
             ...s,
-            spent: s.spent - (original?.amount ?? 0),
+            // Removing a credit raises spent — unapplyEntry handles both signs.
+            spent: unapplyEntry(s.spent, original),
             entries: (s.entries || []).filter(e => e.id !== entryId),
           }
         : s
@@ -238,13 +252,11 @@ export function useSpending(initialSpendingData?: SpendingData) {
     } catch (error) {
       toast.error("Failed to delete entry");
       console.error("Error deleting entry:", error);
-      if (original) {
-        updateMonth(month, items => items.map(s =>
-          s.id === spendingItemId
-            ? { ...s, spent: s.spent + original.amount, entries: [...(s.entries || []), original] }
-            : s
-        ));
-      }
+      updateMonth(month, items => items.map(s =>
+        s.id === spendingItemId
+          ? { ...s, spent: applyEntry(s.spent, original), entries: [...(s.entries || []), original] }
+          : s
+      ));
     }
   }, []);
 
