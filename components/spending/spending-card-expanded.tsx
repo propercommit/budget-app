@@ -121,7 +121,9 @@ export function SpendingCardExpanded({
                     <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
-                            width: `${Math.min(spentPercent, 100)}%`,
+                            // Two-sided clamp: a net-credit month has negative spent, and a
+                            // negative width is invalid CSS (dropped → full-width bar).
+                            width: `${Math.min(100, Math.max(0, spentPercent))}%`,
                             backgroundColor: isOverBudget
                                 ? "#FF3B30"
                                 : spentPercent > 80

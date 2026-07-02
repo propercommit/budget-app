@@ -33,7 +33,9 @@ function ProgressBar({
     color?: string;
     height?: number;
 }) {
-    const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+    // Two-sided clamp: a net-credit month can make value negative, and a
+    // negative width is invalid CSS (dropped → full-width bar).
+    const percentage = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
     const isOver = value > max;
     
     return (
@@ -90,8 +92,9 @@ function CategoryRow({
                 <div className="w-full h-1.5 rounded-full overflow-hidden bg-gray-100">
                     <div
                         className="h-full rounded-full transition-all duration-300"
-                        style={{ 
-                            width: `${Math.min(percentage, 100)}%`,
+                        style={{
+                            // Two-sided clamp — see ProgressBar above.
+                            width: `${Math.min(100, Math.max(0, percentage))}%`,
                             backgroundColor: isOver ? '#FF3B30' : color
                         }}
                     />
@@ -126,7 +129,9 @@ export function BudgetOverviewExpanded({
     const isOverBudget = totalSpent > totalBudgeted && totalBudgeted > 0;
     const { formatAmount } = useSettings();
     
-    // Donut segments from category breakdown
+    // Donut segments from category breakdown. The spent > 0 filter is also the
+    // presentation clamp for signed spent: a net-credit (negative) category
+    // cannot become a slice — the underlying data stays negative.
     const donutSegments = categoryBreakdown
         .filter(cat => cat.spent > 0)
         .map(cat => ({

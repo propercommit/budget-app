@@ -66,8 +66,9 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                         <div className="w-full h-1.5 rounded-full overflow-hidden bg-gray-200">
                             <div
                                 className="h-full rounded-full transition-all duration-500"
-                                style={{ 
-                                    width: `${Math.min(incomeUsedPercent, 100)}%`,
+                                style={{
+                                    // Two-sided clamp: negative spent (net-credit month) must render 0%, not invalid CSS.
+                                    width: `${Math.min(100, Math.max(0, incomeUsedPercent))}%`,
                                     backgroundColor: isOverspent ? '#FF3B30' : '#007AFF'
                                 }}
                             />
