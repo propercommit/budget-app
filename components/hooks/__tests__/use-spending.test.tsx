@@ -28,6 +28,7 @@ const entry = (over: Partial<SpendingEntry> = {}): SpendingEntry => ({
   id: "e1",
   name: "Coffee",
   amount: 425,
+  direction: "debit",
   receiptUrl: null,
   link: null,
   date: "2026-06-02",
@@ -273,6 +274,115 @@ describe("useSpending — entry delete recomputes spent", () => {
     expect(result.current.spendingData[MONTH][0].spent).toBe(1425);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([original]);
     expect(toast.error).toHaveBeenCalledWith("Failed to delete entry");
+  });
+});
+
+describe("useSpending — direction-aware entry math", () => {
+  it("a credit entry lowers spent on create and can push it negative", async () => {
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real", amount: 15_000, direction: "credit" }));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 0, entries: [] })])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Refund", amount: 15_000, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-15_000);
+  });
+
+  it("rolls back a failed credit create exactly", async () => {
+    vi.mocked(api.createEntry).mockRejectedValue(new Error("x"));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 1000 })])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Refund", amount: 425, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
+  });
+
+  it("deleting a credit raises spent", async () => {
+    vi.mocked(api.deleteEntry).mockResolvedValue(undefined);
+    // 200.00 debit + 150.00 credit → spent 5000; removing the credit → 20000.
+    const start = item({
+      spent: 5_000,
+      entries: [
+        entry({ id: "e-debit", amount: 20_000 }),
+        entry({ id: "e-credit", amount: 15_000, direction: "credit" }),
+      ],
+    });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.deleteEntry(MONTH, "s1", "e-credit");
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(20_000);
+  });
+
+  it("restores a negative spent exactly when deleting a credit fails", async () => {
+    vi.mocked(api.deleteEntry).mockRejectedValue(new Error("x"));
+    const credit = entry({ id: "e-credit", amount: 15_000, direction: "credit" });
+    const start = item({ spent: -15_000, entries: [credit] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.deleteEntry(MONTH, "s1", "e-credit");
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-15_000);
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([credit]);
+  });
+
+  it("update flips a debit to a credit and spent follows", async () => {
+    vi.mocked(api.updateEntry).mockResolvedValue(undefined);
+    const start = item({ spent: 425, entries: [entry({ amount: 425 })] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee refund", amount: 425, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-425);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
+  });
+
+  it("update keeps the stored direction when the form sends none", async () => {
+    vi.mocked(api.updateEntry).mockResolvedValue(undefined);
+    const start = item({ spent: -425, entries: [entry({ amount: 425, direction: "credit" })] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee", amount: 1000, date: "2026-06-02",
+      });
+    });
+
+    // Still a credit: unapply −425 → 0, then apply credit 1000 → −1000.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-1000);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
+  });
+
+  it("rolls back a direction flip exactly on failure", async () => {
+    vi.mocked(api.updateEntry).mockRejectedValue(new Error("x"));
+    const original = entry({ amount: 425 });
+    const start = item({ spent: 425, entries: [original] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "X", amount: 425, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(425);
+    expect(result.current.spendingData[MONTH][0].entries?.[0]).toEqual(original);
   });
 });
 

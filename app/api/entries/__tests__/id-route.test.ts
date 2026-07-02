@@ -84,7 +84,7 @@ describe("PUT /api/entries/[id]", () => {
       await PUT(jsonRequest({ name: "New" }), routeContext("e1"))
     );
     expect(status).toBe(200);
-    // spent recompute only runs when `amount` is in the payload
+    // spent recompute only runs when `amount` or `direction` is in the payload
     expect(prismaMock.spendingItem.update).not.toHaveBeenCalled();
   });
 
@@ -98,8 +98,8 @@ describe("PUT /api/entries/[id]", () => {
     // Amounts are integer cents: 1010 + 2020 = 3030 exactly (was 10.1 + 20.2
     // which drifts as floats).
     prismaMock.spendingEntry.findMany.mockResolvedValue([
-      { amount: 1010 },
-      { amount: 2020 },
+      { amount: 1010, direction: "debit" },
+      { amount: 2020, direction: "debit" },
     ]);
     prismaMock.spendingItem.update.mockResolvedValue({});
 
@@ -108,6 +108,39 @@ describe("PUT /api/entries/[id]", () => {
     const arg = prismaMock.spendingItem.update.mock.calls[0][0];
     expect(arg).toEqual({ where: { id: "s1" }, data: { spent: 3030 } });
     expect(arg.data.spent).toBe(3030);
+  });
+
+  it("400 when direction is invalid", async () => {
+    const { status, body } = await readJson(
+      await PUT(jsonRequest({ direction: "reversal" }), routeContext("e1"))
+    );
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: 'Direction must be "debit" or "credit"' });
+    expect(prismaMock.spendingEntry.update).not.toHaveBeenCalled();
+  });
+
+  it("persists a direction change and recomputes spent as a signed sum", async () => {
+    prismaMock.spendingEntry.findUnique.mockResolvedValue({
+      id: "e1",
+      spendingItemId: "s1",
+      spendingItem: { userId: FAKE_USER.id },
+    });
+    prismaMock.spendingEntry.update.mockResolvedValue({ id: "e1" });
+    // Flipping the lone entry to credit turns spent negative — persisted as-is.
+    prismaMock.spendingEntry.findMany.mockResolvedValue([
+      { amount: 425, direction: "credit" },
+    ]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    await PUT(jsonRequest({ direction: "credit" }), routeContext("e1"));
+
+    const entryArg = prismaMock.spendingEntry.update.mock.calls[0][0];
+    expect(entryArg.data.direction).toBe("credit");
+
+    expect(prismaMock.spendingItem.update).toHaveBeenCalledWith({
+      where: { id: "s1" },
+      data: { spent: -425 },
+    });
   });
 });
 
@@ -147,7 +180,7 @@ describe("DELETE /api/entries/[id]", () => {
       spendingItem: { userId: FAKE_USER.id },
     });
     prismaMock.spendingEntry.delete.mockResolvedValue({ id: "e1" });
-    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 500 }]);
+    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 500, direction: "debit" }]);
     prismaMock.spendingItem.update.mockResolvedValue({});
 
     const { status, body } = await readJson(
@@ -163,6 +196,28 @@ describe("DELETE /api/entries/[id]", () => {
     expect(prismaMock.spendingItem.update).toHaveBeenCalledWith({
       where: { id: "s1" },
       data: { spent: 500 },
+    });
+  });
+
+  it("persists a negative spent when only credits remain after the delete", async () => {
+    prismaMock.spendingEntry.findUnique.mockResolvedValue({
+      id: "e1",
+      spendingItemId: "s1",
+      spendingItem: { userId: FAKE_USER.id },
+    });
+    prismaMock.spendingEntry.delete.mockResolvedValue({ id: "e1" });
+    // Deleting the offsetting debit leaves a lone 150.00 credit → -15000,
+    // stored unclamped.
+    prismaMock.spendingEntry.findMany.mockResolvedValue([
+      { amount: 15_000, direction: "credit" },
+    ]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    await DELETE(getRequest("http://localhost"), routeContext("e1"));
+
+    expect(prismaMock.spendingItem.update).toHaveBeenCalledWith({
+      where: { id: "s1" },
+      data: { spent: -15_000 },
     });
   });
 });

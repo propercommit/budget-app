@@ -101,7 +101,8 @@ export function SpendingItemDetailPopin({
                         <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
-                                width: `${Math.min(spentPercent, 100)}%`,
+                                // Two-sided clamp: negative spent (net-credit month) must render 0%, not invalid CSS.
+                                width: `${Math.min(100, Math.max(0, spentPercent))}%`,
                                 backgroundColor: isOverBudget ? "#FF3B30" : spentPercent > 80 ? "#FF9500" : "#34C759",
                             }}
                         />

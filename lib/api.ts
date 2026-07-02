@@ -168,6 +168,7 @@ export async function createEntry(data: {
   spendingItemId: string;
   name: string;
   amount: number;
+  direction?: "debit" | "credit"; // server defaults absent to "debit"
   receiptUrl?: string;
   link?: string;
   date?: string;
@@ -183,6 +184,7 @@ export async function updateEntry(
   data: {
     name?: string;
     amount?: number;
+    direction?: "debit" | "credit"; // absent keeps the stored direction
     receiptUrl?: string;
     link?: string;
     date?: string;

@@ -235,6 +235,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     name: e.name,
                     date: new Date(e.date).toISOString().split("T")[0],
                     amount: e.amount,
+                    direction: e.direction,
                     receipt: e.receiptUrl ?? null,
                     link: e.link ?? null,
                     }))}

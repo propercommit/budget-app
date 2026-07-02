@@ -11,10 +11,12 @@ vi.mock("@/lib/api", () => ({
 
 import { SettingsProvider } from "@/lib/settings-context";
 import { BudgetOverviewCard } from "@/components/budget-overview/budget-overview";
-import type { Category } from "@/lib/category";
-import type { SpendingItem } from "@/lib/types";
+import type { Category, SpendingItem } from "@/lib/types";
 
+// lib/types Category (with id) — structurally satisfies the card's looser
+// lib/category prop type and matches what SpendingItem.category requires.
 const cat = (over: Partial<Category> = {}): Category => ({
+  id: "c1",
   label: "Food",
   icon: "fork",
   color: "#34C759",
@@ -112,5 +114,59 @@ describe("BudgetOverviewCard — expand toggle and category breakdown", () => {
     // donut/legend (which only render cats with spent > 0).
     expect(screen.getAllByText("Food").length).toBeGreaterThan(0);
     expect(screen.queryByText("Empty")).not.toBeInTheDocument();
+  });
+});
+
+describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
+  it("excludes a negative-spent category from the donut and renders without error", () => {
+    const { container } = renderCard({
+      totalIncome: 2000,
+      categories: [cat({ label: "Food" }), cat({ id: "c2", label: "Refunds", color: "#AF52DE" })],
+      spendingItems: [
+        item({ id: "f1", spent: 120, budgeted: 200, category: cat({ label: "Food" }) }),
+        // Refund month: the category's net spent is negative — valid data.
+        item({ id: "r1", spent: -80, budgeted: 100, category: cat({ id: "c2", label: "Refunds" }) }),
+      ],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // Donut svg = 1 track circle + 1 segment (Food). The negative category
+    // never becomes a slice.
+    expect(container.querySelectorAll("circle")).toHaveLength(2);
+
+    // Legend share divides by the positive-slice total the ring uses — Food is
+    // the whole ring, so its share reads 100% (dividing by the net 40 would
+    // print a nonsensical 300% beside a full circle).
+    expect(screen.getByText("100%")).toBeInTheDocument();
+
+    // The unfiltered "Category Budgets" list still shows the refund category,
+    // with its bar clamped to 0% (geometry only — the data stays negative).
+    const categoryBars = container.querySelectorAll<HTMLElement>(".h-1\\.5 > div");
+
+    expect(Array.from(categoryBars).map((bar) => bar.style.width)).toEqual(["60%", "0%"]);
+  });
+
+  it("omits the donut and clamps every bar to 0% when all categories are net-negative", () => {
+    const { container } = renderCard({
+      totalIncome: 2000,
+      categories: [cat({ label: "Refunds" })],
+      spendingItems: [item({ id: "r1", spent: -150, budgeted: 100, category: cat({ label: "Refunds" }) })],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // No positive slice → the donut block is skipped entirely, no svg circles.
+    expect(container.querySelectorAll("circle")).toHaveLength(0);
+
+    // Every percentage-width bar (income-used, budget-used, category row)
+    // clamps to 0 width instead of emitting invalid negative CSS.
+    const widths = Array.from(container.querySelectorAll<HTMLElement>('div[style*="width"]'))
+      .map((el) => el.style.width)
+      .filter((width) => width.endsWith("%"));
+
+    expect(widths.length).toBeGreaterThan(0);
+
+    for (const width of widths) expect(width).toBe("0%");
   });
 });

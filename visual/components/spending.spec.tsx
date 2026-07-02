@@ -1,5 +1,6 @@
 import { test, expect } from "../test";
 import { SpendingCard } from "@/components/spending/spending-card";
+import type { SpendingEntry } from "@/components/spending/spending-card-expanded";
 import { SpendingItemDetailPopin } from "@/components/spending/popins/spending-item-detail-popin";
 import { SpendingItemEditPopin } from "@/components/spending/popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
@@ -17,19 +18,20 @@ import { cardCategories, noop, cents } from "../fixtures";
  */
 
 // Card-shaped entries (the card uses `receipt`, not the fixtures' `receiptUrl`).
-const coopEntry = {
+const coopEntry: SpendingEntry = {
   id: "e2",
   name: "Coop",
   date: "2026-06-11",
   amount: cents(52.75),
+  direction: "debit",
   receipt: null,
   link: "https://example.com/receipt",
 };
 
-const cardEntries = [
-  { id: "e1", name: "Migros", date: "2026-06-03", amount: cents(84.2), receipt: null, link: null },
+const cardEntries: SpendingEntry[] = [
+  { id: "e1", name: "Migros", date: "2026-06-03", amount: cents(84.2), direction: "debit", receipt: null, link: null },
   coopEntry,
-  { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), receipt: null, link: null },
+  { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), direction: "debit", receipt: null, link: null },
 ];
 
 const cardProps = {

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { updateSpentAmount } from "@/lib/spending/update-spent";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
-const MIN_AMOUNT_CENTS = 0;
+const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
 const MAX_RECEIPT_SIZE = 5_000_000; // ~5MB base64
 
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { spendingItemId, name, amount, receiptUrl, link, date } = body;
+        const { spendingItemId, name, amount, direction, receiptUrl, link, date } = body;
 
         // Validate spendingItemId
         if (!spendingItemId || typeof spendingItemId !== "string") {
@@ -118,6 +119,14 @@ export async function POST(request: Request) {
         if (amount < MIN_AMOUNT_CENTS || amount > MAX_AMOUNT_CENTS) {
             return NextResponse.json(
                 { error: `Amount must be between ${MIN_AMOUNT_CENTS / 100} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` },
+                { status: 400 }
+            );
+        }
+
+        // Validate direction if provided (absent defaults to "debit")
+        if (direction !== undefined && direction !== "debit" && direction !== "credit") {
+            return NextResponse.json(
+                { error: 'Direction must be "debit" or "credit"' },
                 { status: 400 }
             );
         }
@@ -194,6 +203,7 @@ export async function POST(request: Request) {
             data: {
                 name: name.trim(),
                 amount,
+                direction: direction ?? "debit",
                 receiptUrl: receiptUrl || null,
                 link: link || null,
                 spendingItemId,
@@ -201,16 +211,8 @@ export async function POST(request: Request) {
             },
         });
 
-        // Update the spent amount on the spending item
-        const allEntries = await prisma.spendingEntry.findMany({
-            where: { spendingItemId },
-        });
-        const newSpent = allEntries.reduce((sum, e) => sum + e.amount, 0);
-
-        await prisma.spendingItem.update({
-            where: { id: spendingItemId },
-            data: { spent: newSpent },
-        });
+        // Recompute the item's spent as the signed sum of its entries
+        await updateSpentAmount(spendingItemId);
 
         return NextResponse.json(entry, { status: 201 });
     } catch (error) {
