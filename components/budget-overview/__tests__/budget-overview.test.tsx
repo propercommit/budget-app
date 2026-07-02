@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 
 // SettingsProvider calls getSettings() on mount; keep it offline so it falls
 // back to the USD default ("<value> $").
@@ -185,5 +185,27 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
     const amounts = screen.getByText("2.34 $ / 2 $");
 
     expect(chip.nextElementSibling).toBe(amounts);
+  });
+
+  it("sorts the Category Budgets rows by budget usage, highest first", () => {
+    // Input order is shuffled (20%, 100%, 80%) on purpose.
+    renderCard({
+      totalIncome: 5000,
+      categories: [cat({ label: "Light" }), cat({ label: "Full" }), cat({ label: "Most" })],
+      spendingItems: [
+        item({ id: "l1", spent: 40, budgeted: 200, category: cat({ label: "Light" }) }),
+        item({ id: "f1", spent: 200, budgeted: 200, category: cat({ label: "Full" }) }),
+        item({ id: "m1", spent: 160, budgeted: 200, category: cat({ label: "Most" }) }),
+      ],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // Scope to the Category Budgets section — the donut legend above lists
+    // the same names in its own (unsorted) order.
+    const section = screen.getByText("Category Budgets").parentElement as HTMLElement;
+    const names = within(section).getAllByText(/^(Light|Full|Most)$/).map((el) => el.textContent);
+
+    expect(names).toEqual(["Full", "Most", "Light"]);
   });
 });

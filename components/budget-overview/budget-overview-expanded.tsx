@@ -54,10 +54,17 @@ function ProgressBar({
     );
 }
 
+/**
+ * Share of budget used, as displayed by the row's progress bar; a zero budget
+ * reads as 0%. The Category Budgets sort uses the same formula so the order
+ * always agrees with the bars.
+ */
+const usagePercentage = (spent: number, budget: number): number => budget > 0 ? (spent / budget) * 100 : 0;
+
 // ============================================
 // CATEGORY ROW COMPONENT
 // ============================================
-function CategoryRow({ 
+function CategoryRow({
     category, 
     spent, 
     budget, 
@@ -68,7 +75,7 @@ function CategoryRow({
     budget: number;
     color: string;
 }) {
-    const percentage = budget > 0 ? (spent / budget) * 100 : 0;
+    const percentage = usagePercentage(spent, budget);
     const isOver = spent > budget;
     const { formatAmount } = useSettings();
     
@@ -287,15 +294,18 @@ export function BudgetOverviewExpanded({
                     <div className="mt-6 pt-6 border-t border-gray-100">
                         <h3 className="text-sm font-semibold mb-4 text-gray-900">Category Budgets</h3>
                         <div className="space-y-4">
-                            {categoryBreakdown.filter(c => c.budget > 0 || c.spent > 0).map((cat, i) => (
-                                <CategoryRow 
-                                    key={i}
-                                    category={{ icon: cat.icon, name: cat.name }}
-                                    spent={cat.spent}
-                                    budget={cat.budget}
-                                    color={cat.color}
-                                />
-                            ))}
+                            {categoryBreakdown
+                                .filter(c => c.budget > 0 || c.spent > 0)
+                                .sort((a, b) => usagePercentage(b.spent, b.budget) - usagePercentage(a.spent, a.budget))
+                                .map((cat) => (
+                                    <CategoryRow
+                                        key={cat.name}
+                                        category={{ icon: cat.icon, name: cat.name }}
+                                        spent={cat.spent}
+                                        budget={cat.budget}
+                                        color={cat.color}
+                                    />
+                                ))}
                         </div>
                     </div>
                 )}
