@@ -49,7 +49,7 @@ describe("DeleteCategoryDialog", () => {
 
   it("runs onConfirm and disables both buttons while it is pending", async () => {
 
-    let resolveConfirm!: () => void;
+    let resolveConfirm: () => void = () => {};
     const pending = new Promise<void>((r) => { resolveConfirm = r; });
     const onConfirm = vi.fn().mockReturnValue(pending);
     const { onCancel } = renderDialog({ onConfirm });

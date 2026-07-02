@@ -16,7 +16,7 @@ interface ManageCategoriesPopinProps {
     entryCounts: Record<string, number>;
     onEditCategory: (category: Category) => void;
     onDeleteCategory: (category: Category) => void;
-    onNewCategory: () => void;
+    onCreateCategory: () => void;
 }
 
 /**
@@ -32,7 +32,7 @@ export function ManageCategoriesPopin({
     entryCounts,
     onEditCategory,
     onDeleteCategory,
-    onNewCategory,
+    onCreateCategory,
 }: ManageCategoriesPopinProps) {
 
     const [query, setQuery] = useState("");
@@ -48,7 +48,7 @@ export function ManageCategoriesPopin({
             subtitle="Edit or remove your spending categories"
             footer={
                 <button
-                    onClick={onNewCategory}
+                    onClick={onCreateCategory}
                     className="w-full flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-sm font-semibold border-2 border-dashed transition-all duration-200 active:scale-[0.98]"
                     style={{ borderColor: "#007AFF", backgroundColor: "rgba(0, 122, 255, 0.04)", color: "#007AFF" }}
                 >
@@ -127,7 +127,7 @@ export function ManageCategoriesPopin({
                                     className="flex items-center justify-center gap-1.5 w-11 h-11 rounded-full sm:w-auto sm:h-auto sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                                     style={{ backgroundColor: "rgba(0, 122, 255, 0.08)", color: "#007AFF" }}
                                 >
-                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.9}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
                                     <span className="hidden sm:inline">Edit</span>
@@ -138,7 +138,7 @@ export function ManageCategoriesPopin({
                                     className="flex items-center justify-center gap-1.5 w-11 h-11 rounded-full sm:w-auto sm:h-auto sm:px-3.5 sm:py-2 sm:rounded-xl text-xs font-semibold transition-all duration-200 active:scale-95"
                                     style={{ backgroundColor: "rgba(255, 59, 48, 0.08)", color: "#FF3B30" }}
                                 >
-                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.9}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
                                     <span className="hidden sm:inline">Delete</span>

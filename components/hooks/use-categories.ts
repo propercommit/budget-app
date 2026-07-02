@@ -92,7 +92,7 @@ export function useCategories(initialCategories?: Category[]) {
       await apiDelete(id);
       return true;
     } catch (error) {
-      toast.error("Failed to delete category");
+      toast.error(errorMessage(error, "Failed to delete category"));
       console.error("Error deleting category:", error);
       setCategories(prev => [...prev, original]);
       return false;

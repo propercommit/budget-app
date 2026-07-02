@@ -21,7 +21,7 @@ function renderPopin(overrides: Partial<PopinProps> = {}) {
     onClose: vi.fn(),
     onEditCategory: vi.fn(),
     onDeleteCategory: vi.fn(),
-    onNewCategory: vi.fn(),
+    onCreateCategory: vi.fn(),
   };
 
   render(
@@ -112,11 +112,11 @@ describe("ManageCategoriesPopin", () => {
     expect(onDeleteCategory).toHaveBeenCalledWith(categories[0]);
   });
 
-  it("fires onNewCategory from the footer CTA", () => {
-    const { onNewCategory } = renderPopin();
+  it("fires onCreateCategory from the footer CTA", () => {
+    const { onCreateCategory } = renderPopin();
 
     fireEvent.click(screen.getByRole("button", { name: /New Category/ }));
 
-    expect(onNewCategory).toHaveBeenCalledTimes(1);
+    expect(onCreateCategory).toHaveBeenCalledTimes(1);
   });
 });

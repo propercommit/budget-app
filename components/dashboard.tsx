@@ -56,8 +56,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);
-    const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
-    const [manageCategoriesKey, setManageCategoriesKey] = useState(0);
+    const [isManageCategoriesPopinOpen, setIsManageCategoriesPopinOpen] = useState(false);
+    const [manageCategoriesPopinKey, setManageCategoriesPopinKey] = useState(0);
     const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
     const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
@@ -99,7 +99,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         setIsCategoryPopinOpen(false);
         setEditingCategory(null);
 
-        if (currentEditing) {
+        if (currentEditing !== null) {
             const success = await updateCategory(currentEditing.id, data.name, data.icon, data.color);
 
             if (success) {
@@ -113,23 +113,23 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             }
         } else {
             const created = await addCategory(data.name, data.icon, data.color);
-            if (created) setLastCreatedCategoryName(data.name);
+
+            if (created !== null) setLastCreatedCategoryName(data.name);
         }
     };
 
-    const handleDeleteCategory = async (id: string) => {
+    const handleDeleteCategory = async (category: Category) => {
 
-        const deleted = categories.find(c => c.id === id);
-        const success = await deleteCategory(id);
+        const success = await deleteCategory(category.id);
 
         if (!success) return;
 
         // Mirror the DB cascade client-side: the category's items (and their
         // entries) are gone across all months, so trends/overview/carousel
         // must not keep rendering them.
-        removeItemsByCategory(id);
+        removeItemsByCategory(category.id);
 
-        if (deleted !== undefined && selectedCategory === deleted.label) setSelectedCategory("all");
+        if (selectedCategory === category.label) setSelectedCategory("all");
     };
 
     const handleOpenAddIncome = () => {
@@ -190,8 +190,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
     // Remount via key on every open so the popin's search state starts fresh.
     const handleOpenManageCategories = () => {
-        setManageCategoriesKey(prev => prev + 1);
-        setIsManageCategoriesOpen(true);
+        setManageCategoriesPopinKey(prev => prev + 1);
+        setIsManageCategoriesPopinOpen(true);
     };
 
     const handleOpenCreateCategory = () => {
@@ -476,9 +476,9 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         />
 
         <ManageCategoriesPopin
-            key={`manage-categories-${manageCategoriesKey}`}
-            isOpen={isManageCategoriesOpen}
-            onClose={() => setIsManageCategoriesOpen(false)}
+            key={`manage-categories-${manageCategoriesPopinKey}`}
+            isOpen={isManageCategoriesPopinOpen}
+            onClose={() => setIsManageCategoriesPopinOpen(false)}
             categories={categories}
             entryCounts={categoryEntryCounts}
             onEditCategory={(category) => {
@@ -486,7 +486,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             setIsCategoryPopinOpen(true);
             }}
             onDeleteCategory={setDeletingCategory}
-            onNewCategory={handleOpenCreateCategory}
+            onCreateCategory={handleOpenCreateCategory}
         />
 
         <CategoryPopin
@@ -501,10 +501,10 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             onSave={handleSaveCategory}
 
             onDelete={editingCategory ? async () => {
-                const id = editingCategory.id;
+                const deleting = editingCategory;
                 setIsCategoryPopinOpen(false);
                 setEditingCategory(null);
-                await handleDeleteCategory(id);
+                await handleDeleteCategory(deleting);
             } : undefined}
 
             mode={editingCategory ? "edit" : "create"}
@@ -518,7 +518,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 category={deletingCategory}
                 onCancel={() => setDeletingCategory(null)}
                 onConfirm={async () => {
-                    await handleDeleteCategory(deletingCategory.id);
+                    await handleDeleteCategory(deletingCategory);
                     setDeletingCategory(null);
                 }}
             />

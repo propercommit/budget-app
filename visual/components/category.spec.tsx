@@ -102,7 +102,7 @@ test.describe("Category components", () => {
           entryCounts={entryCounts}
           onEditCategory={noop}
           onDeleteCategory={noop}
-          onNewCategory={noop}
+          onCreateCategory={noop}
         />
       </Providers>,
     );
@@ -122,7 +122,7 @@ test.describe("Category components", () => {
           entryCounts={entryCounts}
           onEditCategory={noop}
           onDeleteCategory={noop}
-          onNewCategory={noop}
+          onCreateCategory={noop}
         />
       </Providers>,
     );

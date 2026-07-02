@@ -172,8 +172,8 @@ describe("useCategories — delete (optimistic)", () => {
     expect(result.current.categories.map((c) => c.id)).toEqual(["c2"]);
   });
 
-  it("re-inserts the removed item on failure and toasts", async () => {
-    vi.mocked(api.deleteCategory).mockRejectedValue(new Error("fail"));
+  it("re-inserts the removed item on failure and surfaces the server message", async () => {
+    vi.mocked(api.deleteCategory).mockRejectedValue(new Error("Category not found"));
     const { result } = renderHook(() => useCategories([cat()]));
 
     let ok = true;
@@ -183,6 +183,6 @@ describe("useCategories — delete (optimistic)", () => {
 
     expect(ok).toBe(false);
     expect(result.current.categories.map((c) => c.id)).toEqual(["c1"]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete category");
+    expect(toast.error).toHaveBeenCalledWith("Category not found");
   });
 });
