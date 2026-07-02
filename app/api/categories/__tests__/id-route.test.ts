@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
   FAKE_USER,
   jsonRequest,
@@ -137,6 +138,25 @@ describe("PUT /api/categories/[id]", () => {
       where: { id: "c1" },
       data: { label: "Groceries" },
     });
+  });
+
+  // Renaming onto a label the user already has violates @@unique([userId,
+  // label]); the route translates the Prisma P2002 into a friendly 409,
+  // mirroring the POST handler.
+  it("translates a duplicate-label P2002 into a 409", async () => {
+    prismaMock.category.findFirst.mockResolvedValue({ id: "c1" });
+    const p2002 = new PrismaClientKnownRequestError("Unique constraint failed", {
+      code: "P2002",
+      clientVersion: "6",
+    });
+    prismaMock.category.update.mockRejectedValue(p2002);
+
+    const { status, body } = await readJson(
+      await PUT(jsonRequest({ label: "Groceries" }), routeContext("c1"))
+    );
+
+    expect(status).toBe(409);
+    expect(body).toEqual({ error: "A category with this name already exists" });
   });
 });
 

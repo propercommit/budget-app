@@ -102,6 +102,27 @@ describe("POST /api/categories", () => {
     expect(body).toEqual({ error: "Label is required" });
   });
 
+  it("400 when label exceeds 30 chars", async () => {
+    const { status, body } = await readJson(
+      await POST(
+        jsonRequest({ label: "a".repeat(31), icon: "x", color: "#FF5733" })
+      )
+    );
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "Label must be 30 characters or less" });
+  });
+
+  it("accepts a label of exactly 30 chars (boundary)", async () => {
+    prismaMock.user.upsert.mockResolvedValue({});
+    prismaMock.category.create.mockResolvedValue({ id: "c1" });
+    const { status } = await readJson(
+      await POST(
+        jsonRequest({ label: "a".repeat(30), icon: "x", color: "#FF5733" })
+      )
+    );
+    expect(status).toBe(201);
+  });
+
   it("400 when icon is missing", async () => {
     const { status, body } = await readJson(
       await POST(jsonRequest({ label: "Food", color: "#FF5733" }))

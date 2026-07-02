@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
@@ -93,6 +94,15 @@ export async function PUT(
 
         return NextResponse.json(category);
     } catch (error) {
+        // Renaming onto an existing label violates @@unique([userId, label]) —
+        // surface a friendly 409 instead of a generic 500, mirroring POST.
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+            return NextResponse.json(
+                { error: "A category with this name already exists" },
+                { status: 409 }
+            );
+        }
+
         console.error("[Categories PUT] Failed to update:", error);
         return NextResponse.json(
             { error: "Failed to update category" },
