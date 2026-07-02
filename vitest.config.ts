@@ -15,7 +15,9 @@ export default defineConfig({
     // can switch this default once those land.
     environment: "node",
     include: ["**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "dist"],
+    // `visual/` holds Playwright Component Tests (run via `pnpm test:visual`,
+    // not Vitest); excluding them keeps `pnpm test` — and CI — green.
+    exclude: ["node_modules", ".next", "dist", "visual/**", "playwright/**"],
     pool: "forks",
     // Removes jsdom's non-delivering MessageChannel (so React 19's scheduler
     // doesn't hang) and registers @testing-library/jest-dom matchers. See

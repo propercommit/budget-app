@@ -142,8 +142,8 @@ export function SpendingCardExpanded({
                         }}
                     >
                         {isOverBudget
-                            ? `$${Math.abs(amountLeft).toLocaleString()} over`
-                            : `$${amountLeft.toLocaleString()} left`}
+                            ? `${formatAmount(Math.abs(amountLeft))} over`
+                            : `${formatAmount(amountLeft)} left`}
                     </div>
                     <span className="text-xs" style={{ color: "#6E6E73" }}>
                         {spendingEntries} {spendingEntries === 1 ? "entry" : "entries"}

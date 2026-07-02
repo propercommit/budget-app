@@ -82,15 +82,15 @@ describe("StickyBudgetBar — figures and sign branching", () => {
   });
 
   it("computes remaining budget (income - budgeted) and after-spending (income - spent)", () => {
-    renderBar({ totalIncome: 3000, totalBudgeted: 2000, totalSpent: 1200 });
-    // remaining = 1000, after = 1800.
+    renderBar({ totalIncome: 300_000, totalBudgeted: 200_000, totalSpent: 120_000 });
+    // remaining = 100_000c ($1,000), after = 180_000c ($1,800).
     expect(screen.getByText("1,000 $")).toBeInTheDocument();
     expect(screen.getByText("1,800 $")).toBeInTheDocument();
   });
 
   it("renders negative figures when budgeted/spent exceed income", () => {
-    renderBar({ totalIncome: 1000, totalBudgeted: 1500, totalSpent: 1300 });
-    // remaining = -500, after = -300.
+    renderBar({ totalIncome: 100_000, totalBudgeted: 150_000, totalSpent: 130_000 });
+    // remaining = -50_000c (-$500), after = -30_000c (-$300).
     expect(screen.getByText("-500 $")).toBeInTheDocument();
     expect(screen.getByText("-300 $")).toBeInTheDocument();
   });

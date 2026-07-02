@@ -9,6 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:visual": "playwright test -c playwright-ct.config.ts",
+    "test:visual:update": "playwright test -c playwright-ct.config.ts --update-snapshots",
+    "mt940": "tsx try-mt940.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -39,6 +42,8 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/experimental-ct-react": "1.61.1",
+    "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -52,6 +57,7 @@
     "jsdom": "^29.1.1",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",

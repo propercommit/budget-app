@@ -34,7 +34,7 @@
  * ------------------------------------------------------------------
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
@@ -98,7 +98,7 @@ function getSupabaseAdmin() {
 // ============================================================
 const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
 const randInt = (lo: number, hi: number) => Math.floor(rand(lo, hi + 1));
-const money = (n: number) => Math.round(n * 100) / 100; // 2-decimal Float
+const money = (n: number) => Math.round(n * 100); // major units -> integer cents
 const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 const chance = (p: number) => Math.random() < p;
 const pick = <T>(arr: T[]): T => arr[randInt(0, arr.length - 1)];
@@ -643,9 +643,9 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
   };
 
   // --- 5.7 Per-month generation ---
-  const itemRows: any[] = [];
-  const entryRows: any[] = [];
-  const incomeRows: any[] = [];
+  const itemRows: Prisma.SpendingItemCreateManyInput[] = [];
+  const entryRows: Prisma.SpendingEntryCreateManyInput[] = [];
+  const incomeRows: Prisma.IncomeSourceCreateManyInput[] = [];
 
   for (const { year, month } of months) {
     const m = monthStr(year, month);
@@ -695,9 +695,9 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
           });
           manifest.spendingEntryIds.push(entryId);
         }
-        spent = money(spent);
+        // spent is already an exact integer-cent sum of the entry amounts above.
 
-        const budgeted = roundTo(rand(tmpl.budget[0], tmpl.budget[1]), 10);
+        const budgeted = money(roundTo(rand(tmpl.budget[0], tmpl.budget[1]), 10));
         itemRows.push({
           id: itemId,
           name,
