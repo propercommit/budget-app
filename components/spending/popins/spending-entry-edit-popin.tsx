@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
@@ -14,7 +15,8 @@ import { parseAmountToCents, centsToAmount } from "@/lib/money";
 interface EntryEditPopinProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => void;
+    // `direction` is always sent explicitly (both modes); the API's default-to-debit is backward compat only.
+    onSave: (data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => void;
     onDelete?: () => void;
     mode: "create" | "edit";
     entry?: SpendingEntry | null;
@@ -38,6 +40,7 @@ export function EntryEditPopin({
 }: EntryEditPopinProps) {
     const [name, setName] = useState(entry?.name || "");
     const [amount, setAmount] = useState(entry?.amount === undefined ? "" : centsToAmount(entry.amount).toString());
+    const [direction, setDirection] = useState<"debit" | "credit">(entry?.direction ?? "debit");
     const [date, setDate] = useState(entry?.date || new Date().toISOString().split("T")[0]);
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
@@ -46,6 +49,12 @@ export function EntryEditPopin({
     const isCreate = mode === "create";
     const parsedAmount = parseAmountToCents(amount);
     const isFormValid = name.trim() !== "" && parsedAmount !== null && date !== "";
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+
+        if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
+    };
 
     const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -84,6 +93,7 @@ export function EntryEditPopin({
                                 onSave({
                                     name,
                                     amount: parsedAmount,
+                                    direction,
                                     date,
                                     receipt,
                                     link: link || null,
@@ -151,15 +161,16 @@ export function EntryEditPopin({
                     <div className="relative">
                         <span
                             className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold"
-                            style={{ color: "#8E8E93" }}
+                            style={{ color: direction === "debit" ? "#FF3B30" : "#34C759" }}
                         >
+                            {direction === "debit" ? "−" : "+"}
                             {CURRENCY_SYMBOLS[settings.currency]}
                         </span>
                         <input
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
+                            onChange={handleAmountChange}
                             placeholder="0.00"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
                             style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
@@ -167,6 +178,20 @@ export function EntryEditPopin({
                             onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
                         />
                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                        Type
+                    </label>
+                    <SegmentedToggle
+                        options={[
+                            { value: "debit", label: "Debit", dotColor: "#FF3B30" },
+                            { value: "credit", label: "Credit", dotColor: "#34C759" },
+                        ]}
+                        value={direction}
+                        onChange={setDirection}
+                    />
                 </div>
 
                 <div className="space-y-2">
