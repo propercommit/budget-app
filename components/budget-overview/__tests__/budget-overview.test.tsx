@@ -135,6 +135,11 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
     // never becomes a slice.
     expect(container.querySelectorAll("circle")).toHaveLength(2);
 
+    // Legend share divides by the positive-slice total the ring uses — Food is
+    // the whole ring, so its share reads 100% (dividing by the net 40 would
+    // print a nonsensical 300% beside a full circle).
+    expect(screen.getByText("100%")).toBeInTheDocument();
+
     // The unfiltered "Category Budgets" list still shows the refund category,
     // with its bar clamped to 0% (geometry only — the data stays negative).
     const categoryBars = container.querySelectorAll<HTMLElement>(".h-1\\.5 > div");

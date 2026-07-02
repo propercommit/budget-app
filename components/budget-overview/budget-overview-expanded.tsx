@@ -139,6 +139,11 @@ export function BudgetOverviewExpanded({
             color: cat.color
         }));
 
+    // The ring normalizes by the positive-slice total, so the legend shares must
+    // divide by the same figure — dividing by the signed net totalSpent would
+    // print >100% (or 0%) beside a full ring whenever a net-credit category exists.
+    const positiveSpentTotal = donutSegments.reduce((sum, segment) => sum + segment.value, 0);
+
     return (
         <div 
             className="bg-white rounded-3xl overflow-hidden transition-all duration-300"
@@ -266,7 +271,7 @@ export function BudgetOverviewExpanded({
                                             {formatAmount(cat.spent)}
                                         </span>
                                         <span className="text-xs text-gray-400">
-                                            {totalSpent > 0 ? ((cat.spent / totalSpent) * 100).toFixed(0) : 0}%
+                                            {positiveSpentTotal > 0 ? ((cat.spent / positiveSpentTotal) * 100).toFixed(0) : 0}%
                                         </span>
                                     </div>
                                 ))}
