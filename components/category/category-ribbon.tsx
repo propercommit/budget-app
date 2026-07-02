@@ -1,10 +1,14 @@
 "use client";
 
-import { CSSProperties, useState } from "react";
+import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Settings2 } from "lucide-react";
 import { iconMap } from "@/lib/icon-map";
 
-/** Desktop pill budget; categories beyond it collapse into the "+N" peek. */
+/**
+ * Upper desktop pill budget; categories beyond it collapse into the "+N"
+ * peek. The effective count shrinks further at render time whenever the row
+ * would overflow, so the pills, "+N" and "New" always share one line.
+ */
 const MAX_VISIBLE_CATEGORIES = 5;
 
 interface Category {
@@ -174,17 +178,67 @@ export function CategoryRibbon({
     onManage,
 }: CategoryRibbonProps) {
 
-    // Desktop shows at most MAX_VISIBLE_CATEGORIES pills; when the selected
-    // category would be hidden, it is promoted to the front of the row so the
-    // active filter always stays visible. "all" is the All-filter sentinel,
-    // never a promotion target — a user category legally named "all" must not
-    // be yanked forward when the filter is cleared.
-    let visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
+    const pillsRegionRef = useRef<HTMLDivElement>(null);
+    const [visibleCount, setVisibleCount] = useState(MAX_VISIBLE_CATEGORIES);
+    const [measureNonce, setMeasureNonce] = useState(0);
+
+    // Category add/delete/rename changes pill widths — start the fit search
+    // from the full budget again (render-phase reset, per the React
+    // "adjusting state when props change" pattern).
+    const categorySignature = JSON.stringify(categories.map(c => c.name));
+    const [prevSignature, setPrevSignature] = useState(categorySignature);
+
+    if (prevSignature !== categorySignature) {
+        setPrevSignature(categorySignature);
+        setVisibleCount(MAX_VISIBLE_CATEGORIES);
+    }
+
+    // Single-line guarantee: the pills region never wraps, so overflowing
+    // pills report scrollWidth > clientWidth; drop one pill and re-measure.
+    // useLayoutEffect runs before paint, making the convergence invisible
+    // (jsdom reports 0/0 and keeps the budget — measured behavior is covered
+    // by the Playwright suite).
+    useLayoutEffect(() => {
+
+        const region = pillsRegionRef.current;
+
+        if (region === null) return;
+
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- pre-paint measurement loop, the documented layout-effect pattern; converges before paint
+        if (region.scrollWidth > region.clientWidth && visibleCount > 1) setVisibleCount(prev => prev - 1);
+    }, [visibleCount, measureNonce, categorySignature, selectedCategory]);
+
+    // Growing back is driven by real size changes (e.g. a window resize):
+    // reset to the budget and let the layout effect shrink to fit again. The
+    // nonce forces a re-measure even when the count already sits at the
+    // budget (e.g. the region narrowed without a prior shrink).
+    useEffect(() => {
+
+        const region = pillsRegionRef.current;
+
+        if (region === null) return;
+
+        const observer = new ResizeObserver(() => {
+            setVisibleCount(MAX_VISIBLE_CATEGORIES);
+            setMeasureNonce(prev => prev + 1);
+        });
+
+        observer.observe(region);
+
+        return () => observer.disconnect();
+    }, []);
+
+    // Desktop shows at most visibleCount pills; when the selected category
+    // would be hidden, it is promoted to the front of the row so the active
+    // filter always stays visible. "all" is the All-filter sentinel, never a
+    // promotion target — a user category legally named "all" must not be
+    // yanked forward when the filter is cleared.
+    let visibleCategories = categories.slice(0, visibleCount);
 
     if (selectedCategory !== "all" && visibleCategories.every(c => c.name !== selectedCategory)) {
         const selected = categories.find(c => c.name === selectedCategory);
 
-        if (selected !== undefined) visibleCategories = [selected, ...categories.filter(c => c.name !== selected.name)].slice(0, MAX_VISIBLE_CATEGORIES);
+        if (selected !== undefined) visibleCategories = [selected, ...categories.filter(c => c.name !== selected.name)].slice(0, visibleCount);
     }
 
     const hiddenCategories = categories.filter(c => visibleCategories.every(v => v.name !== c.name));
@@ -214,18 +268,22 @@ export function CategoryRibbon({
                 <NewCategoryPill onClick={onAddCategory} />
             </div>
 
-            {/* Desktop: a fixed row of pills; the rest peek out of the "+N" pill. */}
-            <div className="hidden sm:flex flex-1 min-w-0 flex-wrap items-center gap-2 pb-1">
-                <AllPill isSelected={selectedCategory === "all"} onSelect={() => onSelect("all")} />
+            {/* Desktop: a single-line row. The pills region takes the free
+                space, so "+N" and "New" sit pinned at the right edge (next to
+                Manage) in a fixed position regardless of label widths. */}
+            <div className="hidden sm:flex flex-1 min-w-0 flex-nowrap items-center gap-2 pb-1">
+                <div ref={pillsRegionRef} className="flex-1 min-w-0 flex flex-nowrap items-center gap-2 overflow-hidden">
+                    <AllPill isSelected={selectedCategory === "all"} onSelect={() => onSelect("all")} />
 
-                {visibleCategories.map((cat) => (
-                    <CategoryPill
-                        key={cat.name}
-                        category={cat}
-                        isSelected={selectedCategory === cat.name}
-                        onSelect={() => onSelect(cat.name)}
-                    />
-                ))}
+                    {visibleCategories.map((cat) => (
+                        <CategoryPill
+                            key={cat.name}
+                            category={cat}
+                            isSelected={selectedCategory === cat.name}
+                            onSelect={() => onSelect(cat.name)}
+                        />
+                    ))}
+                </div>
 
                 {hiddenCategories.length > 0 && (
                     <OverflowPeek

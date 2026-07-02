@@ -28,6 +28,19 @@ const manyCardCategories = [
   { name: "Kids", icon: "zap", color: "#5E6B7B" },
 ];
 
+/** Long labels in a narrow row: the ribbon must shed pills into "+N" rather than wrap. */
+const longLabelCategories = [
+  { name: "Subscriptions", icon: "credit-card", color: "#FF3B30" },
+  { name: "Food & Dining", icon: "utensils", color: "#FF9F0A" },
+  { name: "Housing", icon: "home", color: "#007AFF" },
+  { name: "Transport", icon: "car", color: "#34C759" },
+  { name: "Entertainment", icon: "film", color: "#AF52DE" },
+  { name: "Gifts", icon: "piggy-bank", color: "#FF3B30" },
+  { name: "Utilities", icon: "lightbulb", color: "#FF9F0A" },
+  { name: "Health", icon: "heart-pulse", color: "#34C759" },
+  { name: "Travel", icon: "plane", color: "#007AFF" },
+];
+
 test.describe("Category components", () => {
   test("ribbon", async ({ mount }) => {
     const component = await mount(
@@ -67,6 +80,28 @@ test.describe("Category components", () => {
     await expect(component).toContainText("Groceries");
 
     await expect(component).toHaveScreenshot("category-ribbon-overflow.png");
+  });
+
+  test("ribbon — narrow row sheds pills into +N instead of wrapping", async ({ mount }, testInfo) => {
+    testInfo.skip(testInfo.project.name === "mobile", "The fit-to-width row is a desktop-only layout");
+
+    const component = await mount(
+      <Providers>
+        <div className="p-4" style={{ width: 700 }}>
+          <CategoryRibbon
+            categories={longLabelCategories}
+            selectedCategory="Subscriptions"
+            onSelect={noop}
+            onAddCategory={noop}
+            onManage={noop}
+          />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component.getByRole("button", { name: /^\+\d/ })).toBeVisible();
+
+    await expect(component).toHaveScreenshot("category-ribbon-narrow.png");
   });
 
   test("ribbon — overflow peek open", async ({ mount, page }, testInfo) => {

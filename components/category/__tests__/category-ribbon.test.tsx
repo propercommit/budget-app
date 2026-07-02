@@ -1,8 +1,20 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { CategoryRibbon } from "@/components/category/category-ribbon";
+
+// The ribbon observes its desktop row to re-fit pills on resize; jsdom lacks
+// ResizeObserver (and reports zero widths, so the visible count keeps the
+// full budget here — the fit-to-width behavior is covered by the Playwright
+// suite).
+beforeAll(() => {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+});
 
 // jsdom applies no CSS, so BOTH responsive rows render: every category pill
 // exists once in the mobile scroll row, and visible ones a second time in the
