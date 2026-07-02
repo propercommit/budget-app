@@ -107,6 +107,36 @@ test.describe("Spending card", () => {
 
     await expect(component).toHaveScreenshot("spending-card-expanded-credit.png");
   });
+
+  // Net-credit month (only a refund): spent is negative, so the header must
+  // read "+amount" in green instead of a bare negative number.
+  test("collapsed with net-credit spent", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <SpendingCard {...cardProps} entries={[refundEntry]} isExpanded={false} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Groceries");
+
+    await expect(component).toHaveScreenshot("spending-card-collapsed-net-credit.png");
+  });
+
+  test("expanded with net-credit spent", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <SpendingCard {...cardProps} entries={[refundEntry]} isExpanded={true} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Coop refund");
+
+    await expect(component).toHaveScreenshot("spending-card-expanded-net-credit.png");
+  });
 });
 
 test.describe("Spending popins", () => {

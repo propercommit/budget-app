@@ -3,6 +3,7 @@
 import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
+import { spentDisplay } from "@/lib/spending/format-spent";
 import { ExpandToggleButton } from "../ui/expand-toggle-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
@@ -52,6 +53,7 @@ export function SpendingCardExpanded({
     const isOverBudget = amountLeft < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
     const { formatAmount, formatDateShort } = useSettings();
+    const spent = spentDisplay(totalSpent, formatAmount);
 
     const filteredEntries = entries
         .filter((entry) => entry.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -99,8 +101,8 @@ export function SpendingCardExpanded({
                     {/* Right — Spent/Budget + Chevron */}
                     <div className="flex items-center gap-3">
                         <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums" style={{ color: "#1D1D1F" }}>
-                                {formatAmount(totalSpent)}
+                            <p className="text-lg font-bold tabular-nums" style={{ color: spent.color }}>
+                                {spent.label}
                             </p>
                             <p className="text-xs" style={{ color: "#6E6E73" }}>
                                 of {formatAmount(budgetNumber)}
