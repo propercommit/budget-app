@@ -16,6 +16,8 @@ interface CategoryPopinProps {
     initialName?: string;
     initialIcon?: string;
     initialColor?: string;
+    /** Stacks this popin above another open popin (e.g. Manage Categories at the default z-50). */
+    zIndex?: number;
 }
 
 export function CategoryPopin({
@@ -27,6 +29,7 @@ export function CategoryPopin({
     initialName = "",
     initialIcon = "shopping-cart",
     initialColor = "#007AFF",
+    zIndex,
 }: CategoryPopinProps) {
     const [name, setName] = useState(initialName);
     const [selectedIcon, setSelectedIcon] = useState(initialIcon);
@@ -66,6 +69,7 @@ export function CategoryPopin({
             isOpen={isOpen}
             onClose={onClose}
             title={isCreate ? "New Category" : "Edit Category"}
+            zIndex={zIndex}
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">

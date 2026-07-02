@@ -18,19 +18,24 @@ import { TrendsCard } from "./trends/trends-card";
 import { BudgetOverviewCard } from "./budget-overview/budget-overview";
 import { SpendingItemEditPopin } from "./spending/popins/spending-item-edit-popin";
 import { CategoryPopin } from "./category/popins/category-popin";
+import { ManageCategoriesPopin } from "./category/popins/manage-categories-popin";
+import { countCategoryEntries } from "@/lib/category-entry-counts";
 import { IncomePopin } from "./income/popins/income-edit-popin";
 import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
 import { StickyBudgetBar } from "./sticky-budget-bar";
+import { Settings2 } from "lucide-react";
 
 interface DashboardProps {
     initialIncomeSources: IncomeSource[],
     initialAllIncomeSources: IncomeSource[],
     initialCategories: Category[],
     initialSpendingData: Record<string, SpendingItem[]>,
-    initialMonth: string
+    initialMonth: string,
+    /** Entry totals per category id for months older than the loaded window (see lib/category-entry-counts). */
+    preWindowEntryCounts?: Record<string, number>
 }
 
-export function Dashboard({initialIncomeSources, initialAllIncomeSources, initialCategories, initialSpendingData, initialMonth}: DashboardProps) {
+export function Dashboard({initialIncomeSources, initialAllIncomeSources, initialCategories, initialSpendingData, initialMonth, preWindowEntryCounts = {}}: DashboardProps) {
 
     const [isSpendingExpanded, setIsSpendingExpanded] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(initialMonth);
@@ -50,6 +55,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);
+    const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+    const [manageCategoriesKey, setManageCategoriesKey] = useState(0);
 
     const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
     const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
@@ -57,6 +64,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [viewingIncomeSource, setViewingIncomeSource] = useState<IncomeSource | null>(null);
 
     const [lastCreatedCategoryName, setLastCreatedCategoryName] = useState<string | null>(null);
+
+    const categoryEntryCounts = countCategoryEntries(spendingData, preWindowEntryCounts);
 
     const currentSpendingItems = spendingData[selectedMonth] || [];
     const filteredSpendingItems = selectedCategory === "all"
@@ -146,6 +155,18 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         await loadMonth(newMonth);
     };
 
+    // Remount via key on every open so the popin's search state starts fresh.
+    const handleOpenManageCategories = () => {
+        setManageCategoriesKey(prev => prev + 1);
+        setIsManageCategoriesOpen(true);
+    };
+
+    const handleOpenCreateCategory = () => {
+        setEditingCategory(null);
+        setCategoryPopinKey(prev => prev + 1);
+        setIsCategoryPopinOpen(true);
+    };
+
     const handleOpenCreateSpending = () => {
         setEditingSpendingItem(null);
         setSpendingPopinKey(prev => prev + 1);
@@ -192,6 +213,14 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 {filteredSpendingItems.length} item{filteredSpendingItems.length !== 1 ? "s" : ""}
                 </p>
                 <button
+                onClick={handleOpenManageCategories}
+                aria-label="Manage categories"
+                className="sm:hidden w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                >
+                <Settings2 className="w-4 h-4" strokeWidth={1.9} />
+                </button>
+                <button
                 onClick={handleOpenCreateSpending}
                 className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
                 style={{ backgroundColor: "#34C759" }}
@@ -208,11 +237,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
                 selectedCategory={selectedCategory}
                 onSelect={setSelectedCategory}
-                onAddCategory={() => {
-                setEditingCategory(null);
-                setCategoryPopinKey(prev => prev + 1);
-                setIsCategoryPopinOpen(true);
-                }}
+                onAddCategory={handleOpenCreateCategory}
+                onManage={handleOpenManageCategories}
             />
             </div>
 
@@ -403,11 +429,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 await handleDeleteSpending(id);
             } : undefined}
 
-            onCreateCategory={() => {
-            setEditingCategory(null);
-            setCategoryPopinKey(prev => prev + 1);
-            setIsCategoryPopinOpen(true);
-            }}
+            onCreateCategory={handleOpenCreateCategory}
 
             mode={editingSpendingItem ? "edit" : "create"}
             categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
@@ -420,8 +442,20 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             initialNote={editingSpendingItem?.note ?? ""}
         />
 
+        <ManageCategoriesPopin
+            key={`manage-categories-${manageCategoriesKey}`}
+            isOpen={isManageCategoriesOpen}
+            onClose={() => setIsManageCategoriesOpen(false)}
+            categories={categories}
+            entryCounts={categoryEntryCounts}
+            onEditCategory={() => {}}
+            onDeleteCategory={() => {}}
+            onNewCategory={handleOpenCreateCategory}
+        />
+
         <CategoryPopin
             key={editingCategory?.id ?? `create-category-${categoryPopinKey}`}
+            zIndex={60}
             isOpen={isCategoryPopinOpen}
             onClose={() => {
             setIsCategoryPopinOpen(false);
