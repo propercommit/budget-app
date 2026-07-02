@@ -1,0 +1,35 @@
+/*
+ * Deterministic rendering environment for visual-regression screenshots.
+ *
+ * The app relies on `next/font` (Geist) to populate `--font-geist-sans` /
+ * `--font-geist-mono` on <body>. Those variables are never set in the CT
+ * harness, so we pin them to a fixed cross-platform stack. Without this,
+ * different elements resolve to different fallback fonts and screenshots
+ * become noisy.
+ */
+:root {
+  --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-geist-mono: "SF Mono", "Menlo", "Consolas", "Liberation Mono",
+    monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-geist-sans);
+  /* Match the app's default page background (Tailwind sets none by default). */
+  background: #ffffff;
+}
+
+/*
+ * Kill caret blink and text-selection colour differences that can otherwise
+ * flake a screenshot. Playwright already disables CSS animations/transitions
+ * at capture time; this covers the rest.
+ */
+*,
+*::before,
+*::after {
+  caret-color: transparent !important;
+}
