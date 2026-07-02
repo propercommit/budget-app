@@ -2,6 +2,7 @@ import { useState } from "react";
 import { IncomeSource } from "@/lib/types";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
@@ -130,38 +131,14 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
 
                 <div className="space-y-2">
                     <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Type</label>
-                    <div className="relative flex rounded-xl p-1" style={{ backgroundColor: "#F5F5F7" }}>
-                        <div
-                            className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out"
-                            style={{
-                                width: 'calc(50% - 4px)',
-                                left: '4px',
-                                transform: incomeType === 'passive' ? 'translateX(100%)' : 'translateX(0)'
-                            }}
-                        />
-                        <button
-                            onClick={() => setIncomeType('active')}
-                            className="relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10"
-                            style={{ color: incomeType === 'active' ? '#1D1D1F' : '#6E6E73' }}
-                        >
-                            <div
-                                className="w-2.5 h-2.5 rounded-full transition-opacity duration-200"
-                                style={{ backgroundColor: '#007AFF', opacity: incomeType === 'active' ? 1 : 0.35 }}
-                            />
-                            Active
-                        </button>
-                        <button
-                            onClick={() => setIncomeType('passive')}
-                            className="relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10"
-                            style={{ color: incomeType === 'passive' ? '#1D1D1F' : '#6E6E73' }}
-                        >
-                            <div
-                                className="w-2.5 h-2.5 rounded-full transition-opacity duration-200"
-                                style={{ backgroundColor: '#FF9500', opacity: incomeType === 'passive' ? 1 : 0.35 }}
-                            />
-                            Passive
-                        </button>
-                    </div>
+                    <SegmentedToggle
+                        options={[
+                            { value: 'active', label: 'Active', dotColor: '#007AFF' },
+                            { value: 'passive', label: 'Passive', dotColor: '#FF9500' },
+                        ]}
+                        value={incomeType}
+                        onChange={setIncomeType}
+                    />
                 </div>
 
                 <div className="space-y-2 max-w-full overflow-hidden">
