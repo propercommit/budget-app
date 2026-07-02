@@ -35,15 +35,3 @@ export function usePathname(): string {
 export function useSearchParams(): URLSearchParams {
   return new URLSearchParams();
 }
-
-export function useParams(): Record<string, string> {
-  return {};
-}
-
-export function redirect(_href: string): never {
-  throw new Error(`redirect(${_href}) is not supported in component tests`);
-}
-
-export function notFound(): never {
-  throw new Error("notFound() is not supported in component tests");
-}

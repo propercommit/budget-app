@@ -1,10 +1,9 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { BudgetOverviewCard } from "@/components/budget-overview/budget-overview";
 import { Providers } from "../providers";
-import { categories, spendingData } from "../fixtures";
+import { categories, spendingData, totalIncome } from "../fixtures";
 
 const spendingItems = spendingData["2026-06"];
-const totalIncome = 5520;
 
 /** Budget overview: the collapsed income/spent/remaining summary and the expanded per-category breakdown. */
 test.describe("Budget overview", () => {

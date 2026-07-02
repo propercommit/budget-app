@@ -1,29 +1,34 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { SpendingCard } from "@/components/spending/spending-card";
 import { SpendingItemDetailPopin } from "@/components/spending/popins/spending-item-detail-popin";
 import { SpendingItemEditPopin } from "@/components/spending/popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
 import { EntryEditPopin } from "@/components/spending/popins/spending-entry-edit-popin";
 import { Providers } from "../providers";
-import { cardCategories } from "../fixtures";
+import { cardCategories, noop } from "../fixtures";
 
 /**
  * Spending feature: the carousel card (collapsed + expanded) and every popin
  * (item detail/edit, entry detail/edit). Popins use `PopinWrapper`, a
  * `fixed inset-0` overlay, so they are captured against the viewport (`page`).
+ *
+ * The create-entry popin defaults its date to `new Date()`; the shared test
+ * base pins the clock so that screenshot is stable.
  */
 
-// The create-mode entry popin defaults its date to `new Date()`; pin the clock
-// so that screenshot is stable.
-test.beforeEach(async ({ page }) => {
-  await page.clock.setFixedTime(new Date("2026-06-15T12:00:00Z"));
-});
-
-const noop = () => {};
+// Card-shaped entries (the card uses `receipt`, not the fixtures' `receiptUrl`).
+const coopEntry = {
+  id: "e2",
+  name: "Coop",
+  date: "2026-06-11",
+  amount: 52.75,
+  receipt: null,
+  link: "https://example.com/receipt",
+};
 
 const cardEntries = [
   { id: "e1", name: "Migros", date: "2026-06-03", amount: 84.2, receipt: null, link: null },
-  { id: "e2", name: "Coop", date: "2026-06-11", amount: 52.75, receipt: null, link: "https://example.com/receipt" },
+  coopEntry,
   { id: "e3", name: "Farmers market", date: "2026-06-18", amount: 31.5, receipt: null, link: null },
 ];
 
@@ -149,7 +154,7 @@ test.describe("Spending popins", () => {
           isOpen={true}
           onClose={noop}
           onEdit={noop}
-          entry={{ id: "e2", name: "Coop", date: "2026-06-11", amount: 52.75, receipt: null, link: "https://example.com/receipt" }}
+          entry={coopEntry}
           spendingName="Groceries"
           spendingItemIcon="shopping-cart"
           spendingCategoryColor="#34C759"
@@ -191,7 +196,7 @@ test.describe("Spending popins", () => {
           onSave={noop}
           onDelete={noop}
           mode="edit"
-          entry={{ id: "e2", name: "Coop", date: "2026-06-11", amount: 52.75, receipt: null, link: "https://example.com/receipt" }}
+          entry={coopEntry}
           spendingName="Groceries"
           spendingItemIcon="shopping-cart"
           spendingCategoryName="Groceries"

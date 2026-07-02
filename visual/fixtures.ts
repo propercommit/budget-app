@@ -18,10 +18,11 @@ import type {
   SpendingItem,
 } from "@/lib/types";
 
-export const MONTHS = ["2026-04", "2026-05", "2026-06"] as const;
-
 /** The month the Dashboard opens on in tests. */
 export const SELECTED_MONTH = "2026-06";
+
+/** No-op callback for the many handler props that visual tests never fire. */
+export const noop = () => {};
 
 export const categories: Category[] = [
   { id: "cat-groceries", icon: "shopping-cart", label: "Groceries", color: "#34C759" },
@@ -42,14 +43,14 @@ function entry(
   name: string,
   amount: number,
   date: string,
-  extras: Partial<Pick<SpendingEntry, "receiptUrl" | "link">> = {},
+  extras: Partial<Pick<SpendingEntry, "link">> = {},
 ): SpendingEntry {
   return {
     id: `${itemId}-e${index}`,
     name,
     amount,
     date,
-    receiptUrl: extras.receiptUrl ?? null,
+    receiptUrl: null,
     link: extras.link ?? null,
     spendingItemId: itemId,
   };
@@ -185,14 +186,8 @@ export const allIncomeSources: IncomeSource[] = [
   ...incomeSources,
 ];
 
-/** A single spending item (with entries) for feature-component tests. */
-export const spendingItem: SpendingItem = spendingData["2026-06"][0];
-
 /** A single income source for feature-component tests. */
 export const incomeSource: IncomeSource = incomeSources[0];
-
-/** A single category for feature-component tests. */
-export const category: Category = categories[0];
 
 /** Category shape (`{ name, icon, color }`) that card components expect. */
 export const cardCategories = categories.map((c) => ({
@@ -200,3 +195,13 @@ export const cardCategories = categories.map((c) => ({
   icon: c.icon,
   color: c.color,
 }));
+
+/** A three-month `{ label, value }` series shared by chart/trend tests. */
+export const trendSeries = [
+  { label: "Apr", value: 168 },
+  { label: "May", value: 175 },
+  { label: "Jun", value: 208 },
+];
+
+/** Total of the selected-month income sources (a derived display value). */
+export const totalIncome = incomeSources.reduce((sum, i) => sum + i.amount, 0);

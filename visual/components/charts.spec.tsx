@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { DonutChart } from "@/components/ui/donut-chart";
 import { AreaLineChart } from "@/components/area-line-chart";
 import { CategoryTrendCard } from "@/components/trends/category-trend-card";
@@ -6,14 +6,7 @@ import { Sparkline } from "@/components/trends/sparkline";
 import { MiniAreaChart } from "@/components/trends/mini-area-chart";
 import { StatBox } from "@/components/trends/stat-box";
 import { Providers } from "../providers";
-
-const noop = () => {};
-
-const series = [
-  { label: "Apr", value: 168 },
-  { label: "May", value: 175 },
-  { label: "Jun", value: 208 },
-];
+import { noop, trendSeries as series } from "../fixtures";
 
 /** Hand-rolled inline-SVG charts and the small trend widgets built on them. */
 test.describe("Charts", () => {

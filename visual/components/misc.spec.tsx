@@ -1,15 +1,14 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { Logo } from "@/components/logo";
 import { SectionCard } from "@/components/section-card";
 import { IconPicker } from "@/components/icon-picker";
 import { ColorPicker } from "@/components/color-picker";
+import { noop } from "../fixtures";
 
 // Note: StickyBudgetBar is intentionally not tested in isolation — it self-hides
 // (`return null`) until a scroll listener finds the Dashboard's
 // `[data-spending-section]`/`[data-budget-overview]` nodes, so it only renders in
 // the full-page context, not when mounted alone.
-
-const noop = () => {};
 
 test.describe("Misc components", () => {
   test("logo sizes", async ({ mount }) => {

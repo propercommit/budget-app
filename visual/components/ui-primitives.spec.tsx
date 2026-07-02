@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,7 @@ import { CardHeader as ExpandableCardHeader } from "@/components/ui/card-header"
 import { ExpandToggleButton } from "@/components/ui/expand-toggle-button";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { ReceiptViewer } from "@/components/ui/receipt-viewer";
-
-const noop = () => {};
+import { noop } from "../fixtures";
 
 const receiptSvg =
   "<svg xmlns='http://www.w3.org/2000/svg' width='320' height='440'><rect width='100%' height='100%' fill='#f2f2f7'/><text x='50%' y='50%' text-anchor='middle' font-family='sans-serif' font-size='24' fill='#1d1d1f'>Receipt</text></svg>";

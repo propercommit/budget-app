@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { TrendsCard } from "@/components/trends/trends-card";
 import { Providers } from "../providers";
-import { cardCategories } from "../fixtures";
+import { cardCategories, trendSeries } from "../fixtures";
 
 const spendingTrend = [
   { label: "Apr", value: 462.55 },
@@ -16,11 +16,7 @@ const incomeTrend = [
 ];
 
 const categoryTrend: Record<string, { label: string; value: number }[]> = {
-  Groceries: [
-    { label: "Apr", value: 168 },
-    { label: "May", value: 175 },
-    { label: "Jun", value: 208 },
-  ],
+  Groceries: trendSeries,
   "Dining out": [
     { label: "Apr", value: 150 },
     { label: "May", value: 165 },

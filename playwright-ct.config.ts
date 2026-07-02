@@ -37,7 +37,9 @@ export default defineConfig({
   reporter: process.env.CI === "true" ? "line" : [["list"]],
 
   use: {
-    trace: "on-first-retry",
+    // retries is 0, so keep a trace only when a test fails — useful for
+    // debugging a screenshot diff locally.
+    trace: "retain-on-failure",
     ctViteConfig: {
       plugins: [tsconfigPaths(), react()],
       resolve: {

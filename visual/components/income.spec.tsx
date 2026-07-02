@@ -1,11 +1,9 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { IncomeCard } from "@/components/income/income-card";
 import { IncomeDetailPopin } from "@/components/income/popins/income-detail-popin";
 import { IncomePopin } from "@/components/income/popins/income-edit-popin";
 import { Providers } from "../providers";
-import { incomeSources, incomeSource } from "../fixtures";
-
-const noop = () => {};
+import { incomeSources, incomeSource, noop } from "../fixtures";
 
 /** Income feature: the summary card (collapsed donut + expanded list) and popins. */
 test.describe("Income card", () => {

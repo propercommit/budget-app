@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import AccountPage from "@/app/account/page";
 import { Providers } from "../providers";
 

@@ -1,13 +1,11 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import { CategoryRibbon } from "@/components/category/category-ribbon";
 import { CategoryPopin } from "@/components/category/popins/category-popin";
 import { CategoryChip } from "@/components/category-chip";
 import { LegendChip } from "@/components/legend-chip";
 import { Chip } from "@/components/Chip";
 import { Providers } from "../providers";
-import { cardCategories } from "../fixtures";
-
-const noop = () => {};
+import { cardCategories, noop } from "../fixtures";
 
 test.describe("Category components", () => {
   test("ribbon", async ({ mount }) => {

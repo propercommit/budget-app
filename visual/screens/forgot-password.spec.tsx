@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/experimental-ct-react";
+import { test, expect } from "../test";
 import ForgotPasswordPage from "@/app/auth/forgot-password/page";
 
 /**
