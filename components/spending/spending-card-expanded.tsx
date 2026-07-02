@@ -225,8 +225,9 @@ export function SpendingCardExpanded({
                                     </p>
                                 </div>
                             </div>
-                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: "#1D1D1F" }}>
-                                -{formatAmount(entry.amount)}
+                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "#1D1D1F" }}>
+                                {entry.direction === "credit" ? "+" : "-"}
+                                {formatAmount(entry.amount)}
                             </p>
                         </button>
                     ))}

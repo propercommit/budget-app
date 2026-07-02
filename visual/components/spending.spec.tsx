@@ -93,6 +93,20 @@ test.describe("Spending card", () => {
 
     await expect(component).toHaveScreenshot("spending-card-expanded.png");
   });
+
+  test("expanded with a credit entry in the list", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <SpendingCard {...cardProps} entries={[...cardEntries, refundEntry]} isExpanded={true} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Coop refund");
+
+    await expect(component).toHaveScreenshot("spending-card-expanded-credit.png");
+  });
 });
 
 test.describe("Spending popins", () => {
@@ -179,6 +193,26 @@ test.describe("Spending popins", () => {
     await expect(page.getByText("Coop").first()).toBeVisible();
 
     await expect(page).toHaveScreenshot("spending-entry-detail.png");
+  });
+
+  test("entry detail — credit entry", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <EntryDetailPopin
+          isOpen={true}
+          onClose={noop}
+          onEdit={noop}
+          entry={refundEntry}
+          spendingName="Groceries"
+          spendingItemIcon="shopping-cart"
+          spendingCategoryColor="#34C759"
+        />
+      </Providers>,
+    );
+
+    await expect(page.getByText("Coop refund").first()).toBeVisible();
+
+    await expect(page).toHaveScreenshot("spending-entry-detail-credit.png");
   });
 
   test("entry edit — create mode", async ({ mount, page }) => {
