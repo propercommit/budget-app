@@ -3,6 +3,9 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
+// Constants (kept in sync with PUT /api/categories/[id])
+const MAX_LABEL_LENGTH = 30;
+
 // GET /api/categories - Fetch all categories for the authenticated user
 export async function GET() {
     try {
@@ -49,6 +52,13 @@ export async function POST(request: Request) {
         if (!label || typeof label !== "string" || label.trim() === "") {
             return NextResponse.json(
                 { error: "Label is required" },
+                { status: 400 }
+            );
+        }
+
+        if (label.trim().length > MAX_LABEL_LENGTH) {
+            return NextResponse.json(
+                { error: `Label must be ${MAX_LABEL_LENGTH} characters or less` },
                 { status: 400 }
             );
         }

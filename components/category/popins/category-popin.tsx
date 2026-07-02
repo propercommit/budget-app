@@ -6,6 +6,7 @@ import { ColorPicker } from "@/components/color-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
+import { CATEGORY_DELETE_WARNING } from "@/lib/constants";
 
 interface CategoryPopinProps {
     isOpen: boolean;
@@ -16,6 +17,8 @@ interface CategoryPopinProps {
     initialName?: string;
     initialIcon?: string;
     initialColor?: string;
+    /** Stacks this popin above another open popin (e.g. Manage Categories at the default z-50). */
+    zIndex?: number;
 }
 
 export function CategoryPopin({
@@ -27,6 +30,7 @@ export function CategoryPopin({
     initialName = "",
     initialIcon = "shopping-cart",
     initialColor = "#007AFF",
+    zIndex,
 }: CategoryPopinProps) {
     const [name, setName] = useState(initialName);
     const [selectedIcon, setSelectedIcon] = useState(initialIcon);
@@ -58,7 +62,9 @@ export function CategoryPopin({
             setShowErrors(true);
             return;
         }
-        onSave({ name, icon: selectedIcon, color: selectedColor });
+        // The API persists the trimmed label — emit the same value so client
+        // state (snapshots, label filter) never diverges from the server.
+        onSave({ name: name.trim(), icon: selectedIcon, color: selectedColor });
     };
 
     return (
@@ -66,6 +72,7 @@ export function CategoryPopin({
             isOpen={isOpen}
             onClose={onClose}
             title={isCreate ? "New Category" : "Edit Category"}
+            zIndex={zIndex}
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
@@ -91,7 +98,7 @@ export function CategoryPopin({
                     {!isCreate && onDelete && (
                         <DeleteConfirmSection
                             label="Delete Category"
-                            confirmMessage="Are you sure? This will delete all spending items in this category. This cannot be undone."
+                            confirmMessage={CATEGORY_DELETE_WARNING}
                             onDelete={onDelete}
                         />
                     )}

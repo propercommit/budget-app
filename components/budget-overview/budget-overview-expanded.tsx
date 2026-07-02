@@ -85,8 +85,18 @@ function CategoryRow({
                     <span className="text-sm font-medium truncate text-gray-900">
                         {category.name}
                     </span>
-                    <span className="text-sm text-gray-500 flex-shrink-0 ml-2 whitespace-nowrap">
-                        {formatAmount(spent)} / {formatAmount(budget)}
+                    <span className="flex items-center flex-shrink-0 ml-2">
+                        {isOver && (
+                            <span
+                                className="text-xs font-semibold px-1.5 py-0.5 rounded mr-2"
+                                style={{ backgroundColor: 'rgba(255, 59, 48, 0.1)', color: '#FF3B30' }}
+                            >
+                                +{formatAmount(spent - budget)}
+                            </span>
+                        )}
+                        <span className="text-sm text-gray-500 whitespace-nowrap">
+                            {formatAmount(spent)} / {formatAmount(budget)}
+                        </span>
                     </span>
                 </div>
                 <div className="w-full h-1.5 rounded-full overflow-hidden bg-gray-100">
@@ -100,14 +110,6 @@ function CategoryRow({
                     />
                 </div>
             </div>
-            {isOver && (
-                <span 
-                    className="text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
-                    style={{ backgroundColor: 'rgba(255, 59, 48, 0.1)', color: '#FF3B30' }}
-                >
-                    +{formatAmount(spent - budget)}
-                </span>
-            )}
         </div>
     );
 }

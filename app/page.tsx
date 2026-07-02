@@ -66,7 +66,7 @@ export default async function Home() {
   const spendingMonths = [...new Set(spendingItems.map(i => i.month))];
 
   
-  const [categories, incomeSources, allIncomeSources] = await Promise.all([
+  const [categories, incomeSources, allIncomeSources, preWindowItems] = await Promise.all([
     prisma.category.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "asc" },
@@ -79,7 +79,21 @@ export default async function Home() {
       where: { userId: user.id, month: { in: spendingMonths } },
       orderBy: { createdAt: "asc" },
     }),
+    // Entry counts for months older than the loaded window, so the Manage
+    // Categories popin can report what a cascade delete would really destroy
+    // (the items payload above is cut off at `cutoffMonth`).
+    prisma.spendingItem.findMany({
+      where: { userId: user.id, month: { lt: cutoffMonth } },
+      select: {
+        categoryId: true,
+        _count: { select: { spendingEntries: true } },
+      },
+    }),
   ]);
+
+  const preWindowEntryCounts: Record<string, number> = {};
+
+  for (const item of preWindowItems) preWindowEntryCounts[item.categoryId] = (preWindowEntryCounts[item.categoryId] ?? 0) + item._count.spendingEntries;
   
 
   const mappedCategories = categories.map(c => ({
@@ -141,6 +155,7 @@ export default async function Home() {
       initialIncomeSources={mapIncome(incomeSources)}
       initialAllIncomeSources={mapIncome(allIncomeSources)}
       initialMonth={currentMonth}
+      preWindowEntryCounts={preWindowEntryCounts}
     />
   );
 }
