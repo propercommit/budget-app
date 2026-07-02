@@ -1,11 +1,24 @@
 import { test, expect } from "../test";
 import { CategoryRibbon } from "@/components/category/category-ribbon";
 import { CategoryPopin } from "@/components/category/popins/category-popin";
+import { ManageCategoriesPopin } from "@/components/category/popins/manage-categories-popin";
+import { DeleteCategoryDialog } from "@/components/category/popins/delete-category-dialog";
 import { CategoryChip } from "@/components/category-chip";
 import { LegendChip } from "@/components/legend-chip";
 import { Chip } from "@/components/Chip";
 import { Providers } from "../providers";
-import { cardCategories, noop } from "../fixtures";
+import { categories, cardCategories, noop } from "../fixtures";
+
+/** Fixed per-category entry totals; includes a singular ("1 entry") and a zero. */
+const entryCounts: Record<string, number> = {
+  "cat-groceries": 8,
+  "cat-transport": 5,
+  "cat-dining": 12,
+  "cat-housing": 1,
+  "cat-fun": 0,
+};
+
+const noopAsync = async () => {};
 
 test.describe("Category components", () => {
   test("ribbon", async ({ mount }) => {
@@ -17,6 +30,7 @@ test.describe("Category components", () => {
             selectedCategory="Groceries"
             onSelect={noop}
             onAddCategory={noop}
+            onManage={noop}
           />
         </div>
       </Providers>,
@@ -76,5 +90,62 @@ test.describe("Category components", () => {
     );
 
     await expect(page).toHaveScreenshot("category-popin-edit.png");
+  });
+
+  test("manage popin", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <ManageCategoriesPopin
+          isOpen={true}
+          onClose={noop}
+          categories={categories}
+          entryCounts={entryCounts}
+          onEditCategory={noop}
+          onDeleteCategory={noop}
+          onNewCategory={noop}
+        />
+      </Providers>,
+    );
+
+    await expect(page.getByText("Manage Categories")).toBeVisible();
+
+    await expect(page).toHaveScreenshot("category-manage-popin.png");
+  });
+
+  test("manage popin — empty search state", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <ManageCategoriesPopin
+          isOpen={true}
+          onClose={noop}
+          categories={categories}
+          entryCounts={entryCounts}
+          onEditCategory={noop}
+          onDeleteCategory={noop}
+          onNewCategory={noop}
+        />
+      </Providers>,
+    );
+
+    await page.getByPlaceholder("Search categories").fill("zzz");
+    await expect(page.getByText("No categories found")).toBeVisible();
+
+    await expect(page).toHaveScreenshot("category-manage-popin-empty-search.png");
+  });
+
+  test("delete confirmation dialog", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <DeleteCategoryDialog
+          category={categories[0]}
+          onCancel={noop}
+          onConfirm={noopAsync}
+        />
+      </Providers>,
+    );
+
+    await expect(page.getByText('Delete "Groceries"?')).toBeVisible();
+
+    await expect(page).toHaveScreenshot("category-delete-dialog.png");
   });
 });
