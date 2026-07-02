@@ -353,6 +353,35 @@ describe("useSpending — direction-aware entry math", () => {
     expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
   });
 
+  it("flips a 10000-cent debit to credit: spent moves by −20000 and settles unchanged", async () => {
+    let resolve!: () => void;
+    vi.mocked(api.updateEntry).mockReturnValue(
+      new Promise<void>((r) => { resolve = r; }) as ReturnType<typeof api.updateEntry>
+    );
+
+    const start = item({ spent: 10_000, entries: [entry({ amount: 10_000 })] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee", amount: 10_000, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    // Optimistic: unapply the +10000 debit, apply the −10000 credit → net −20000.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-10_000);
+
+    await act(async () => {
+      resolve();
+      await pending;
+    });
+
+    // Settled: the optimistic value already equals the server recompute — no flicker.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-10_000);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
+  });
+
   it("update keeps the stored direction when the form sends none", async () => {
     vi.mocked(api.updateEntry).mockResolvedValue(undefined);
     const start = item({ spent: -425, entries: [entry({ amount: 425, direction: "credit" })] });

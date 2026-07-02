@@ -39,8 +39,8 @@ interface SpendingCardProps {
         note: string;
     }) => void;
     onItemDelete: () => void;
-    onEntryCreate: (data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => void;
-    onEntryUpdate: (entryId: string, data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => void;
+    onEntryCreate: (data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => void;
+    onEntryUpdate: (entryId: string, data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => void;
     onEntryDelete: (entryId: string) => void;
     onCreateCategory: (data: { name: string; icon: string; color: string }) => void;
     isExpanded: boolean;
@@ -123,7 +123,7 @@ export function SpendingCard({
         setShowEntryEdit(true);
     };
 
-    const handleEntrySave = (data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => {
+    const handleEntrySave = (data: { name: string; amount: number; direction: "debit" | "credit"; date: string; receipt: string | null; link: string | null }) => {
         if (entryMode === "create") {
             onEntryCreate(data);
         } else if (selectedEntry) {

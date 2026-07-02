@@ -272,6 +272,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     await createEntry(selectedMonth, item.id, {
                         name: data.name,
                         amount: data.amount,
+                        direction: data.direction,
                         date: data.date,
                         receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
@@ -281,6 +282,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     await updateEntry(selectedMonth, item.id, entryId, {
                         name: data.name,
                         amount: data.amount,
+                        direction: data.direction,
                         date: data.date,
                         receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
