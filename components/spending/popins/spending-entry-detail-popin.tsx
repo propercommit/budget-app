@@ -65,8 +65,9 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                             <p className="text-sm" style={{ color: "#6E6E73" }}>{spendingName}</p>
                         </div>
                     </div>
-                    <p className="text-2xl font-bold" style={{ color: "#FF3B30" }}>
-                        -{formatAmount(entry.amount)}
+                    <p className="text-2xl font-bold" style={{ color: entry.direction === "credit" ? "#34C759" : "#FF3B30" }}>
+                        {entry.direction === "credit" ? "+" : "-"}
+                        {formatAmount(entry.amount)}
                     </p>
                 </div>
 

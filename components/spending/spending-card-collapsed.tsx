@@ -2,6 +2,7 @@
 
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { spentDisplay } from "@/lib/spending/format-spent";
 import { ExpandToggleButton } from "../ui/expand-toggle-button";
 
 interface SpendingCardCollapsedProps {
@@ -29,6 +30,7 @@ export function SpendingCardCollapsed({
     const isOverBudget = amountLeft < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
     const { formatAmount } = useSettings();
+    const spent = spentDisplay(totalSpent, formatAmount);
 
     return (
         <div
@@ -62,8 +64,8 @@ export function SpendingCardCollapsed({
                     {/* Right — Spent/Budget + Chevron */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: "#1D1D1F" }}>
-                               {formatAmount(totalSpent)}
+                            <p className="text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: spent.color }}>
+                               {spent.label}
                             </p>
                             <p className="text-xs whitespace-nowrap" style={{ color: "#6E6E73" }}>
                                 of {formatAmount(budgetNumber)}

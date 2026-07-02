@@ -3,6 +3,7 @@
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { spentDisplay } from "@/lib/spending/format-spent";
 
 interface SpendingItemDetailPopinProps {
     isOpen: boolean;
@@ -36,6 +37,7 @@ export function SpendingItemDetailPopin({
     note,
 }: SpendingItemDetailPopinProps) {
     const { formatAmount } = useSettings();
+    const spent = spentDisplay(totalSpent, formatAmount);
 
     const remaining = budgetNumber - totalSpent;
     const isOverBudget = remaining < 0;
@@ -111,7 +113,7 @@ export function SpendingItemDetailPopin({
                     <div className="flex items-center justify-between mt-3">
                         <div>
                             <span className="text-sm" style={{ color: "#6E6E73" }}>Spent: </span>
-                            <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>{formatAmount(totalSpent)}</span>
+                            <span className="text-sm font-semibold" style={{ color: spent.color }}>{spent.label}</span>
                         </div>
                         <div
                             className="px-2.5 py-1 rounded-full text-xs font-semibold"

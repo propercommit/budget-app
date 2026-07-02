@@ -34,6 +34,18 @@ const cardEntries: SpendingEntry[] = [
   { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), direction: "debit", receipt: null, link: null },
 ];
 
+// A credit (refund) entry: editing it preloads the popin's Credit state —
+// pill on Credit, green "+" sign preview on the amount prefix.
+const refundEntry: SpendingEntry = {
+  id: "e4",
+  name: "Coop refund",
+  date: "2026-06-12",
+  amount: cents(15),
+  direction: "credit",
+  receipt: null,
+  link: null,
+};
+
 const cardProps = {
   spendingName: "Groceries",
   spendingItemIcon: "shopping-cart",
@@ -80,6 +92,50 @@ test.describe("Spending card", () => {
     await expect(component).toContainText("Migros");
 
     await expect(component).toHaveScreenshot("spending-card-expanded.png");
+  });
+
+  test("expanded with a credit entry in the list", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <SpendingCard {...cardProps} entries={[...cardEntries, refundEntry]} isExpanded={true} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Coop refund");
+
+    await expect(component).toHaveScreenshot("spending-card-expanded-credit.png");
+  });
+
+  // Net-credit month (only a refund): spent is negative, so the header must
+  // read "+amount" in green instead of a bare negative number.
+  test("collapsed with net-credit spent", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <SpendingCard {...cardProps} entries={[refundEntry]} isExpanded={false} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Groceries");
+
+    await expect(component).toHaveScreenshot("spending-card-collapsed-net-credit.png");
+  });
+
+  test("expanded with net-credit spent", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <SpendingCard {...cardProps} entries={[refundEntry]} isExpanded={true} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Coop refund");
+
+    await expect(component).toHaveScreenshot("spending-card-expanded-net-credit.png");
   });
 });
 
@@ -169,6 +225,26 @@ test.describe("Spending popins", () => {
     await expect(page).toHaveScreenshot("spending-entry-detail.png");
   });
 
+  test("entry detail — credit entry", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <EntryDetailPopin
+          isOpen={true}
+          onClose={noop}
+          onEdit={noop}
+          entry={refundEntry}
+          spendingName="Groceries"
+          spendingItemIcon="shopping-cart"
+          spendingCategoryColor="#34C759"
+        />
+      </Providers>,
+    );
+
+    await expect(page.getByText("Coop refund").first()).toBeVisible();
+
+    await expect(page).toHaveScreenshot("spending-entry-detail-credit.png");
+  });
+
   test("entry edit — create mode", async ({ mount, page }) => {
     await mount(
       <Providers>
@@ -208,5 +284,26 @@ test.describe("Spending popins", () => {
     );
 
     await expect(page).toHaveScreenshot("spending-entry-edit-edit.png");
+  });
+
+  test("entry edit — edit mode with credit selected", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <EntryEditPopin
+          isOpen={true}
+          onClose={noop}
+          onSave={noop}
+          onDelete={noop}
+          mode="edit"
+          entry={refundEntry}
+          spendingName="Groceries"
+          spendingItemIcon="shopping-cart"
+          spendingCategoryName="Groceries"
+          spendingCategoryColor="#34C759"
+        />
+      </Providers>,
+    );
+
+    await expect(page).toHaveScreenshot("spending-entry-edit-credit.png");
   });
 });
