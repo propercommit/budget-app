@@ -431,3 +431,47 @@ describe("useSpending — month isolation", () => {
     expect(result.current.spendingData["2026-05"]).toEqual([other]);
   });
 });
+
+describe("useSpending — category cascade mirrors (local state only)", () => {
+  it("removeItemsByCategory drops the category's items across every loaded month", () => {
+    const { result } = renderHook(() =>
+      useSpending({
+        "2026-05": [item({ id: "s1", month: "2026-05", categoryId: "c1" }), item({ id: "s2", month: "2026-05", categoryId: "c2" })],
+        [MONTH]: [item({ id: "s3", categoryId: "c1" })],
+      })
+    );
+
+    act(() => {
+      result.current.removeItemsByCategory("c1");
+    });
+
+    expect(result.current.spendingData["2026-05"].map((i) => i.id)).toEqual(["s2"]);
+    expect(result.current.spendingData[MONTH]).toEqual([]);
+    expect(api.deleteSpending).not.toHaveBeenCalled();
+    expect(api.getSpending).not.toHaveBeenCalled();
+  });
+
+  it("updateCategoryOnItems refreshes the embedded category snapshot everywhere", () => {
+    const oldCat = { id: "c1", label: "Groceries", icon: "cart", color: "#34C759" };
+    const { result } = renderHook(() =>
+      useSpending({
+        "2026-05": [item({ id: "s1", month: "2026-05", categoryId: "c1", category: oldCat })],
+        [MONTH]: [
+          item({ id: "s2", categoryId: "c1", category: oldCat }),
+          item({ id: "s3", categoryId: "c2", category: { id: "c2", label: "Transport", icon: "car", color: "#007AFF" } }),
+        ],
+      })
+    );
+
+    const renamed = { id: "c1", label: "Food", icon: "fork", color: "#FF3B30" };
+
+    act(() => {
+      result.current.updateCategoryOnItems(renamed);
+    });
+
+    expect(result.current.spendingData["2026-05"][0].category).toEqual(renamed);
+    expect(result.current.spendingData[MONTH][0].category).toEqual(renamed);
+    // Other categories' items are untouched.
+    expect(result.current.spendingData[MONTH][1].category?.label).toBe("Transport");
+  });
+});

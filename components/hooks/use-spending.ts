@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from "@/lib/api";
-import { SpendingItem } from "@/lib/types";
+import { Category, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import toast from "react-hot-toast";
 
@@ -260,6 +260,29 @@ export function useSpending(initialSpendingData?: SpendingData) {
     }
   }, []);
 
+  const updateAllMonths = useCallback((fn: (items: SpendingItem[]) => SpendingItem[]) => {
+    setSpendingData(prev => Object.fromEntries(Object.entries(prev).map(([month, items]) => [month, fn(items)])));
+  }, []);
+
+  /**
+   * Mirrors a category cascade delete in client state: drops the category's
+   * spending items (and with them their entries) across ALL loaded months.
+   * Pure local filter — the server rows are already gone via the DB cascade.
+   */
+  const removeItemsByCategory = useCallback((categoryId: string) => {
+    updateAllMonths(items => items.filter(i => i.categoryId !== categoryId));
+  }, [updateAllMonths]);
+
+  /**
+   * Mirrors a category edit in client state: refreshes the category snapshot
+   * embedded on every loaded spending item of that category. Cards, the label
+   * filter and trends read the embedded copy, not the categories list, so a
+   * rename/recolor would otherwise render stale until a full reload.
+   */
+  const updateCategoryOnItems = useCallback((category: Category) => {
+    updateAllMonths(items => items.map(i => i.categoryId === category.id ? { ...i, category } : i));
+  }, [updateAllMonths]);
+
   return {
     spendingData,
     isLoading,
@@ -270,5 +293,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
     createEntry,
     updateEntry,
     deleteEntry,
+    removeItemsByCategory,
+    updateCategoryOnItems,
   };
 }

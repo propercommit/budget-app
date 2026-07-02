@@ -94,7 +94,8 @@ describe("useCategories — create (optimistic)", () => {
 
     expect(result.current.categories).toEqual([]);
     expect(returned).toBeNull();
-    expect(toast.error).toHaveBeenCalledWith("Failed to create category");
+    // The rejection's message is surfaced (e.g. the friendly duplicate 409).
+    expect(toast.error).toHaveBeenCalledWith("boom");
   });
 });
 
@@ -103,10 +104,12 @@ describe("useCategories — update (optimistic)", () => {
     vi.mocked(api.updateCategory).mockResolvedValue(undefined);
     const { result } = renderHook(() => useCategories([cat()]));
 
+    let ok = false;
     await act(async () => {
-      await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
+      ok = await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
     });
 
+    expect(ok).toBe(true);
     expect(result.current.categories[0]).toMatchObject({
       id: "c1",
       label: "Food",
@@ -120,16 +123,29 @@ describe("useCategories — update (optimistic)", () => {
     });
   });
 
-  it("restores the original on failure and toasts", async () => {
-    vi.mocked(api.updateCategory).mockRejectedValue(new Error("nope"));
+  it("restores the original on failure and surfaces the server message", async () => {
+    vi.mocked(api.updateCategory).mockRejectedValue(new Error("A category with this name already exists"));
     const original = cat();
     const { result } = renderHook(() => useCategories([original]));
+
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
+    });
+
+    expect(ok).toBe(false);
+    expect(result.current.categories[0]).toEqual(original);
+    expect(toast.error).toHaveBeenCalledWith("A category with this name already exists");
+  });
+
+  it("falls back to a generic toast when the rejection has no message", async () => {
+    vi.mocked(api.updateCategory).mockRejectedValue("kaboom");
+    const { result } = renderHook(() => useCategories([cat()]));
 
     await act(async () => {
       await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
     });
 
-    expect(result.current.categories[0]).toEqual(original);
     expect(toast.error).toHaveBeenCalledWith("Failed to update category");
   });
 

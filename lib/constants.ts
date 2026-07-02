@@ -42,3 +42,6 @@ export const DATE_FORMAT_FULL_TOKENS: Record<DateFormat, string> = {
   "DD/MM/YYYY": "EEEE d MMMM yyyy",
   "YYYY-MM-DD": "yyyy-MM-dd, EEEE",
 };
+
+/** Shared by every category-delete affordance so the warning never drifts. */
+export const CATEGORY_DELETE_WARNING = "Are you sure? This will delete all spending items in this category. This cannot be undone.";

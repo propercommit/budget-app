@@ -2,14 +2,23 @@ const USER_ID = "temp-user";
 
 // Helper to make API requests
 async function fetchAPI(url: string, options?: RequestInit) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-id": USER_ID,
-      ...options?.headers,
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": USER_ID,
+        ...options?.headers,
+      },
+    });
+  } catch (error) {
+    // fetch() rejects with a transport-level TypeError ("Failed to fetch");
+    // normalize it so callers can surface error messages to users verbatim.
+    console.error("Network error calling", url, error);
+    throw new Error("Network error. Please try again.");
+  }
 
   if (response.ok === false) {
     const body = await response.json().catch(() => ({}));

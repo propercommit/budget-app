@@ -19,6 +19,7 @@ import { BudgetOverviewCard } from "./budget-overview/budget-overview";
 import { SpendingItemEditPopin } from "./spending/popins/spending-item-edit-popin";
 import { CategoryPopin } from "./category/popins/category-popin";
 import { ManageCategoriesPopin } from "./category/popins/manage-categories-popin";
+import { DeleteCategoryDialog } from "./category/popins/delete-category-dialog";
 import { countCategoryEntries } from "@/lib/category-entry-counts";
 import { IncomePopin } from "./income/popins/income-edit-popin";
 import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
@@ -42,7 +43,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
-    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry } = useSpending(initialSpendingData);
+    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
@@ -57,6 +58,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);
     const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
     const [manageCategoriesKey, setManageCategoriesKey] = useState(0);
+    const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
     const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
     const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
@@ -91,12 +93,43 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         };
     });
 
+    const handleSaveCategory = async (data: { name: string; icon: string; color: string }) => {
+
+        const currentEditing = editingCategory;
+        setIsCategoryPopinOpen(false);
+        setEditingCategory(null);
+
+        if (currentEditing) {
+            const success = await updateCategory(currentEditing.id, data.name, data.icon, data.color);
+
+            if (success) {
+                // Items embed a category snapshot — refresh it so the cards,
+                // label filter and trends don't render stale.
+                updateCategoryOnItems({ id: currentEditing.id, label: data.name, icon: data.icon, color: data.color });
+
+                // The filter holds the label string — remap it on rename so
+                // the selection doesn't strand.
+                if (selectedCategory === currentEditing.label) setSelectedCategory(data.name);
+            }
+        } else {
+            const created = await addCategory(data.name, data.icon, data.color);
+            if (created) setLastCreatedCategoryName(data.name);
+        }
+    };
+
     const handleDeleteCategory = async (id: string) => {
+
         const deleted = categories.find(c => c.id === id);
         const success = await deleteCategory(id);
-        if (success && deleted && selectedCategory === deleted.label) {
-        setSelectedCategory("all");
-        }
+
+        if (!success) return;
+
+        // Mirror the DB cascade client-side: the category's items (and their
+        // entries) are gone across all months, so trends/overview/carousel
+        // must not keep rendering them.
+        removeItemsByCategory(id);
+
+        if (deleted !== undefined && selectedCategory === deleted.label) setSelectedCategory("all");
     };
 
     const handleOpenAddIncome = () => {
@@ -448,8 +481,11 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             onClose={() => setIsManageCategoriesOpen(false)}
             categories={categories}
             entryCounts={categoryEntryCounts}
-            onEditCategory={() => {}}
-            onDeleteCategory={() => {}}
+            onEditCategory={(category) => {
+            setEditingCategory(category);
+            setIsCategoryPopinOpen(true);
+            }}
+            onDeleteCategory={setDeletingCategory}
             onNewCategory={handleOpenCreateCategory}
         />
 
@@ -462,17 +498,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             setEditingCategory(null);
             }}
 
-            onSave={async (data) => {
-                const currentEditing = editingCategory;
-                setIsCategoryPopinOpen(false);
-                setEditingCategory(null);
-                if (currentEditing) {
-                    await updateCategory(currentEditing.id, data.name, data.icon, data.color);
-                } else {
-                    const created = await addCategory(data.name, data.icon, data.color);
-                    if (created) setLastCreatedCategoryName(data.name);
-                }
-            }}
+            onSave={handleSaveCategory}
 
             onDelete={editingCategory ? async () => {
                 const id = editingCategory.id;
@@ -486,6 +512,17 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             initialIcon={editingCategory?.icon ?? "shopping-cart"}
             initialColor={editingCategory?.color ?? "#007AFF"}
         />
+
+        {deletingCategory !== null && (
+            <DeleteCategoryDialog
+                category={deletingCategory}
+                onCancel={() => setDeletingCategory(null)}
+                onConfirm={async () => {
+                    await handleDeleteCategory(deletingCategory.id);
+                    setDeletingCategory(null);
+                }}
+            />
+        )}
 
         <IncomePopin
             key={editingIncomeSource?.id ?? `add-${incomePopinKey}`}
