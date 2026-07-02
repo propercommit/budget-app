@@ -194,6 +194,22 @@ describe("POST /api/spending", () => {
     expect((body as { entries: unknown[] }).entries).toEqual([{ id: "e1" }]);
   });
 
+  it("accepts and persists a negative spent (signed)", async () => {
+    prismaMock.category.findFirst.mockResolvedValue({ id: "cat-1" });
+    prismaMock.spendingItem.create.mockResolvedValue({
+      id: "s1",
+      spendingEntries: [],
+    });
+
+    const { status } = await readJson(
+      await POST(jsonRequest({ ...validBody, spent: -15_000 }))
+    );
+    expect(status).toBe(201);
+
+    const arg = prismaMock.spendingItem.create.mock.calls[0][0];
+    expect(arg.data.spent).toBe(-15_000);
+  });
+
   // SpendingItem has @@unique([userId, name, month]); a duplicate raises a Prisma
   // P2002, which the route translates into a friendly 409 rather than a 500.
   it("translates a duplicate (name,month) P2002 into a 409", async () => {

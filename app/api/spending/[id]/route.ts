@@ -65,13 +65,14 @@ export async function PUT(
             }
         }
 
-        // Validate spent if provided
+        // Validate spent if provided — signed: credits can push a card's spent
+        // negative (see lib/spending/math.ts), so only the magnitude is capped
         if (spent !== undefined) {
             if (typeof spent !== "number" || !Number.isFinite(spent)) {
                 return NextResponse.json({ error: "Spent must be a valid number" }, { status: 400 });
             }
-            if (spent < MIN_AMOUNT_CENTS || spent > MAX_AMOUNT_CENTS) {
-                return NextResponse.json({ error: `Spent must be between ${MIN_AMOUNT_CENTS / 100} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` }, { status: 400 });
+            if (spent < -MAX_AMOUNT_CENTS || spent > MAX_AMOUNT_CENTS) {
+                return NextResponse.json({ error: `Spent must be between ${(-MAX_AMOUNT_CENTS / 100).toLocaleString()} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` }, { status: 400 });
             }
         }
 

@@ -49,12 +49,32 @@ describe("PUT /api/spending/[id]", () => {
     expect(body).toEqual({ error: "At least one field is required to update" });
   });
 
-  it("400 when spent is out of range", async () => {
-    const { status, body } = await readJson(
+  it("accepts a negative spent — signed spent is valid data", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingItem.update.mockResolvedValue({ id: "s1", spendingEntries: [] });
+
+    const { status } = await readJson(
       await PUT(jsonRequest({ spent: -1 }), routeContext("s1"))
     );
+    expect(status).toBe(200);
+  });
+
+  it("persists a negative spent as-is (credit-only card)", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingItem.update.mockResolvedValue({ id: "s1", spendingEntries: [] });
+
+    await PUT(jsonRequest({ spent: -15_000 }), routeContext("s1"));
+
+    const arg = prismaMock.spendingItem.update.mock.calls[0][0];
+    expect(arg.data.spent).toBe(-15_000);
+  });
+
+  it("400 when spent exceeds the magnitude cap", async () => {
+    const { status, body } = await readJson(
+      await PUT(jsonRequest({ spent: -10_000_000_001 }), routeContext("s1"))
+    );
     expect(status).toBe(400);
-    expect(body).toEqual({ error: "Spent must be between 0 and 100,000,000" });
+    expect(body).toEqual({ error: "Spent must be between -100,000,000 and 100,000,000" });
   });
 
   it("404 when item not found", async () => {

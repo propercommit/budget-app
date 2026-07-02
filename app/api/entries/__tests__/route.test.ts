@@ -112,7 +112,7 @@ describe("POST /api/entries", () => {
   it("accepts a valid https link", async () => {
     prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
     prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });
-    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 450 }]);
+    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 450, direction: "debit" }]);
     prismaMock.spendingItem.update.mockResolvedValue({});
     const { status } = await readJson(
       await POST(jsonRequest({ ...validBody, link: "https://shop.example.com/x" }))
@@ -142,8 +142,8 @@ describe("POST /api/entries", () => {
     // Amounts are integer cents: 10 + 20 = 30 exactly (the classic 0.1 + 0.2
     // float case, now drift-free).
     prismaMock.spendingEntry.findMany.mockResolvedValue([
-      { amount: 10 },
-      { amount: 20 },
+      { amount: 10, direction: "debit" },
+      { amount: 20, direction: "debit" },
     ]);
     prismaMock.spendingItem.update.mockResolvedValue({});
 
@@ -157,6 +157,76 @@ describe("POST /api/entries", () => {
       data: { spent: 30 },
     });
     expect(updateArg.data.spent).toBe(30);
+  });
+
+  it("400 when direction is not debit or credit", async () => {
+    const { status, body } = await readJson(
+      await POST(jsonRequest({ ...validBody, direction: "refund" }))
+    );
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: 'Direction must be "debit" or "credit"' });
+    expect(prismaMock.spendingEntry.create).not.toHaveBeenCalled();
+  });
+
+  it("defaults direction to debit when omitted", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });
+    prismaMock.spendingEntry.findMany.mockResolvedValue([]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    await POST(jsonRequest(validBody));
+
+    const arg = prismaMock.spendingEntry.create.mock.calls[0][0];
+    expect(arg.data.direction).toBe("debit");
+  });
+
+  it("persists an explicit credit direction", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });
+    prismaMock.spendingEntry.findMany.mockResolvedValue([]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    await POST(jsonRequest({ ...validBody, direction: "credit" }));
+
+    const arg = prismaMock.spendingEntry.create.mock.calls[0][0];
+    expect(arg.data.direction).toBe("credit");
+  });
+
+  it("recomputes spent as a signed sum over mixed directions", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e3" });
+    // 200.00 debit + 150.00 credit → 50.00 (5000 cents), exact.
+    prismaMock.spendingEntry.findMany.mockResolvedValue([
+      { amount: 20_000, direction: "debit" },
+      { amount: 15_000, direction: "credit" },
+    ]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    await POST(jsonRequest({ ...validBody, direction: "credit" }));
+
+    expect(prismaMock.spendingItem.update).toHaveBeenCalledWith({
+      where: { id: "s1" },
+      data: { spent: 5_000 },
+    });
+  });
+
+  it("persists a negative spent as-is when the card holds only a credit", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });
+    // Months-split case: the refund lands in a later month than the expense,
+    // so that month's card holds only the credit. Negative spent is valid
+    // data and must be stored unclamped.
+    prismaMock.spendingEntry.findMany.mockResolvedValue([
+      { amount: 15_000, direction: "credit" },
+    ]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    await POST(jsonRequest({ ...validBody, direction: "credit" }));
+
+    expect(prismaMock.spendingItem.update).toHaveBeenCalledWith({
+      where: { id: "s1" },
+      data: { spent: -15_000 },
+    });
   });
 
   it("defaults date to now when omitted", async () => {
