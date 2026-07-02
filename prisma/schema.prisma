@@ -88,10 +88,16 @@ model IncomeSource {
   @@index([userId, month])
 }
 
+enum Direction {
+  debit
+  credit
+}
+
 model SpendingEntry {
   id              String    @id             @default(cuid())
   name            String
-  amount          Int       @default(0) // integer minor units (cents)
+  amount          Int       @default(0) // integer minor units (cents); always a positive magnitude — sign comes from direction
+  direction       Direction @default(debit)
   receiptUrl      String?
   link            String?
   date            DateTime  @default(now())
