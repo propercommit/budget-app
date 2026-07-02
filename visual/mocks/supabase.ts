@@ -44,6 +44,7 @@ export function createClient() {
       signUp: () => Promise.resolve({ data: {}, error: null }),
       signOut: () => Promise.resolve({ error: null }),
       updateUser: () => Promise.resolve({ data: { user: FAKE_USER }, error: null }),
+      resetPasswordForEmail: () => Promise.resolve({ data: {}, error: null }),
     },
     storage: {
       from: () => ({
