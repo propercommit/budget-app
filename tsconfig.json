@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
 , "components/category/popins/category-creation-popin.tsx", "components/spending-card", "components/account/page.old"  ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "playwright-ct.config.ts"]
 }
