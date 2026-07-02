@@ -20,11 +20,19 @@ const entryCounts: Record<string, number> = {
 
 const noopAsync = async () => {};
 
+/** More categories than the desktop pill budget, to trigger the "+N" peek. */
+const manyCardCategories = [
+  ...cardCategories,
+  { name: "Gifts", icon: "piggy-bank", color: "#FF3B30" },
+  { name: "Utilities", icon: "lightbulb", color: "#FF9F0A" },
+  { name: "Kids", icon: "zap", color: "#5E6B7B" },
+];
+
 test.describe("Category components", () => {
   test("ribbon", async ({ mount }) => {
     const component = await mount(
       <Providers>
-        <div className="max-w-md p-4">
+        <div className="p-4">
           <CategoryRibbon
             categories={cardCategories}
             selectedCategory="Groceries"
@@ -39,6 +47,49 @@ test.describe("Category components", () => {
     await expect(component).toContainText("Groceries");
 
     await expect(component).toHaveScreenshot("category-ribbon.png");
+  });
+
+  test("ribbon — many categories (+N pill)", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="p-4">
+          <CategoryRibbon
+            categories={manyCardCategories}
+            selectedCategory="Groceries"
+            onSelect={noop}
+            onAddCategory={noop}
+            onManage={noop}
+          />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Groceries");
+
+    await expect(component).toHaveScreenshot("category-ribbon-overflow.png");
+  });
+
+  test("ribbon — overflow peek open", async ({ mount, page }, testInfo) => {
+    testInfo.skip(testInfo.project.name === "mobile", "The +N peek is a desktop-only affordance");
+
+    await mount(
+      <Providers>
+        <div className="p-4" style={{ minHeight: 400 }}>
+          <CategoryRibbon
+            categories={manyCardCategories}
+            selectedCategory="Groceries"
+            onSelect={noop}
+            onAddCategory={noop}
+            onManage={noop}
+          />
+        </div>
+      </Providers>,
+    );
+
+    await page.getByRole("button", { name: "+3" }).hover();
+    await expect(page.getByRole("button", { name: "Utilities" })).toBeVisible();
+
+    await expect(page).toHaveScreenshot("category-ribbon-peek-open.png");
   });
 
   test("chips — selected and unselected", async ({ mount }) => {

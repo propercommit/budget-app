@@ -99,8 +99,9 @@ describe("Dashboard — category management wiring", () => {
     vi.mocked(api.deleteCategory).mockResolvedValue({ success: true });
     renderDashboard();
 
-    // Filter down to Groceries via its ribbon pill.
-    fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    // Filter down to Groceries via its ribbon pill (the ribbon renders both
+    // its responsive rows in jsdom, so pill queries use getAllByRole).
+    fireEvent.click(screen.getAllByRole("button", { name: "Groceries" })[0]);
 
     expect(screen.getByText("Weekly shop")).toBeDefined();
     expect(screen.queryByText("Bus pass")).toBeNull();
@@ -122,7 +123,7 @@ describe("Dashboard — category management wiring", () => {
 
     // Dialog closed; the deleted category left the ribbon and the manage list.
     expect(screen.queryByText('Delete "Groceries"?')).toBeNull();
-    expect(screen.queryByRole("button", { name: "Groceries" })).toBeNull();
+    expect(screen.queryAllByRole("button", { name: "Groceries" })).toHaveLength(0);
     expect(screen.queryByRole("button", { name: "Delete Groceries" })).toBeNull();
   });
 
@@ -148,7 +149,7 @@ describe("Dashboard — category management wiring", () => {
     renderDashboard();
 
     // Select Groceries, then rename it to Food from the manage popin.
-    fireEvent.click(screen.getByRole("button", { name: "Groceries" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Groceries" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Manage" }));
     fireEvent.click(screen.getByRole("button", { name: "Edit Groceries" }));
 
@@ -167,8 +168,8 @@ describe("Dashboard — category management wiring", () => {
 
     // The filter followed the rename (item still visible, not stranded), and
     // the renamed pill exists while the old label's pill is gone.
-    await waitFor(() => expect(screen.getByRole("button", { name: "Food" })).toBeDefined());
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Food" }).length).toBeGreaterThan(0));
     expect(screen.getByText("Weekly shop")).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Groceries" })).toBeNull();
+    expect(screen.queryAllByRole("button", { name: "Groceries" })).toHaveLength(0);
   });
 });
