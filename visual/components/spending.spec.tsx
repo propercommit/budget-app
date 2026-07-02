@@ -5,7 +5,7 @@ import { SpendingItemEditPopin } from "@/components/spending/popins/spending-ite
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
 import { EntryEditPopin } from "@/components/spending/popins/spending-entry-edit-popin";
 import { Providers } from "../providers";
-import { cardCategories, noop } from "../fixtures";
+import { cardCategories, noop, cents } from "../fixtures";
 
 /**
  * Spending feature: the carousel card (collapsed + expanded) and every popin
@@ -21,15 +21,15 @@ const coopEntry = {
   id: "e2",
   name: "Coop",
   date: "2026-06-11",
-  amount: 52.75,
+  amount: cents(52.75),
   receipt: null,
   link: "https://example.com/receipt",
 };
 
 const cardEntries = [
-  { id: "e1", name: "Migros", date: "2026-06-03", amount: 84.2, receipt: null, link: null },
+  { id: "e1", name: "Migros", date: "2026-06-03", amount: cents(84.2), receipt: null, link: null },
   coopEntry,
-  { id: "e3", name: "Farmers market", date: "2026-06-18", amount: 31.5, receipt: null, link: null },
+  { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), receipt: null, link: null },
 ];
 
 const cardProps = {
@@ -37,7 +37,7 @@ const cardProps = {
   spendingItemIcon: "shopping-cart",
   categoryName: "Groceries",
   spendingCategoryColor: "#34C759",
-  budgetNumber: 600,
+  budgetNumber: cents(600),
   startDate: "2026-06-01",
   note: "Weekly supermarket runs",
   entries: cardEntries,
@@ -93,8 +93,8 @@ test.describe("Spending popins", () => {
           spendingItemIcon="shopping-cart"
           categoryName="Groceries"
           spendingCategoryColor="#34C759"
-          budgetNumber={600}
-          totalSpent={168.45}
+          budgetNumber={cents(600)}
+          totalSpent={cents(168.45)}
           entriesCount={3}
           startDate="2026-06-01"
           note="Weekly supermarket runs"

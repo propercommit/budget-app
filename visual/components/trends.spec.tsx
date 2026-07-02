@@ -1,26 +1,26 @@
 import { test, expect } from "../test";
 import { TrendsCard } from "@/components/trends/trends-card";
 import { Providers } from "../providers";
-import { cardCategories, trendSeries } from "../fixtures";
+import { cardCategories, trendSeries, cents } from "../fixtures";
 
 const spendingTrend = [
-  { label: "Apr", value: 462.55 },
-  { label: "May", value: 495.3 },
-  { label: "Jun", value: 528.25 },
+  { label: "Apr", value: cents(462.55) },
+  { label: "May", value: cents(495.3) },
+  { label: "Jun", value: cents(528.25) },
 ];
 
 const incomeTrend = [
-  { label: "Apr", value: 5000 },
-  { label: "May", value: 5500 },
-  { label: "Jun", value: 5520 },
+  { label: "Apr", value: cents(5000) },
+  { label: "May", value: cents(5500) },
+  { label: "Jun", value: cents(5520) },
 ];
 
 const categoryTrend: Record<string, { label: string; value: number }[]> = {
   Groceries: trendSeries,
   "Dining out": [
-    { label: "Apr", value: 150 },
-    { label: "May", value: 165 },
-    { label: "Jun", value: 190 },
+    { label: "Apr", value: cents(150) },
+    { label: "May", value: cents(165) },
+    { label: "Jun", value: cents(190) },
   ],
 };
 

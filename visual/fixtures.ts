@@ -2,8 +2,9 @@
  * Deterministic fixture data for visual-regression tests.
  *
  * Every value is fixed — months, dates, amounts, ids — so screenshots are
- * byte-stable across runs and never depend on the real current date. Amounts
- * are major-unit numbers (the same shape `app/page.tsx` hands to `<Dashboard>`);
+ * byte-stable across runs and never depend on the real current date. Money is
+ * stored as integer cents (the app's unit; components divide by 100 only at the
+ * display edge) — written major-unit via the `cents()` helper for legibility.
  * `spent` on a spending item is always the exact sum of its entries so
  * component-level tests match what the server recomputes on load.
  *
@@ -23,6 +24,14 @@ export const SELECTED_MONTH = "2026-06";
 
 /** No-op callback for the many handler props that visual tests never fire. */
 export const noop = () => {};
+
+/**
+ * Convert a readable major-unit amount to the integer cents the app now uses
+ * everywhere (components divide by 100 only at the display edge via
+ * `formatAmount`). Written major-unit in the fixtures for legibility, stored as
+ * cents so screenshots render the intended values.
+ */
+export const cents = (major: number) => Math.round(major * 100);
 
 export const categories: Category[] = [
   { id: "cat-groceries", icon: "shopping-cart", label: "Groceries", color: "#34C759" },
@@ -83,33 +92,33 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       id: groceries,
       name: "Groceries",
       icon: "shopping-cart",
-      budgeted: 600,
+      budgeted: cents(600),
       month,
       startDate: `${month}-01`,
       endDate: null,
       note: "Weekly supermarket runs",
       categoryId: "cat-groceries",
       entries: [
-        entry(groceries, 1, "Migros", 84.2 + scale, `${month}-03`),
-        entry(groceries, 2, "Coop", 52.75, `${month}-11`, {
+        entry(groceries, 1, "Migros", cents(84.2 + scale), `${month}-03`),
+        entry(groceries, 2, "Coop", cents(52.75), `${month}-11`, {
           link: "https://example.com/receipt",
         }),
-        entry(groceries, 3, "Farmers market", 31.5, `${month}-18`),
+        entry(groceries, 3, "Farmers market", cents(31.5), `${month}-18`),
       ],
     }),
     item({
       id: transport,
       name: "Transport",
       icon: "car",
-      budgeted: 200,
+      budgeted: cents(200),
       month,
       startDate: `${month}-01`,
       endDate: null,
       note: null,
       categoryId: "cat-transport",
       entries: [
-        entry(transport, 1, "Fuel", 78.4, `${month}-06`),
-        entry(transport, 2, "Parking", 24.0, `${month}-20`),
+        entry(transport, 1, "Fuel", cents(78.4), `${month}-06`),
+        entry(transport, 2, "Parking", cents(24.0), `${month}-20`),
       ],
     }),
     // Deliberately over budget to exercise the over-budget card state.
@@ -117,16 +126,16 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       id: dining,
       name: "Dining out",
       icon: "coffee",
-      budgeted: 150,
+      budgeted: cents(150),
       month,
       startDate: `${month}-01`,
       endDate: null,
       note: "Restaurants & cafés",
       categoryId: "cat-dining",
       entries: [
-        entry(dining, 1, "Sushi bar", 96.0 + scale, `${month}-08`),
-        entry(dining, 2, "Coffee", 42.5, `${month}-14`),
-        entry(dining, 3, "Pizza night", 38.9, `${month}-25`),
+        entry(dining, 1, "Sushi bar", cents(96.0 + scale), `${month}-08`),
+        entry(dining, 2, "Coffee", cents(42.5), `${month}-14`),
+        entry(dining, 3, "Pizza night", cents(38.9), `${month}-25`),
       ],
     }),
     // No entries → no spend yet, full budget remaining.
@@ -134,7 +143,7 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       id: housing,
       name: "Home supplies",
       icon: "home",
-      budgeted: 120,
+      budgeted: cents(120),
       month,
       startDate: `${month}-01`,
       endDate: null,
@@ -174,15 +183,15 @@ function income(
 
 /** Income for the selected month only (what the income card renders). */
 export const incomeSources: IncomeSource[] = [
-  income("income-salary-2026-06", "Salary", 5200, "briefcase", "active", "2026-06", "Monthly net pay"),
-  income("income-dividends-2026-06", "Dividends", 320, "trending-up", "passive", "2026-06"),
+  income("income-salary-2026-06", "Salary", cents(5200), "briefcase", "active", "2026-06", "Monthly net pay"),
+  income("income-dividends-2026-06", "Dividends", cents(320), "trending-up", "passive", "2026-06"),
 ];
 
 /** Income across all three months, driving the trends dataset. */
 export const allIncomeSources: IncomeSource[] = [
-  income("income-salary-2026-04", "Salary", 5000, "briefcase", "active", "2026-04"),
-  income("income-salary-2026-05", "Salary", 5200, "briefcase", "active", "2026-05"),
-  income("income-dividends-2026-05", "Dividends", 300, "trending-up", "passive", "2026-05"),
+  income("income-salary-2026-04", "Salary", cents(5000), "briefcase", "active", "2026-04"),
+  income("income-salary-2026-05", "Salary", cents(5200), "briefcase", "active", "2026-05"),
+  income("income-dividends-2026-05", "Dividends", cents(300), "trending-up", "passive", "2026-05"),
   ...incomeSources,
 ];
 
@@ -198,9 +207,9 @@ export const cardCategories = categories.map((c) => ({
 
 /** A three-month `{ label, value }` series shared by chart/trend tests. */
 export const trendSeries = [
-  { label: "Apr", value: 168 },
-  { label: "May", value: 175 },
-  { label: "Jun", value: 208 },
+  { label: "Apr", value: cents(168) },
+  { label: "May", value: cents(175) },
+  { label: "Jun", value: cents(208) },
 ];
 
 /** Total of the selected-month income sources (a derived display value). */

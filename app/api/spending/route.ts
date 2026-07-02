@@ -5,8 +5,8 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 const MAX_NAME_LENGTH = 100;
-const MAX_AMOUNT = 100_000_000;
-const MIN_AMOUNT = 0;
+const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
+const MIN_AMOUNT_CENTS = 0;
 const MAX_NOTE_LENGTH = 500;
 
 type SpendingItemWithEntries = {
@@ -158,8 +158,8 @@ export async function POST(request: Request) {
             if (typeof budgeted !== "number" || !Number.isFinite(budgeted)) {
                 return NextResponse.json({ error: "Budgeted must be a valid number" }, { status: 400 });
             }
-            if (budgeted < MIN_AMOUNT || budgeted > MAX_AMOUNT) {
-                return NextResponse.json({ error: `Budgeted must be between ${MIN_AMOUNT} and ${MAX_AMOUNT.toLocaleString()}` }, { status: 400 });
+            if (budgeted < MIN_AMOUNT_CENTS || budgeted > MAX_AMOUNT_CENTS) {
+                return NextResponse.json({ error: `Budgeted must be between ${MIN_AMOUNT_CENTS / 100} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` }, { status: 400 });
             }
         }
 
@@ -168,8 +168,8 @@ export async function POST(request: Request) {
             if (typeof spent !== "number" || !Number.isFinite(spent)) {
                 return NextResponse.json({ error: "Spent must be a valid number" }, { status: 400 });
             }
-            if (spent < MIN_AMOUNT || spent > MAX_AMOUNT) {
-                return NextResponse.json({ error: `Spent must be between ${MIN_AMOUNT} and ${MAX_AMOUNT.toLocaleString()}` }, { status: 400 });
+            if (spent < MIN_AMOUNT_CENTS || spent > MAX_AMOUNT_CENTS) {
+                return NextResponse.json({ error: `Spent must be between ${MIN_AMOUNT_CENTS / 100} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` }, { status: 400 });
             }
         }
 

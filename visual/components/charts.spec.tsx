@@ -6,7 +6,7 @@ import { Sparkline } from "@/components/trends/sparkline";
 import { MiniAreaChart } from "@/components/trends/mini-area-chart";
 import { StatBox } from "@/components/trends/stat-box";
 import { Providers } from "../providers";
-import { noop, trendSeries as series } from "../fixtures";
+import { noop, trendSeries as series, cents } from "../fixtures";
 
 /** Hand-rolled inline-SVG charts and the small trend widgets built on them. */
 test.describe("Charts", () => {
@@ -88,7 +88,7 @@ test.describe("Charts", () => {
         <div className="max-w-xs p-4">
           <StatBox
             label="Spending"
-            value={528.25}
+            value={cents(528.25)}
             change={8.2}
             color="#FF3B30"
             bgColor="#FFF1F0"

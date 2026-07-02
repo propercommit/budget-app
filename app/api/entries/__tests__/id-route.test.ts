@@ -88,24 +88,26 @@ describe("PUT /api/entries/[id]", () => {
     expect(prismaMock.spendingItem.update).not.toHaveBeenCalled();
   });
 
-  it("recomputes spent (with float sum) when amount changes", async () => {
+  it("recomputes spent as an exact cent sum when amount changes", async () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
       spendingItem: { userId: FAKE_USER.id },
     });
     prismaMock.spendingEntry.update.mockResolvedValue({ id: "e1" });
+    // Amounts are integer cents: 1010 + 2020 = 3030 exactly (was 10.1 + 20.2
+    // which drifts as floats).
     prismaMock.spendingEntry.findMany.mockResolvedValue([
-      { amount: 10.1 },
-      { amount: 20.2 },
+      { amount: 1010 },
+      { amount: 2020 },
     ]);
     prismaMock.spendingItem.update.mockResolvedValue({});
 
-    await PUT(jsonRequest({ amount: 20.2 }), routeContext("e1"));
+    await PUT(jsonRequest({ amount: 2020 }), routeContext("e1"));
 
     const arg = prismaMock.spendingItem.update.mock.calls[0][0];
-    expect(arg).toEqual({ where: { id: "s1" }, data: { spent: 10.1 + 20.2 } });
-    expect(arg.data.spent).toBeCloseTo(30.3, 10);
+    expect(arg).toEqual({ where: { id: "s1" }, data: { spent: 3030 } });
+    expect(arg.data.spent).toBe(3030);
   });
 });
 
@@ -145,7 +147,7 @@ describe("DELETE /api/entries/[id]", () => {
       spendingItem: { userId: FAKE_USER.id },
     });
     prismaMock.spendingEntry.delete.mockResolvedValue({ id: "e1" });
-    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 5 }]);
+    prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 500 }]);
     prismaMock.spendingItem.update.mockResolvedValue({});
 
     const { status, body } = await readJson(
@@ -160,7 +162,7 @@ describe("DELETE /api/entries/[id]", () => {
     expect(deleteOrder).toBeLessThan(updateOrder);
     expect(prismaMock.spendingItem.update).toHaveBeenCalledWith({
       where: { id: "s1" },
-      data: { spent: 5 },
+      data: { spent: 500 },
     });
   });
 });
