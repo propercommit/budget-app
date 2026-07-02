@@ -34,6 +34,18 @@ const cardEntries: SpendingEntry[] = [
   { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), direction: "debit", receipt: null, link: null },
 ];
 
+// A credit (refund) entry: editing it preloads the popin's Credit state —
+// pill on Credit, green "+" sign preview on the amount prefix.
+const refundEntry: SpendingEntry = {
+  id: "e4",
+  name: "Coop refund",
+  date: "2026-06-12",
+  amount: cents(15),
+  direction: "credit",
+  receipt: null,
+  link: null,
+};
+
 const cardProps = {
   spendingName: "Groceries",
   spendingItemIcon: "shopping-cart",
@@ -208,5 +220,26 @@ test.describe("Spending popins", () => {
     );
 
     await expect(page).toHaveScreenshot("spending-entry-edit-edit.png");
+  });
+
+  test("entry edit — edit mode with credit selected", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <EntryEditPopin
+          isOpen={true}
+          onClose={noop}
+          onSave={noop}
+          onDelete={noop}
+          mode="edit"
+          entry={refundEntry}
+          spendingName="Groceries"
+          spendingItemIcon="shopping-cart"
+          spendingCategoryName="Groceries"
+          spendingCategoryColor="#34C759"
+        />
+      </Providers>,
+    );
+
+    await expect(page).toHaveScreenshot("spending-entry-edit-credit.png");
   });
 });
