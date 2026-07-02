@@ -169,4 +169,21 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
 
     for (const width of widths) expect(width).toBe("0%");
   });
+
+  it("renders the over-budget chip inline, immediately before the amounts", () => {
+    renderCard({
+      totalIncome: 2000,
+      categories: [cat({ label: "Food" })],
+      spendingItems: [item({ spent: 234, budgeted: 200, category: cat({ label: "Food" }) })],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // 34c over -> "+0.34 $", sitting in the header line right before the
+    // "spent / budget" amounts (not trailing the row after the bar).
+    const chip = screen.getByText("+0.34 $");
+    const amounts = screen.getByText("2.34 $ / 2 $");
+
+    expect(chip.nextElementSibling).toBe(amounts);
+  });
 });
