@@ -299,8 +299,7 @@ export function CategoryRibbon({
             {/* Manage categories (desktop only; mobile uses the Spending header button) */}
             <button
                 onClick={onManage}
-                className="hidden sm:flex flex-shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
-                style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
+                className="hidden sm:flex flex-shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95 bg-muted text-foreground"
             >
                 <Settings2 className="w-4 h-4" strokeWidth={1.9} />
                 Manage

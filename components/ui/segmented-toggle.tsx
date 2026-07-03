@@ -44,8 +44,7 @@ export function SegmentedToggle<T extends string>({ options, value, onChange }: 
                 <button
                     key={option.value}
                     onClick={() => onChange(option.value)}
-                    className="relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10"
-                    style={{ color: value === option.value ? "var(--foreground)" : "var(--muted-foreground)" }}
+                    className={`relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10 ${value === option.value ? "text-foreground" : "text-muted-foreground"}`}
                 >
                     <div
                         className="w-2.5 h-2.5 rounded-full transition-opacity duration-200"

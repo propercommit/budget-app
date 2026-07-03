@@ -71,7 +71,7 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                     </p>
                 </div>
 
-                <div className="h-px" style={{ background: "linear-gradient(to right, transparent, var(--border), transparent)" }} />
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
                 <div className="flex items-center justify-between py-2">
                     <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Date</span>

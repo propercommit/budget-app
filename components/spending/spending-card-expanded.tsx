@@ -67,10 +67,7 @@ export function SpendingCardExpanded({
 
     return (
         <div
-            className="bg-card border border-black/5 dark:border-border rounded-3xl overflow-hidden"
-            style={{
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)",
-            }}
+            className="bg-card border border-(--card-border) rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
         >
             {/* Header section — same as collapsed */}
             <div className="p-4 sm:p-5">
@@ -116,8 +113,7 @@ export function SpendingCardExpanded({
 
                 {/* Row 2: Progress Bar */}
                 <div
-                    className="w-full h-3 rounded-full overflow-hidden"
-                    style={{ backgroundColor: "var(--border)" }}
+                    className="w-full h-3 rounded-full overflow-hidden bg-input"
                 >
                     <div
                         className="h-full rounded-full transition-all duration-500"
@@ -157,7 +153,7 @@ export function SpendingCardExpanded({
 
             {/* Expanded Content — Entries */}
             <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                <div className="h-px mb-4" style={{ backgroundColor: "var(--border)" }} />
+                <div className="h-px mb-4 bg-border" />
 
                 {/* Search and Sort */}
                 <div className="flex gap-2 mb-3">

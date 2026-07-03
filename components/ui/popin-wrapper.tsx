@@ -67,8 +67,7 @@ export function PopinWrapper({
                 </div>
 
                 <div
-                    className="flex items-center justify-between px-5 py-4"
-                    style={{ borderBottom: "1px solid var(--border)" }}
+                    className="flex items-center justify-between px-5 py-4 border-b border-border"
                 >
                     <div>
                         <h2 className="text-lg font-semibold text-foreground">
@@ -109,8 +108,7 @@ export function PopinWrapper({
 
                 {footer && (
                     <div
-                        className="px-5 py-4"
-                        style={{ borderTop: "1px solid var(--border)" }}
+                        className="px-5 py-4 border-t border-border"
                     >
                         {footer}
                     </div>

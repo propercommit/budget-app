@@ -33,7 +33,7 @@ export function SpendingCardCollapsed({
     const spent = spentDisplay(totalSpent, formatAmount);
 
     return (
-        <div className="bg-card border border-black/5 dark:border-border rounded-2xl overflow-hidden">
+        <div className="bg-card border border-(--card-border) rounded-2xl overflow-hidden">
             <div className="p-4 sm:p-5">
                 {/* Row 1: Header */}
                 <div className="flex items-center justify-between mb-3">
@@ -74,8 +74,7 @@ export function SpendingCardCollapsed({
 
                 {/* Row 2: Progress Bar */}
                 <div
-                    className="w-full h-3 rounded-full overflow-hidden"
-                    style={{ backgroundColor: "var(--border)" }}
+                    className="w-full h-3 rounded-full overflow-hidden bg-input"
                 >
                     <div
                         className="h-full rounded-full transition-all duration-500"

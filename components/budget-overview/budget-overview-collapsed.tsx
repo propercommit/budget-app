@@ -15,8 +15,7 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
 
     return (
         <div 
-            className="bg-card rounded-3xl overflow-hidden transition-all duration-300 border border-black/5 dark:border-border"
-            style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)' }}
+            className="bg-card rounded-3xl overflow-hidden transition-all duration-300 border border-(--card-border) shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
         >
             <div className="p-4 sm:p-5 cursor-pointer" onClick={onExpand}>
                 {/* Header */}

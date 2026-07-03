@@ -91,7 +91,7 @@ export function SpendingItemDetailPopin({
                     </div>
                 </div>
 
-                <div className="h-px" style={{ background: "linear-gradient(to right, transparent, var(--border), transparent)" }} />
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
                 <div className="p-4 rounded-2xl" style={{ backgroundColor: "var(--muted)" }}>
                     <div className="flex items-center justify-between mb-3">
@@ -99,7 +99,7 @@ export function SpendingItemDetailPopin({
                         <span className="text-lg font-bold" style={{ color: "var(--foreground)" }}>{formatAmount(budgetNumber)}</span>
                     </div>
 
-                    <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: "var(--border)" }}>
+                    <div className="w-full h-3 rounded-full overflow-hidden bg-input">
                         <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{

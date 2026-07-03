@@ -169,7 +169,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                                 onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
                                 onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>End date <span style={{ color: "var(--muted-foreground)" }}>(optional)</span></p>
+                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>End date (optional)</p>
                         </div>
                     </div>
                 </div>

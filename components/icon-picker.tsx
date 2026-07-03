@@ -83,17 +83,12 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 rounded-xl border-2 border-dashed border-border bg-muted">
-                    {value.startsWith("data:") ? (
+                    {value.startsWith("data:") && (
                         <div className="flex flex-col items-center gap-2">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={value} alt="Custom icon" className="w-12 h-12 object-contain" />
                             <p className="text-sm text-muted-foreground">Icon uploaded!</p>
                         </div>
-                    ) : (
-                        <>
-                            {/* <Upload className="w-8 h-8 text-muted-foreground/70" />
-                            <p className="text-sm text-muted-foreground">Upload your custom icon</p> */}
-                        </>
                     )}
                     <Label
                         htmlFor="icon-upload"
