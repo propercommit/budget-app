@@ -10,7 +10,9 @@ test.describe("Income card", () => {
   test("collapsed", async ({ mount }) => {
     const component = await mount(
       <Providers>
-        <div className="max-w-md p-4">
+        {/* Wide enough for the desktop donut + figures cluster; the mobile
+            project's 390px viewport still caps the mobile layout naturally. */}
+        <div className="max-w-2xl p-4">
           <IncomeCard incomes={incomeSources} onAdd={noop} onSelect={noop} />
         </div>
       </Providers>,
