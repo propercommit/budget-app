@@ -33,7 +33,7 @@ test.describe("Budget overview", () => {
   test("expanded", async ({ mount }) => {
     const component = await mount(
       <Providers>
-        <div className="max-w-md p-4">
+        <div className="w-full max-w-3xl p-4">
           <BudgetOverviewCard
             totalIncome={totalIncome}
             categories={categories}
@@ -51,7 +51,7 @@ test.describe("Budget overview", () => {
   test("expanded — over-budget chip inline before the amounts", async ({ mount }) => {
     const component = await mount(
       <Providers>
-        <div className="max-w-md p-4">
+        <div className="w-full max-w-3xl p-4">
           <BudgetOverviewCard
             totalIncome={totalIncome}
             categories={categories}
