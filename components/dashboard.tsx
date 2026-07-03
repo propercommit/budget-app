@@ -241,25 +241,29 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         <SectionCard className="mt-6">
             <div className="flex items-center justify-between mb-3 px-1">
             <p className="text-sm font-semibold text-foreground">Spending</p>
-            <div className="flex items-center gap-2">
+            {/* Mobile: both actions are 44px HIG touch targets with a wider
+                gap so adjacent taps don't land on the wrong button. */}
+            <div className="flex items-center gap-3 sm:gap-2">
                 <p className="text-xs tabular-nums text-muted-foreground">
                 {filteredSpendingItems.length} item{filteredSpendingItems.length !== 1 ? "s" : ""}
                 </p>
                 <button
                 onClick={handleOpenManageCategories}
                 aria-label="Manage categories"
-                className="sm:hidden w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted text-foreground"
+                className="sm:hidden w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted text-foreground"
                 >
-                <Settings2 className="w-4 h-4" strokeWidth={1.9} />
+                <Settings2 className="w-5 h-5" strokeWidth={1.9} />
                 </button>
                 <button
                 onClick={handleOpenCreateSpending}
-                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                aria-label="New spending item"
+                className="w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 rounded-full flex items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all duration-200 active:scale-95"
                 style={{ backgroundColor: "#34C759" }}
                 >
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
+                <span className="hidden sm:inline">Spending</span>
                 </button>
             </div>
             </div>

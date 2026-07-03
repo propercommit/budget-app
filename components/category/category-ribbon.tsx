@@ -1,15 +1,18 @@
 "use client";
 
 import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Settings2 } from "lucide-react";
+import { ChevronDown, Settings2 } from "lucide-react";
 import { iconMap } from "@/lib/icon-map";
 
 /**
  * Upper desktop pill budget; categories beyond it collapse into the "+N"
  * peek. The effective count shrinks further at render time whenever the row
- * would overflow, so the pills, "+N" and "New" always share one line.
+ * would overflow, so the pills, "+N" and "+ Category" always share one line.
  */
 const MAX_VISIBLE_CATEGORIES = 5;
+
+/** Shared look of every pill-shaped button in the ribbon. */
+const PILL_CLASSES = "flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95";
 
 interface Category {
     name: string;
@@ -33,12 +36,12 @@ interface CategoryPillProps {
     style?: CSSProperties;
 }
 
-/** Selected-aware pill shared by the mobile scroll row, the desktop row and the peek. */
+/** Selected-aware pill shared by the mobile scroll row, the desktop row and the peek row. */
 function CategoryPill({ category, isSelected, onSelect, style }: CategoryPillProps) {
     return (
         <button
             onClick={onSelect}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
+            className={PILL_CLASSES}
             style={{
                 backgroundColor: isSelected ? category.color : "var(--card)",
                 color: isSelected ? "white" : "var(--muted-foreground)",
@@ -70,103 +73,54 @@ function AllPill({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
     );
 }
 
-function NewCategoryPill({ onClick }: { onClick: () => void }) {
+interface OverflowTogglePillProps {
+    count: number;
+    isOpen: boolean;
+    onToggle: () => void;
+}
+
+/** The "+N" pill that expands/collapses the hidden categories into the peek row. */
+function OverflowTogglePill({ count, isOpen, onToggle }: OverflowTogglePillProps) {
     return (
         <button
-            onClick={onClick}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 border-2 border-dashed"
+            onClick={onToggle}
+            title="Show more categories"
+            aria-expanded={isOpen}
+            className={PILL_CLASSES}
             style={{
-                borderColor: "#007AFF",
-                backgroundColor: "rgba(0, 122, 255, 0.04)",
-                color: "#007AFF",
+                backgroundColor: isOpen ? "rgba(0, 122, 255, 0.08)" : "var(--card)",
+                color: isOpen ? "#007AFF" : "var(--foreground)",
+                border: isOpen ? "1px solid #007AFF" : "1px solid var(--border)",
             }}
         >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>New</span>
+            +{count}
+            <ChevronDown
+                className="w-3.5 h-3.5"
+                strokeWidth={2.2}
+                style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
+            />
         </button>
     );
 }
 
-interface OverflowPeekProps {
-    hiddenCategories: Category[];
-    selectedCategory: string;
-    onSelect: (category: string) => void;
-}
-
-/**
- * The "+N" pill and its hover flyout of hidden categories. Owns its own open
- * state so it dies with the component: the ribbon only mounts this while an
- * overflow exists, which makes a stale pre-opened peek impossible.
- */
-function OverflowPeek({ hiddenCategories, selectedCategory, onSelect }: OverflowPeekProps) {
-
-    const [isPeekOpen, setIsPeekOpen] = useState(false);
-
-    // Pure selection: picking a peeked category closes the peek, and the
-    // ribbon's promotion rule pulls it into the visible row.
-    const handleSelect = (name: string) => {
-        setIsPeekOpen(false);
-        onSelect(name);
-    };
-
+/** Labeled quick-add pill — same shape as the category pills so create is unmistakable. */
+function NewCategoryPill({ onClick }: { onClick: () => void }) {
     return (
-        <div
-            className="relative flex-shrink-0"
-            onMouseEnter={() => setIsPeekOpen(true)}
-            onMouseLeave={() => setIsPeekOpen(false)}
+        <button
+            onClick={onClick}
+            title="New category"
+            className={PILL_CLASSES}
+            style={{
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
+                color: "#007AFF",
+            }}
         >
-            {/* Open-only click: a tap/click is always preceded by the
-                wrapper's mouseenter, so a toggle would close what the hover
-                just opened. Mouse-leave (or selecting) closes. */}
-            <button
-                onClick={() => setIsPeekOpen(true)}
-                title="Show more categories"
-                aria-expanded={isPeekOpen}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
-                style={{
-                    backgroundColor: isPeekOpen ? "rgba(0, 122, 255, 0.08)" : "var(--card)",
-                    color: isPeekOpen ? "#007AFF" : "var(--foreground)",
-                    border: isPeekOpen ? "1px solid #007AFF" : "1px solid var(--border)",
-                }}
-            >
-                +{hiddenCategories.length}
-                <svg
-                    className="w-3.5 h-3.5"
-                    style={{ transform: isPeekOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <polyline points="6 9 12 15 18 9" />
-                </svg>
-            </button>
-
-            {/* pt-2 bridges the gap so the hover survives the travel down. */}
-            {isPeekOpen && (
-                <div className="absolute top-full left-0 z-20 pt-2">
-                    <div className="flex flex-col items-start gap-2">
-                        {hiddenCategories.map((cat, index) => (
-                            <CategoryPill
-                                key={cat.name}
-                                category={cat}
-                                isSelected={selectedCategory === cat.name}
-                                onSelect={() => handleSelect(cat.name)}
-                                style={{
-                                    boxShadow: "0 6px 18px rgba(0, 0, 0, 0.14)",
-                                    animation: "categoryRibbonPeekIn 0.3s both",
-                                    animationDelay: `${index * 35}ms`,
-                                }}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Category</span>
+        </button>
     );
 }
 
@@ -181,6 +135,7 @@ export function CategoryRibbon({
     const pillsRegionRef = useRef<HTMLDivElement>(null);
     const [visibleCount, setVisibleCount] = useState(MAX_VISIBLE_CATEGORIES);
     const [measureNonce, setMeasureNonce] = useState(0);
+    const [isPeekOpen, setIsPeekOpen] = useState(false);
 
     // Category add/delete/rename changes pill widths — start the fit search
     // from the full budget again (render-phase reset, per the React
@@ -228,14 +183,17 @@ export function CategoryRibbon({
         return () => observer.disconnect();
     }, []);
 
-    // Desktop shows at most visibleCount pills; when the selected category
-    // would be hidden, it is promoted to the front of the row so the active
-    // filter always stays visible. "all" is the All-filter sentinel, never a
-    // promotion target — a user category legally named "all" must not be
-    // yanked forward when the filter is cleared.
+    // Desktop shows at most visibleCount pills. While the peek row is CLOSED
+    // and the selected category would be hidden, it is promoted to the front
+    // so the active filter stays visible. While the peek row is OPEN the
+    // promotion is suspended: selecting a peeked category marks it active in
+    // place instead of yanking it (and reshuffling everything) into the top
+    // row. "all" is the All-filter sentinel, never a promotion target — a
+    // user category legally named "all" must not be pulled forward when the
+    // filter is cleared.
     let visibleCategories = categories.slice(0, visibleCount);
 
-    if (selectedCategory !== "all" && visibleCategories.every(c => c.name !== selectedCategory)) {
+    if (!isPeekOpen && selectedCategory !== "all" && visibleCategories.every(c => c.name !== selectedCategory)) {
         const selected = categories.find(c => c.name === selectedCategory);
 
         if (selected !== undefined) visibleCategories = [selected, ...categories.filter(c => c.name !== selected.name)].slice(0, visibleCount);
@@ -243,11 +201,17 @@ export function CategoryRibbon({
 
     const hiddenCategories = categories.filter(c => visibleCategories.every(v => v.name !== c.name));
 
+    // The peek cannot outlive its overflow: when deletions or a resize bring
+    // every category back into the top row there is nothing to peek at, so an
+    // open peek resets (render-phase adjustment — the condition is false again
+    // right after the set, so this cannot loop).
+    if (isPeekOpen && hiddenCategories.length === 0) setIsPeekOpen(false);
+
     return (
-        <div className="relative flex items-start gap-2">
+        <div>
             {/* Mobile: every category in one horizontally scrolling row. */}
             <div
-                className="sm:hidden flex-1 min-w-0 flex gap-2 overflow-x-auto pb-1"
+                className="sm:hidden flex gap-2 overflow-x-auto pb-1"
                 style={{
                     scrollbarWidth: "none",
                     msOverflowStyle: "none",
@@ -269,41 +233,65 @@ export function CategoryRibbon({
             </div>
 
             {/* Desktop: a single-line row. The pills region takes the free
-                space, so "+N" and "New" sit pinned at the right edge (next to
-                Manage) in a fixed position regardless of label widths. */}
-            <div className="hidden sm:flex flex-1 min-w-0 flex-nowrap items-center gap-2 pb-1">
-                <div ref={pillsRegionRef} className="flex-1 min-w-0 flex flex-nowrap items-center gap-2 overflow-hidden">
-                    <AllPill isSelected={selectedCategory === "all"} onSelect={() => onSelect("all")} />
+                space, so "+N", "+ Category" and Manage sit pinned at the right
+                edge in a fixed position regardless of label widths. */}
+            <div className="hidden sm:block">
+                <div className="flex flex-nowrap items-center gap-2 pb-1">
+                    <div ref={pillsRegionRef} className="flex-1 min-w-0 flex flex-nowrap items-center gap-2 overflow-hidden">
+                        <AllPill isSelected={selectedCategory === "all"} onSelect={() => onSelect("all")} />
 
-                    {visibleCategories.map((cat) => (
-                        <CategoryPill
-                            key={cat.name}
-                            category={cat}
-                            isSelected={selectedCategory === cat.name}
-                            onSelect={() => onSelect(cat.name)}
+                        {visibleCategories.map((cat) => (
+                            <CategoryPill
+                                key={cat.name}
+                                category={cat}
+                                isSelected={selectedCategory === cat.name}
+                                onSelect={() => onSelect(cat.name)}
+                            />
+                        ))}
+                    </div>
+
+                    {hiddenCategories.length > 0 && (
+                        <OverflowTogglePill
+                            count={hiddenCategories.length}
+                            isOpen={isPeekOpen}
+                            onToggle={() => setIsPeekOpen(prev => !prev)}
                         />
-                    ))}
+                    )}
+
+                    <NewCategoryPill onClick={onAddCategory} />
+
+                    {/* Manage categories (desktop only; mobile uses the Spending header button) */}
+                    <button
+                        onClick={onManage}
+                        className={`${PILL_CLASSES} bg-muted text-foreground`}
+                    >
+                        <Settings2 className="w-4 h-4" strokeWidth={1.9} />
+                        Manage
+                    </button>
                 </div>
 
-                {hiddenCategories.length > 0 && (
-                    <OverflowPeek
-                        hiddenCategories={hiddenCategories}
-                        selectedCategory={selectedCategory}
-                        onSelect={onSelect}
-                    />
+                {/* Second row: the hidden categories expand in place under a
+                    dashed separator; selecting one marks it active right there. */}
+                {isPeekOpen && hiddenCategories.length > 0 && (
+                    <div
+                        className="flex flex-wrap items-center gap-2 mt-2 pt-3 border-t border-dashed"
+                        style={{ borderColor: "var(--border)" }}
+                    >
+                        {hiddenCategories.map((cat, index) => (
+                            <CategoryPill
+                                key={cat.name}
+                                category={cat}
+                                isSelected={selectedCategory === cat.name}
+                                onSelect={() => onSelect(cat.name)}
+                                style={{
+                                    animation: "categoryRibbonPeekIn 0.3s both",
+                                    animationDelay: `${index * 30}ms`,
+                                }}
+                            />
+                        ))}
+                    </div>
                 )}
-
-                <NewCategoryPill onClick={onAddCategory} />
             </div>
-
-            {/* Manage categories (desktop only; mobile uses the Spending header button) */}
-            <button
-                onClick={onManage}
-                className="hidden sm:flex flex-shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95 bg-muted text-foreground"
-            >
-                <Settings2 className="w-4 h-4" strokeWidth={1.9} />
-                Manage
-            </button>
 
             {/* Hide the mobile row's scrollbar */}
             <style jsx>{`

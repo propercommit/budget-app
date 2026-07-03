@@ -45,13 +45,12 @@ export function IncomeCard({ incomes, onAdd, onSelect }: IncomeCardProps) {
                     setHoveredItemId={setHoveredItemId}
                 />
             ) : (
-                <IncomeCardCollapsed 
-                    totalIncome={totalIncome} 
-                    activeTotal={activeTotal} 
-                    passiveTotal={passiveTotal} 
-                    activePercentage={activePercentage} 
+                <IncomeCardCollapsed
+                    totalIncome={totalIncome}
+                    activeTotal={activeTotal}
+                    passiveTotal={passiveTotal}
+                    activePercentage={activePercentage}
                     passivePercentage={passivePercentage}
-                    onAdd={onAdd}
                     hoveredType={hoveredType}
                     setHoveredType={setHoveredType}
                 />

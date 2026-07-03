@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import { Category } from "@/lib/types";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
@@ -37,7 +38,8 @@ export function ManageCategoriesPopin({
 
     const [query, setQuery] = useState("");
 
-    const normalizedQuery = query.trim().toLowerCase();
+    const trimmedQuery = query.trim();
+    const normalizedQuery = trimmedQuery.toLowerCase();
     const filteredCategories = categories.filter(c => c.label.toLowerCase().includes(normalizedQuery));
 
     return (
@@ -77,20 +79,33 @@ export function ManageCategoriesPopin({
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                 </svg>
+                {/* text-base on mobile: iOS auto-zooms into inputs whose font
+                    is under 16px, yanking the whole view around on focus. */}
                 <input
                     type="text"
                     placeholder="Search categories"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-sm"
+                    className="flex-1 bg-transparent outline-none text-base sm:text-sm"
                     style={{ color: "var(--foreground)" }}
                 />
+
+                {query.length > 0 && (
+                    <button
+                        onClick={() => setQuery("")}
+                        aria-label="Clear search"
+                        className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200 active:scale-95"
+                        style={{ backgroundColor: "var(--muted-foreground)", color: "var(--card)" }}
+                    >
+                        <X className="w-2.5 h-2.5" strokeWidth={3} />
+                    </button>
+                )}
             </div>
 
             <div className="mt-4 flex flex-col gap-2.5">
                 {filteredCategories.length === 0 && (
                     <p className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        No categories found
+                        {trimmedQuery.length > 0 ? `No categories match "${trimmedQuery}".` : "No categories found"}
                     </p>
                 )}
 

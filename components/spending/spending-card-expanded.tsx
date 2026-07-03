@@ -27,7 +27,8 @@ interface SpendingCardExpandedProps {
     spendingCategoryColor: string;
     entries: SpendingEntry[];
     onCollapse: () => void;
-    onEntryClick: (entry: SpendingEntry) => void;
+    /** Receives the clicked entry plus the list as currently displayed (filtered + sorted), for sibling paging in the detail popin. */
+    onEntryClick: (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => void;
     onAddEntry: () => void;
     onItemDetailClick: () => void;
 }
@@ -175,12 +176,14 @@ export function SpendingCardExpanded({
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                             />
                         </svg>
+                        {/* text-base on mobile: iOS auto-zooms into inputs
+                            whose font is under 16px (see manage popin). */}
                         <input
                             type="text"
                             placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="flex-1 bg-transparent outline-none text-sm"
+                            className="flex-1 bg-transparent outline-none text-base sm:text-sm"
                             style={{ color: "var(--foreground)" }}
                         />
                     </div>
@@ -202,7 +205,7 @@ export function SpendingCardExpanded({
                     {filteredEntries.map((entry) => (
                         <button
                             key={entry.id}
-                            onClick={() => onEntryClick(entry)}
+                            onClick={() => onEntryClick(entry, filteredEntries)}
                             className="w-full flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors hover:bg-input text-left"
                             style={{ backgroundColor: "var(--muted)" }}
                         >

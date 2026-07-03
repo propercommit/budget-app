@@ -121,7 +121,7 @@ test.describe("Category components", () => {
       </Providers>,
     );
 
-    await page.getByRole("button", { name: "+3" }).hover();
+    await page.getByRole("button", { name: "+3" }).click();
     await expect(page.getByRole("button", { name: "Utilities" })).toBeVisible();
 
     await expect(page).toHaveScreenshot("category-ribbon-peek-open.png");
@@ -214,7 +214,7 @@ test.describe("Category components", () => {
     );
 
     await page.getByPlaceholder("Search categories").fill("zzz");
-    await expect(page.getByText("No categories found")).toBeVisible();
+    await expect(page.getByText('No categories match "zzz".')).toBeVisible();
 
     await expect(page).toHaveScreenshot("category-manage-popin-empty-search.png");
   });

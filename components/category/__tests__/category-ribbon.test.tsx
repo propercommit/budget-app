@@ -82,41 +82,44 @@ describe("CategoryRibbon — +N overflow peek (desktop)", () => {
     expect(pillCount("Kids")).toBe(1);
   });
 
-  it("opens the peek on click, listing only the hidden categories", () => {
+  it("expands the hidden categories into a second row on click, and collapses on a second click", () => {
     renderRibbon();
 
+    const toggle = screen.getByRole("button", { name: "+2" });
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveProperty("ariaExpanded", "true");
+    expect(pillCount("Gifts")).toBe(2);
+    expect(pillCount("Kids")).toBe(2);
+    expect(pillCount("Shopping")).toBe(2);
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveProperty("ariaExpanded", "false");
+    expect(pillCount("Gifts")).toBe(1);
+  });
+
+  it("selecting a peeked category fires onSelect, keeps the row open and marks it active in place", () => {
+    const { onSelect, rerenderRibbon } = renderRibbon();
+
     fireEvent.click(screen.getByRole("button", { name: "+2" }));
+
+    // Index 1 is the second-row pill (index 0 is the mobile-row pill).
+    fireEvent.click(screen.getAllByRole("button", { name: "Gifts" })[1]);
+
+    expect(onSelect).toHaveBeenCalledWith("Gifts");
+
+    // The row stays open and the selection lands in place: no promotion into
+    // the top row (which would reshuffle it), no displaced visible pill.
+    rerenderRibbon({ selectedCategory: "Gifts" });
 
     expect(pillCount("Gifts")).toBe(2);
     expect(pillCount("Kids")).toBe(2);
     expect(pillCount("Shopping")).toBe(2);
   });
 
-  it("opens on hover and closes on mouse leave", () => {
-    renderRibbon();
-
-    const wrapper = screen.getByRole("button", { name: "+2" }).parentElement as HTMLElement;
-
-    fireEvent.mouseEnter(wrapper);
-    expect(pillCount("Gifts")).toBe(2);
-
-    fireEvent.mouseLeave(wrapper);
-    expect(pillCount("Gifts")).toBe(1);
-  });
-
-  it("selecting a peeked category fires onSelect and closes the peek", () => {
-    const { onSelect } = renderRibbon();
-
-    fireEvent.click(screen.getByRole("button", { name: "+2" }));
-
-    // Index 1 is the peek pill (index 0 is the mobile-row pill).
-    fireEvent.click(screen.getAllByRole("button", { name: "Gifts" })[1]);
-
-    expect(onSelect).toHaveBeenCalledWith("Gifts");
-    expect(pillCount("Kids")).toBe(1);
-  });
-
-  it("promotes a hidden selected category into the visible row", () => {
+  it("promotes a hidden selected category into the visible row while the peek is closed", () => {
     renderRibbon({ selectedCategory: "Kids" });
 
     // Promoted: present in the desktop row without opening the peek.
