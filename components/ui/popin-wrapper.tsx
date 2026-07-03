@@ -19,6 +19,13 @@ interface PopinWrapperProps {
      */
     onTouchStart?: TouchEventHandler<HTMLDivElement>;
     onTouchEnd?: TouchEventHandler<HTMLDivElement>;
+    /**
+     * Changing this remounts the sheet (e.g. per pager page turn), replaying
+     * any entrance animation in `sheetClassName` on the whole sheet.
+     */
+    sheetKey?: string | number;
+    /** Extra classes for the sheet element (e.g. animate-in utilities). */
+    sheetClassName?: string;
 }
 
 export function PopinWrapper({
@@ -32,6 +39,8 @@ export function PopinWrapper({
     zIndex,
     onTouchStart,
     onTouchEnd,
+    sheetKey,
+    sheetClassName,
 }: PopinWrapperProps) {
     const popinRef = useRef<HTMLDivElement>(null);
 
@@ -61,11 +70,12 @@ export function PopinWrapper({
             />
 
             <div
+                key={sheetKey}
                 ref={popinRef}
                 tabIndex={-1}
                 onTouchStart={onTouchStart}
                 onTouchEnd={onTouchEnd}
-                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-card rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0"
+                className={`relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-card rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0 ${sheetClassName ?? ""}`}
                 style={{
                     boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)",
                     maxHeight: "90vh",

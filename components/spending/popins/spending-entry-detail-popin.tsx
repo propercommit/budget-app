@@ -110,6 +110,8 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
             subtitle={canNavigate ? `Entry ${index + 1} of ${entries.length}` : undefined}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            sheetKey={entry.id}
+            sheetClassName={slideFrom === null ? undefined : `animate-in fade-in duration-300 ${slideFrom === "right" ? "slide-in-from-right-7" : "slide-in-from-left-7"}`}
             headerActions={
                 <button
                     onClick={onEdit}
@@ -131,11 +133,7 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                 </button>
             }
         >
-            {/* Remounting on the entry id replays the slide-in per page turn. */}
-            <div
-                key={entry.id}
-                className={`space-y-5 ${slideFrom === null ? "" : `animate-in fade-in duration-300 ${slideFrom === "right" ? "slide-in-from-right-7" : "slide-in-from-left-7"}`}`}
-            >
+            <div className="space-y-5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: spendingCategoryColor + "15" }}>
