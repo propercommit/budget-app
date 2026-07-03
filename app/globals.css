@@ -123,4 +123,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* color-scheme alone doesn't theme inner-container scrollbars in every
+     engine (visible with always-on classic scrollbars); the token keeps the
+     thumb readable and the track invisible in both themes. */
+  html {
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent) transparent;
+  }
 }
