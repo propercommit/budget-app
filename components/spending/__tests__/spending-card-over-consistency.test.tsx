@@ -130,9 +130,9 @@ describe("SpendingCard — net-credit month (negative spent)", () => {
     // Header renders net-credit spent as "+X" (see lib/spending/format-spent);
     // remaining = budget - spent stays a plain formula on the signed value, so
     // the credit genuinely increases what's left.
-    expect(expanded.textContent).toContain("+150 $");
+    expect(expanded.textContent).toContain("+150\u00A0$");
 
-    expect(expanded.textContent).not.toContain("-150 $");
+    expect(expanded.textContent).not.toContain("-150\u00A0$");
 
     expect(await within(expanded).findByText("550 $ left")).toBeInTheDocument();
   });
