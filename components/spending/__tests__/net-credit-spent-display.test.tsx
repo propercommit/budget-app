@@ -108,7 +108,7 @@ describe("collapsed card header — net-credit spent", () => {
 
     const amount = screen.getByText("89.12 $", { selector: "p" });
 
-    expect(amount).toHaveStyle({ color: "#1D1D1F" });
+    expect(amount).toHaveStyle({ color: "var(--foreground)" });
 
     expect(screen.getByText("210.88 $ left")).toBeInTheDocument();
   });
@@ -128,7 +128,7 @@ describe("expanded card header — net-credit spent", () => {
 
     const amount = screen.getByText("89.12 $", { selector: "p" });
 
-    expect(amount).toHaveStyle({ color: "#1D1D1F" });
+    expect(amount).toHaveStyle({ color: "var(--foreground)" });
   });
 });
 
@@ -146,6 +146,6 @@ describe("item detail popin — net-credit spent", () => {
 
     const amount = screen.getByText("89.12 $", { selector: "span" });
 
-    expect(amount).toHaveStyle({ color: "#1D1D1F" });
+    expect(amount).toHaveStyle({ color: "var(--foreground)" });
   });
 });

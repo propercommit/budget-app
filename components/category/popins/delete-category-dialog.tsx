@@ -64,7 +64,7 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
             <div
                 ref={panelRef}
                 tabIndex={-1}
-                className="relative w-full max-w-[320px] sm:max-w-[380px] bg-white rounded-3xl p-6 text-center outline-none"
+                className="relative w-full max-w-[320px] sm:max-w-[380px] bg-card rounded-3xl p-6 text-center outline-none"
                 style={{ boxShadow: "0 30px 60px rgba(0, 0, 0, 0.3)" }}
             >
                 <div
@@ -76,11 +76,11 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
                     </svg>
                 </div>
 
-                <h2 id="delete-category-dialog-title" className="text-lg font-bold mb-2" style={{ color: "#1D1D1F" }}>
+                <h2 id="delete-category-dialog-title" className="text-lg font-bold mb-2" style={{ color: "var(--foreground)" }}>
                     {`Delete "${category.label}"?`}
                 </h2>
 
-                <p id="delete-category-dialog-description" className="text-sm leading-relaxed mb-6" style={{ color: "#6E6E73" }}>
+                <p id="delete-category-dialog-description" className="text-sm leading-relaxed mb-6" style={{ color: "var(--muted-foreground)" }}>
                     {CATEGORY_DELETE_WARNING}
                 </p>
 
@@ -89,7 +89,7 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
                         onClick={handleCancel}
                         disabled={isDeleting}
                         className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
-                        style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                     >
                         Cancel
                     </button>

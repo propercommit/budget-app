@@ -54,10 +54,10 @@ export function ProfileAvatar({
                     <img
                         src={avatarUrl}
                         alt="profile picture"
-                        className="w-28 h-28 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                        className="w-28 h-28 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-background shadow-lg"
                     />
                 ) : (
-                    <div className="w-28 h-28 sm:w-24 sm:h-24 bg-green-500 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                    <div className="w-28 h-28 sm:w-24 sm:h-24 bg-green-500 rounded-full flex items-center justify-center border-4 border-background shadow-lg">
                         <span className="text-white font-bold text-4xl sm:text-3xl">
                             {initials}
                         </span>
@@ -92,10 +92,10 @@ export function ProfileAvatar({
                     </div>
                 )}
             </div>
-            <p className="mt-4 text-lg font-medium text-gray-900">
+            <p className="mt-4 text-lg font-medium text-foreground">
                 {firstName} {lastName}
             </p>
-            <p className="text-sm text-gray-500">{email}</p>
+            <p className="text-sm text-muted-foreground">{email}</p>
         </div>
     );
 }

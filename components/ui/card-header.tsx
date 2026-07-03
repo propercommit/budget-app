@@ -22,7 +22,7 @@ export function CardHeader({ isExpanded, onToggle, title, icon, iconBgColor = 'r
                         {typeof icon === 'string' ? iconMap[icon] : icon}
                     </div>
                 )}
-                <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+                <h2 className="text-base font-semibold text-foreground">{title}</h2>
             </div>
             <ExpandToggleButton
                 isExpanded={isExpanded}

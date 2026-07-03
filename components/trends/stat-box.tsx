@@ -21,17 +21,17 @@ export function StatBox({ label, value, change, color, bgColor, sparklineData }:
     return (
         <div className="flex-1 p-3 rounded-2xl" style={{ backgroundColor: bgColor }}>
             <div className="flex items-start justify-between mb-1">
-                <p className="text-xs font-medium" style={{ color: "#6E6E73" }}>{label}</p>
+                <p className="text-xs font-medium" style={{ color: "var(--muted-foreground)" }}>{label}</p>
                 <Sparkline data={sparklineData} color={color} width={44} height={22} />
             </div>
-            <p className="text-xl font-bold mb-0.5" style={{ color: "#1D1D1F" }}>
+            <p className="text-xl font-bold mb-0.5" style={{ color: "var(--foreground)" }}>
                 {formatAmount(value)}
             </p>
             <div className="flex items-center gap-1">
                 <span className="text-xs font-semibold" style={{ color: isGood ? "#34C759" : "#FF3B30" }}>
                     {isPositive ? "↑" : "↓"}{Math.abs(change).toFixed(1)}%
                 </span>
-                <span className="text-xs" style={{ color: "#AEAEB2" }}>vs last</span>
+                <span className="text-xs text-muted-foreground/70">vs last</span>
             </div>
         </div>
     );

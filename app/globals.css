@@ -44,7 +44,9 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 0.625rem;
+  --card-border: rgb(0 0 0 / 0.05);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -79,6 +81,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+  --card-border: var(--border);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -118,5 +122,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* color-scheme alone doesn't theme inner-container scrollbars in every
+     engine (visible with always-on classic scrollbars); the token keeps the
+     thumb readable and the track invisible in both themes. */
+  html {
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent) transparent;
   }
 }

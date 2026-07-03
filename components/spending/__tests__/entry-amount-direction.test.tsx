@@ -70,12 +70,12 @@ function renderDetail(entry: SpendingEntry) {
 }
 
 describe("expanded card entry list — direction-aware amounts", () => {
-  it("renders a debit as -amount in the default dark color", () => {
+  it("renders a debit as -amount in the default foreground color", () => {
     renderExpandedWith([debit]);
 
     const amount = screen.getByText("-42 $", { selector: "p" });
 
-    expect(amount).toHaveStyle({ color: "#1D1D1F" });
+    expect(amount).toHaveStyle({ color: "var(--foreground)" });
   });
 
   it("renders a credit as +amount in green", () => {

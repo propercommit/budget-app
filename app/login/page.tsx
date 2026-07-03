@@ -178,12 +178,12 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="min-h-svh flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
+        <main className="min-h-svh flex flex-col bg-gradient-to-b from-background to-muted">
             {/* Header */}
             <header className="pt-6 pb-4 px-4 text-center sm:pt-12">
                 <div className="inline-flex items-center justify-center mb-4">
                     <Logo size="lg" animated={false} />
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                         Budget Planner
                     </h1>
                 </div>
@@ -192,13 +192,13 @@ export default function LoginPage() {
             {/* Main content */}
             <div className="flex-1 flex items-start sm:items-center justify-center px-4 pb-8 sm:pb-12">
                 <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="bg-card rounded-2xl shadow-xl overflow-hidden">
                         {/* Card header */}
                         <div className="px-5 pt-6 pb-2 sm:px-8 sm:pt-8 sm:pb-4 text-center">
-                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                            <h2 className="text-lg sm:text-xl font-semibold text-foreground">
                                 {mode === "login" ? "Welcome back" : "Create account"}
                             </h2>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 {mode === "login" 
                                     ? "Sign in to continue to your account" 
                                     : "Get started with your free account"
@@ -212,7 +212,7 @@ export default function LoginPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full h-12 text-base font-medium border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                                className="w-full h-12 text-base font-medium border-border hover:bg-muted active:bg-input transition-colors touch-manipulation"
                                 onClick={handleGoogleSignIn}
                                 disabled={isFormDisabled}
                             >
@@ -250,10 +250,10 @@ export default function LoginPage() {
                             {/* Divider */}
                             <div className="relative my-6">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200" />
+                                    <div className="w-full border-t border-border" />
                                 </div>
                                 <div className="relative flex justify-center">
-                                    <span className="px-3 bg-white text-xs sm:text-sm text-gray-500">
+                                    <span className="px-3 bg-card text-xs sm:text-sm text-muted-foreground">
                                         or continue with email
                                     </span>
                                 </div>
@@ -267,7 +267,7 @@ export default function LoginPage() {
                                         <div className="space-y-1.5">
                                             <Label 
                                                 htmlFor="firstName" 
-                                                className="text-sm font-medium text-gray-700"
+                                                className="text-sm font-medium text-foreground"
                                             >
                                                 First name
                                             </Label>
@@ -286,7 +286,7 @@ export default function LoginPage() {
                                         <div className="space-y-1.5">
                                             <Label 
                                                 htmlFor="lastName" 
-                                                className="text-sm font-medium text-gray-700"
+                                                className="text-sm font-medium text-foreground"
                                             >
                                                 Last name
                                             </Label>
@@ -308,7 +308,7 @@ export default function LoginPage() {
                                 <div className="space-y-1.5">
                                     <Label 
                                         htmlFor="email" 
-                                        className="text-sm font-medium text-gray-700"
+                                        className="text-sm font-medium text-foreground"
                                     >
                                         Email address
                                     </Label>
@@ -329,7 +329,7 @@ export default function LoginPage() {
                                     <div className="flex items-center justify-between">
                                         <Label 
                                             htmlFor="password" 
-                                            className="text-sm font-medium text-gray-700"
+                                            className="text-sm font-medium text-foreground"
                                         >
                                             Password
                                         </Label>
@@ -355,7 +355,7 @@ export default function LoginPage() {
                                         className="h-12 text-base"
                                     />
                                     {mode === "signup" && (
-                                        <p className="text-xs text-gray-500">Must be at least 8 characters</p>
+                                        <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
                                     )}
                                 </div>
 
@@ -364,7 +364,7 @@ export default function LoginPage() {
                                     <div className="space-y-1.5">
                                         <Label 
                                             htmlFor="confirmPassword" 
-                                            className="text-sm font-medium text-gray-700"
+                                            className="text-sm font-medium text-foreground"
                                         >
                                             Confirm password
                                         </Label>
@@ -395,7 +395,7 @@ export default function LoginPage() {
                                         />
                                         <Label 
                                             htmlFor="terms" 
-                                            className="text-sm text-gray-600 leading-snug cursor-pointer"
+                                            className="text-sm text-muted-foreground leading-snug cursor-pointer"
                                         >
                                             I agree to the{" "}
                                             <a 
@@ -448,8 +448,8 @@ export default function LoginPage() {
                         </div>
 
                         {/* Card footer */}
-                        <div className="px-5 py-4 sm:px-8 sm:py-5 bg-gray-50 text-center">
-                            <p className="text-sm text-gray-600">
+                        <div className="px-5 py-4 sm:px-8 sm:py-5 bg-muted text-center">
+                            <p className="text-sm text-muted-foreground">
                                 {mode === "login" ? (
                                     <>
                                         Don&apos;t have an account?{" "}
@@ -479,13 +479,13 @@ export default function LoginPage() {
 
                     {/* Footer text - only show on login */}
                     {mode === "login" && (
-                        <p className="mt-6 text-center text-xs text-gray-500 px-4">
+                        <p className="mt-6 text-center text-xs text-muted-foreground px-4">
                             By continuing, you agree to our{" "}
-                            <a href="/terms" className="underline hover:text-gray-700">
+                            <a href="/terms" className="underline hover:text-foreground">
                                 Terms of Service
                             </a>{" "}
                             and{" "}
-                            <a href="/privacy" className="underline hover:text-gray-700">
+                            <a href="/privacy" className="underline hover:text-foreground">
                                 Privacy Policy
                             </a>
                         </p>

@@ -67,7 +67,7 @@ export function DeleteModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="deleteConfirm" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="deleteConfirm" className="text-sm font-medium text-foreground">
                             Type &quot;DELETE&quot; to confirm
                         </Label>
                         <Input
@@ -83,7 +83,7 @@ export function DeleteModal({
 
                     {!isGoogleUser && (
                         <div className="space-y-2">
-                            <Label htmlFor="deletePassword" className="text-sm font-medium text-gray-700">
+                            <Label htmlFor="deletePassword" className="text-sm font-medium text-foreground">
                                 Enter your password
                             </Label>
                             <Input

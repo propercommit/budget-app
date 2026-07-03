@@ -23,17 +23,17 @@ export interface SegmentedToggleProps<T extends string> {
 }
 
 /**
- * Two-option segmented control with a sliding white pill on a `#F5F5F7`
- * track — the toggle formerly inlined in the income popin, extracted so the
- * spending entry popin can reuse it. Controlled: selection lives in the
+ * Two-option segmented control with a sliding pill on a muted track — the
+ * toggle formerly inlined in the income popin, extracted so the spending
+ * entry popin can reuse it. Controlled: selection lives in the
  * caller; clicking a segment reports its `value` via `onChange`.
  */
 export function SegmentedToggle<T extends string>({ options, value, onChange }: SegmentedToggleProps<T>) {
 
     return (
-        <div className="relative flex rounded-xl p-1" style={{ backgroundColor: "#F5F5F7" }}>
+        <div className="relative flex rounded-xl p-1 bg-muted">
             <div
-                className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out"
+                className="absolute top-1 bottom-1 rounded-lg bg-background shadow-sm transition-transform duration-200 ease-out"
                 style={{
                     width: "calc(50% - 4px)",
                     left: "4px",
@@ -44,8 +44,7 @@ export function SegmentedToggle<T extends string>({ options, value, onChange }: 
                 <button
                     key={option.value}
                     onClick={() => onChange(option.value)}
-                    className="relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10"
-                    style={{ color: value === option.value ? "#1D1D1F" : "#6E6E73" }}
+                    className={`relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10 ${value === option.value ? "text-foreground" : "text-muted-foreground"}`}
                 >
                     <div
                         className="w-2.5 h-2.5 rounded-full transition-opacity duration-200"

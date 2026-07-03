@@ -64,7 +64,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         <button
                             onClick={onClose}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                         >
                             Cancel
                         </button>
@@ -74,7 +74,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={isFormValid
                                 ? { backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }
-                                : { backgroundColor: "#E5E5EA", color: "#8E8E93", cursor: "not-allowed" }
+                                : { backgroundColor: "var(--border)", color: "var(--muted-foreground)", cursor: "not-allowed" }
                             }
                         >
                             {isEdit ? 'Save Changes' : 'Add Income'}
@@ -92,25 +92,25 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
         >
             <div className="space-y-5">
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Name</label>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Name</label>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Monthly Salary"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Amount <span className="font-normal text-xs" style={{ color: "#6E6E73" }}>/month</span>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Amount <span className="font-normal text-xs" style={{ color: "var(--muted-foreground)" }}>/month</span>
                     </label>
                     <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold pointer-events-none" style={{ color: "#8E8E93" }}>
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold pointer-events-none" style={{ color: "var(--muted-foreground)" }}>
                             {CURRENCY_SYMBOLS[settings.currency]}
                         </div>
                         <input
@@ -120,9 +120,9 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                             onChange={handleAmountChange}
                             placeholder="0.00"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                             onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                         />
                     </div>
                 </div>
@@ -130,7 +130,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                 <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Type</label>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Type</label>
                     <SegmentedToggle
                         options={[
                             { value: 'active', label: 'Active', dotColor: '#007AFF' },
@@ -142,7 +142,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                 </div>
 
                 <div className="space-y-2 max-w-full overflow-hidden">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Date Range</label>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Date Range</label>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="w-full sm:flex-1 min-w-0">
                             <input
@@ -150,13 +150,13 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F", WebkitAppearance: 'none', minWidth: 0 }}
+                                style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)", WebkitAppearance: 'none', minWidth: 0 }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>Start date</p>
+                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>Start date</p>
                         </div>
-                        <svg className="hidden sm:block w-5 h-5 flex-shrink-0" style={{ color: "#C7C7CC" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="hidden sm:block w-5 h-5 flex-shrink-0 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
                         <div className="w-full sm:flex-1 min-w-0">
@@ -165,18 +165,18 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F", WebkitAppearance: 'none', minWidth: 0 }}
+                                style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)", WebkitAppearance: 'none', minWidth: 0 }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>End date <span style={{ color: "#8E8E93" }}>(optional)</span></p>
+                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>End date (optional)</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Note <span className="font-normal" style={{ color: "#6E6E73" }}>(optional)</span>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Note <span className="font-normal" style={{ color: "var(--muted-foreground)" }}>(optional)</span>
                     </label>
                     <textarea
                         value={note}
@@ -184,9 +184,9 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         placeholder="Add any additional details..."
                         rows={3}
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200 resize-none"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
             </div>

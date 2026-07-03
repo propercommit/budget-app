@@ -61,11 +61,11 @@ export function ManageCategoriesPopin({
         >
             <div
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-                style={{ backgroundColor: "#F5F5F7" }}
+                style={{ backgroundColor: "var(--muted)" }}
             >
                 <svg
                     className="w-4 h-4 flex-shrink-0"
-                    style={{ color: "#6E6E73" }}
+                    style={{ color: "var(--muted-foreground)" }}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -83,13 +83,13 @@ export function ManageCategoriesPopin({
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     className="flex-1 bg-transparent outline-none text-sm"
-                    style={{ color: "#1D1D1F" }}
+                    style={{ color: "var(--foreground)" }}
                 />
             </div>
 
             <div className="mt-4 flex flex-col gap-2.5">
                 {filteredCategories.length === 0 && (
-                    <p className="py-8 text-center text-sm" style={{ color: "#6E6E73" }}>
+                    <p className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
                         No categories found
                     </p>
                 )}
@@ -101,7 +101,7 @@ export function ManageCategoriesPopin({
                         <div
                             key={category.id}
                             className="flex items-center justify-between gap-3 rounded-2xl p-3"
-                            style={{ backgroundColor: "#F7F7F9" }}
+                            style={{ backgroundColor: "var(--muted)" }}
                         >
                             <div className="flex items-center gap-3 min-w-0">
                                 <div
@@ -111,10 +111,10 @@ export function ManageCategoriesPopin({
                                     {iconMap[category.icon] ?? category.icon}
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-sm font-semibold truncate" style={{ color: "#1D1D1F" }}>
+                                    <p className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>
                                         {category.label}
                                     </p>
-                                    <p className="text-xs" style={{ color: "#6E6E73" }}>
+                                    <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                                         {count} {count === 1 ? "entry" : "entries"}
                                     </p>
                                 </div>

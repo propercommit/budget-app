@@ -40,9 +40,9 @@ function CategoryPill({ category, isSelected, onSelect, style }: CategoryPillPro
             onClick={onSelect}
             className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
             style={{
-                backgroundColor: isSelected ? category.color : "#FFFFFF",
-                color: isSelected ? "white" : "#6E6E73",
-                border: isSelected ? "none" : "1px solid #E5E5EA",
+                backgroundColor: isSelected ? category.color : "var(--card)",
+                color: isSelected ? "white" : "var(--muted-foreground)",
+                border: isSelected ? "none" : "1px solid var(--border)",
                 boxShadow: isSelected ? "none" : "0 1px 4px rgba(0,0,0,0.03)",
                 ...style,
             }}
@@ -59,9 +59,9 @@ function AllPill({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
             onClick={onSelect}
             className="flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
             style={{
-                backgroundColor: isSelected ? "#1D1D1F" : "#FFFFFF",
-                color: isSelected ? "white" : "#6E6E73",
-                border: isSelected ? "none" : "1px solid #E5E5EA",
+                backgroundColor: isSelected ? "var(--foreground)" : "var(--card)",
+                color: isSelected ? "var(--background)" : "var(--muted-foreground)",
+                border: isSelected ? "none" : "1px solid var(--border)",
                 boxShadow: isSelected ? "none" : "0 1px 4px rgba(0,0,0,0.03)",
             }}
         >
@@ -126,9 +126,9 @@ function OverflowPeek({ hiddenCategories, selectedCategory, onSelect }: Overflow
                 aria-expanded={isPeekOpen}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
                 style={{
-                    backgroundColor: isPeekOpen ? "rgba(0, 122, 255, 0.08)" : "#FFFFFF",
-                    color: isPeekOpen ? "#007AFF" : "#1D1D1F",
-                    border: isPeekOpen ? "1px solid #007AFF" : "1px solid #E5E5EA",
+                    backgroundColor: isPeekOpen ? "rgba(0, 122, 255, 0.08)" : "var(--card)",
+                    color: isPeekOpen ? "#007AFF" : "var(--foreground)",
+                    border: isPeekOpen ? "1px solid #007AFF" : "1px solid var(--border)",
                 }}
             >
                 +{hiddenCategories.length}
@@ -299,8 +299,7 @@ export function CategoryRibbon({
             {/* Manage categories (desktop only; mobile uses the Spending header button) */}
             <button
                 onClick={onManage}
-                className="hidden sm:flex flex-shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
-                style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                className="hidden sm:flex flex-shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95 bg-muted text-foreground"
             >
                 <Settings2 className="w-4 h-4" strokeWidth={1.9} />
                 Manage

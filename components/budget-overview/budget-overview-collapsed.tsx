@@ -15,8 +15,7 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
 
     return (
         <div 
-            className="bg-white rounded-3xl overflow-hidden transition-all duration-300"
-            style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)', border: '1px solid rgba(0, 0, 0, 0.04)' }}
+            className="bg-card rounded-3xl overflow-hidden transition-all duration-300 border border-(--card-border) shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
         >
             <div className="p-4 sm:p-5 cursor-pointer" onClick={onExpand}>
                 {/* Header */}
@@ -25,22 +24,22 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                 {/* Quick Stats Row */}
                 <div className="mt-4 space-y-3">
                     <div className="flex gap-3">
-                        <div className="flex-1 p-3 rounded-2xl bg-gray-100">
-                            <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
-                            <p className="text-lg font-bold text-gray-900 whitespace-nowrap">{formatAmount(totalIncome)}</p>
+                        <div className="flex-1 p-3 rounded-2xl bg-muted">
+                            <p className="text-xs font-medium mb-0.5 text-muted-foreground">Income</p>
+                            <p className="text-lg font-bold text-foreground whitespace-nowrap">{formatAmount(totalIncome)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
                             style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
-                            <p className="text-xs font-medium mb-0.5 text-gray-500">Spent</p>
+                            <p className="text-xs font-medium mb-0.5 text-muted-foreground">Spent</p>
                             <p className="text-lg font-bold whitespace-nowrap" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
                             style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
                         >
-                            <p className="text-xs font-medium mb-0.5 text-gray-500">
+                            <p className="text-xs font-medium mb-0.5 text-muted-foreground">
                                 {isOverspent ? 'Over by' : 'Remaining'}
                             </p>
                             <p className="text-lg font-bold whitespace-nowrap" style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}>
@@ -52,18 +51,18 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                     {/* Mini Progress Bar */}
                     <div 
                         className="p-3 rounded-2xl"
-                        style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : '#F5F5F7' }}
+                        style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'var(--muted)' }}
                     >
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-gray-500">Income Used</span>
+                            <span className="text-xs font-medium text-muted-foreground">Income Used</span>
                             <span 
                                 className="text-xs font-semibold"
-                                style={{ color: isOverspent ? '#FF3B30' : '#1D1D1F' }}
+                                style={{ color: isOverspent ? '#FF3B30' : 'var(--foreground)' }}
                             >
                                 {incomeUsedPercent.toFixed(0)}%
                             </span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden bg-gray-200">
+                        <div className="w-full h-1.5 rounded-full overflow-hidden bg-input">
                             <div
                                 className="h-full rounded-full transition-all duration-500"
                                 style={{

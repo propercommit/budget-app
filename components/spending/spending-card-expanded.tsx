@@ -67,11 +67,7 @@ export function SpendingCardExpanded({
 
     return (
         <div
-            className="bg-white rounded-3xl overflow-hidden"
-            style={{
-                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.06)",
-                border: "1px solid rgba(0, 0, 0, 0.04)",
-            }}
+            className="bg-card border border-(--card-border) rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
         >
             {/* Header section — same as collapsed */}
             <div className="p-4 sm:p-5">
@@ -89,10 +85,10 @@ export function SpendingCardExpanded({
                             {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
                         <div className="text-left">
-                            <h2 className="text-base font-semibold" style={{ color: "#1D1D1F" }}>
+                            <h2 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
                                 {spendingName}
                             </h2>
-                            <p className="text-xs" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                                 {categoryName}
                             </p>
                         </div>
@@ -104,7 +100,7 @@ export function SpendingCardExpanded({
                             <p className="text-lg font-bold tabular-nums" style={{ color: spent.color }}>
                                 {spent.label}
                             </p>
-                            <p className="text-xs" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
@@ -117,8 +113,7 @@ export function SpendingCardExpanded({
 
                 {/* Row 2: Progress Bar */}
                 <div
-                    className="w-full h-3 rounded-full overflow-hidden"
-                    style={{ backgroundColor: "#E5E5EA" }}
+                    className="w-full h-3 rounded-full overflow-hidden bg-input"
                 >
                     <div
                         className="h-full rounded-full transition-all duration-500"
@@ -150,7 +145,7 @@ export function SpendingCardExpanded({
                             ? `${formatAmount(Math.abs(amountLeft))} over`
                             : `${formatAmount(amountLeft)} left`}
                     </div>
-                    <span className="text-xs" style={{ color: "#6E6E73" }}>
+                    <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                         {spendingEntries} {spendingEntries === 1 ? "entry" : "entries"}
                     </span>
                 </div>
@@ -158,17 +153,17 @@ export function SpendingCardExpanded({
 
             {/* Expanded Content — Entries */}
             <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                <div className="h-px mb-4" style={{ backgroundColor: "#E5E5EA" }} />
+                <div className="h-px mb-4 bg-border" />
 
                 {/* Search and Sort */}
                 <div className="flex gap-2 mb-3">
                     <div
                         className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 rounded-xl"
-                        style={{ backgroundColor: "#F5F5F7" }}
+                        style={{ backgroundColor: "var(--muted)" }}
                     >
                         <svg
                             className="w-4 h-4 flex-shrink-0"
-                            style={{ color: "#6E6E73" }}
+                            style={{ color: "var(--muted-foreground)" }}
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -186,11 +181,11 @@ export function SpendingCardExpanded({
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="flex-1 bg-transparent outline-none text-sm"
-                            style={{ color: "#1D1D1F" }}
+                            style={{ color: "var(--foreground)" }}
                         />
                     </div>
                     <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as typeof sortOrder)}>
-                        <SelectTrigger className="flex-shrink-0 h-auto px-3 py-2.5 rounded-xl text-xs font-medium border-none bg-[#F5F5F7] text-[#1D1D1F]">
+                        <SelectTrigger className="flex-shrink-0 h-auto px-3 py-2.5 rounded-xl text-xs font-medium border-none bg-muted text-foreground">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -208,8 +203,8 @@ export function SpendingCardExpanded({
                         <button
                             key={entry.id}
                             onClick={() => onEntryClick(entry)}
-                            className="w-full flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors hover:bg-gray-100 text-left"
-                            style={{ backgroundColor: "#F5F5F7" }}
+                            className="w-full flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors hover:bg-input text-left"
+                            style={{ backgroundColor: "var(--muted)" }}
                         >
                             <div className="flex items-center gap-3">
                                 <div
@@ -219,15 +214,15 @@ export function SpendingCardExpanded({
                                     {iconMap[spendingItemIcon] || spendingItemIcon}
                                 </div>
                                 <div>
-                                    <p className="font-medium text-sm" style={{ color: "#1D1D1F" }}>
+                                    <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>
                                         {entry.name}
                                     </p>
-                                    <p className="text-xs truncate max-w-[160px]" style={{ color: "#6E6E73" }}>
+                                    <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>
                                         {formatDateShort(entry.date)}
                                     </p>
                                 </div>
                             </div>
-                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "#1D1D1F" }}>
+                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "var(--foreground)" }}>
                                 {entry.direction === "credit" ? "+" : "-"}
                                 {formatAmount(entry.amount)}
                             </p>
@@ -239,11 +234,11 @@ export function SpendingCardExpanded({
                         <div className="text-center py-8">
                             <div
                                 className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center"
-                                style={{ backgroundColor: "#F5F5F7" }}
+                                style={{ backgroundColor: "var(--muted)" }}
                             >
                                 <svg
                                     className="w-6 h-6"
-                                    style={{ color: "#6E6E73" }}
+                                    style={{ color: "var(--muted-foreground)" }}
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -256,10 +251,10 @@ export function SpendingCardExpanded({
                                     />
                                 </svg>
                             </div>
-                            <p className="text-sm font-medium" style={{ color: "#1D1D1F" }}>
+                            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                                 No entries yet
                             </p>
-                            <p className="text-xs mt-1" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>
                                 Add your first expense
                             </p>
                         </div>
@@ -270,7 +265,7 @@ export function SpendingCardExpanded({
                 <button
                     onClick={onAddEntry}
                     className="w-full mt-3 p-3.5 rounded-xl border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] hover:border-[#007AFF] hover:bg-[rgba(0,122,255,0.05)]"
-                    style={{ borderColor: "#E5E5EA" }}
+                    style={{ borderColor: "var(--border)" }}
                 >
                     <svg
                         className="w-5 h-5"

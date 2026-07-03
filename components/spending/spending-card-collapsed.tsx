@@ -33,13 +33,7 @@ export function SpendingCardCollapsed({
     const spent = spentDisplay(totalSpent, formatAmount);
 
     return (
-        <div
-            className="rounded-2xl overflow-hidden"
-            style={{
-                backgroundColor: "#ffffffff",
-                border: "1px solid rgba(0, 0, 0, 0.06)",
-            }}
-        >
+        <div className="bg-card border border-(--card-border) rounded-2xl overflow-hidden">
             <div className="p-4 sm:p-5">
                 {/* Row 1: Header */}
                 <div className="flex items-center justify-between mb-3">
@@ -52,10 +46,10 @@ export function SpendingCardCollapsed({
                             {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
                         <div className="min-w-0">
-                            <h2 className="text-base font-semibold truncate" style={{ color: "#1D1D1F" }}>
+                            <h2 className="text-base font-semibold truncate" style={{ color: "var(--foreground)" }}>
                                 {spendingName}
                             </h2>
-                            <p className="text-xs truncate" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
                                 {categoryName}
                             </p>
                         </div>
@@ -67,7 +61,7 @@ export function SpendingCardCollapsed({
                             <p className="text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: spent.color }}>
                                {spent.label}
                             </p>
-                            <p className="text-xs whitespace-nowrap" style={{ color: "#6E6E73" }}>
+                            <p className="text-xs whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
@@ -80,8 +74,7 @@ export function SpendingCardCollapsed({
 
                 {/* Row 2: Progress Bar */}
                 <div
-                    className="w-full h-3 rounded-full overflow-hidden"
-                    style={{ backgroundColor: "#E5E5EA" }}
+                    className="w-full h-3 rounded-full overflow-hidden bg-input"
                 >
                     <div
                         className="h-full rounded-full transition-all duration-500"
@@ -116,7 +109,7 @@ export function SpendingCardCollapsed({
                     </div>
 
                     {/* Entries count */}
-                    <span className="text-xs" style={{ color: "#6E6E73" }}>
+                    <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
                         {spendingEntries} {spendingEntries === 1 ? "entry" : "entries"}
                     </span>
                 </div>

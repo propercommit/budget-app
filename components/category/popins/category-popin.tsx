@@ -42,9 +42,9 @@ export function CategoryPopin({
     const isFormValid = isNameValid;
 
     const getInputStyle = (isValid: boolean) => ({
-        backgroundColor: "#F5F5F7",
-        border: `1px solid ${showErrors && !isValid ? "#FF3B30" : "#E5E5EA"}`,
-        color: "#1D1D1F",
+        backgroundColor: "var(--muted)",
+        border: `1px solid ${showErrors && !isValid ? "#FF3B30" : "var(--border)"}`,
+        color: "var(--foreground)",
     });
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -53,7 +53,7 @@ export function CategoryPopin({
     };
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>, isValid: boolean) => {
-        e.currentTarget.style.borderColor = showErrors && !isValid ? "#FF3B30" : "#E5E5EA";
+        e.currentTarget.style.borderColor = showErrors && !isValid ? "#FF3B30" : "var(--border)";
         e.currentTarget.style.boxShadow = "none";
     };
 
@@ -79,7 +79,7 @@ export function CategoryPopin({
                         <button
                             onClick={onClose}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                         >
                             Cancel
                         </button>
@@ -105,7 +105,7 @@ export function CategoryPopin({
                 </div>
             }
         >
-            <div className="-mx-5 -mt-5 mb-5 flex justify-center py-4" style={{ backgroundColor: "#FAFAFA" }}>
+            <div className="-mx-5 -mt-5 mb-5 flex justify-center py-4" style={{ backgroundColor: "var(--muted)" }}>
                 <div
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold"
                     style={{ backgroundColor: selectedColor }}
@@ -117,7 +117,7 @@ export function CategoryPopin({
 
             <div className="space-y-5">
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Category Name
                     </label>
                     <input
@@ -131,7 +131,7 @@ export function CategoryPopin({
                         onFocus={handleFocus}
                         onBlur={(e) => handleBlur(e, isNameValid)}
                     />
-                    <p className="text-xs text-right" style={{ color: name.length >= 25 ? "#FF9500" : "#6E6E73" }}>
+                    <p className="text-xs text-right" style={{ color: name.length >= 25 ? "#FF9500" : "var(--muted-foreground)" }}>
                         {name.length}/30
                     </p>
                     {showErrors && !isNameValid && (

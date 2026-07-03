@@ -47,8 +47,7 @@ export function TrendsCard({ spendingData, incomeData, categoryData, categories 
             style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif' }}
         >
             <div
-                className="bg-white rounded-3xl overflow-hidden transition-all duration-300"
-                style={{ boxShadow: "0 4px 24px rgba(0, 0, 0, 0.06)", border: "1px solid rgba(0, 0, 0, 0.04)" }}
+                className="bg-card rounded-3xl overflow-hidden transition-all duration-300 border border-(--card-border) shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
             >
                 {/* Header */}
                 <div className="p-4 sm:p-5 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>

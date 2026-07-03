@@ -34,10 +34,10 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
                 <button
                     onClick={onEdit}
                     className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                    style={{ backgroundColor: "#F5F5F7" }}
+                    style={{ backgroundColor: "var(--muted)" }}
                     title="Edit income"
                 >
-                    <svg className="w-5 h-5" style={{ color: "#6E6E73" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5" style={{ color: "var(--muted-foreground)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                 </button>
@@ -46,7 +46,7 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
                 <button
                     onClick={onClose}
                     className="w-full py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                    style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                 >
                     Close
                 </button>
@@ -61,41 +61,41 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
                         {renderIcon(income.icon)}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-semibold truncate" style={{ color: "#1D1D1F" }}>{income.name}</h3>
+                        <h3 className="text-xl font-semibold truncate" style={{ color: "var(--foreground)" }}>{income.name}</h3>
                     </div>
                 </div>
 
-                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Amount</span>
-                        <span className="text-base font-bold" style={{ color: "#1D1D1F" }}>
+                        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Amount</span>
+                        <span className="text-base font-bold" style={{ color: "var(--foreground)" }}>
                             {formatAmount(income.amount)}
                         </span>
                     </div>
 
                     <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Type</span>
+                        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Type</span>
                         <div className="flex items-center gap-2">
                             <div
                                 className="w-2.5 h-2.5 rounded-full"
                                 style={{ backgroundColor: typeColor }}
                             />
-                            <span className="text-sm font-semibold capitalize" style={{ color: "#1D1D1F" }}>
+                            <span className="text-sm font-semibold capitalize" style={{ color: "var(--foreground)" }}>
                                 {income.type}
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Duration</span>
+                        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Duration</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                            <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                                 {formatDate(income.startDate)}
                             </span>
-                            <span style={{ color: "#C7C7CC" }}>→</span>
-                            <span className="text-sm font-semibold" style={{ color: income.endDate ? "#1D1D1F" : "#34C759" }}>
+                            <span className="text-muted-foreground/60">→</span>
+                            <span className="text-sm font-semibold" style={{ color: income.endDate ? "var(--foreground)" : "#34C759" }}>
                                 {income.endDate ? formatDate(income.endDate) : 'Present'}
                             </span>
                         </div>
@@ -103,8 +103,8 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
 
                     {income.note && (
                         <div className="space-y-2">
-                            <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Note</span>
-                            <p className="text-sm leading-relaxed p-4 rounded-xl" style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}>
+                            <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Note</span>
+                            <p className="text-sm leading-relaxed p-4 rounded-xl" style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}>
                                 {income.note}
                             </p>
                         </div>
