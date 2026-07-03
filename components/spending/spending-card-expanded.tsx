@@ -27,7 +27,8 @@ interface SpendingCardExpandedProps {
     spendingCategoryColor: string;
     entries: SpendingEntry[];
     onCollapse: () => void;
-    onEntryClick: (entry: SpendingEntry) => void;
+    /** Receives the clicked entry plus the list as currently displayed (filtered + sorted), for sibling paging in the detail popin. */
+    onEntryClick: (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => void;
     onAddEntry: () => void;
     onItemDetailClick: () => void;
 }
@@ -202,7 +203,7 @@ export function SpendingCardExpanded({
                     {filteredEntries.map((entry) => (
                         <button
                             key={entry.id}
-                            onClick={() => onEntryClick(entry)}
+                            onClick={() => onEntryClick(entry, filteredEntries)}
                             className="w-full flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors hover:bg-input text-left"
                             style={{ backgroundColor: "var(--muted)" }}
                         >

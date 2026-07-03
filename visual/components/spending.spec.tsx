@@ -213,12 +213,17 @@ test.describe("Spending popins", () => {
           onClose={noop}
           onEdit={noop}
           entry={coopEntry}
+          entries={cardEntries}
+          onNavigate={noop}
           spendingName="Groceries"
           spendingItemIcon="shopping-cart"
           spendingCategoryColor="#34C759"
         />
       </Providers>,
     );
+
+    // The sibling pager announces the position under the title.
+    await expect(page.getByText("Entry 2 of 3")).toBeVisible();
 
     await expect(page.getByText("Coop").first()).toBeVisible();
 
