@@ -26,17 +26,17 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
 
     return (
         <div className="space-y-3">
-            <Label className="text-sm font-semibold text-gray-900">Icon</Label>
+            <Label className="text-sm font-semibold text-foreground">Icon</Label>
             
             {/* Tabs */}
-            <div className="flex border-b border-gray-200">
+            <div className="flex border-b border-border">
                 <button
                     type="button"
                     onClick={() => setIconSource("preset")}
                     className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                         iconSource === "preset"
-                            ? "text-gray-900 border-blue-500"
-                            : "text-gray-500 border-transparent"
+                            ? "text-foreground border-blue-500"
+                            : "text-muted-foreground border-transparent"
                     }`}
                 >
                     Choose Icon
@@ -46,8 +46,8 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     onClick={() => setIconSource("upload")}
                     className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                         iconSource === "upload"
-                            ? "text-gray-900 border-blue-500"
-                            : "text-gray-500 border-transparent"
+                            ? "text-foreground border-blue-500"
+                            : "text-muted-foreground border-transparent"
                     }`}
                 >
                     Upload Icon
@@ -68,13 +68,13 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all flex-shrink-0 min-w-[72px] ${
                                     isSelected
                                         ? "bg-blue-50 border-2 border-blue-500"
-                                        : "bg-gray-100 border-2 border-transparent hover:bg-gray-200"
+                                        : "bg-muted border-2 border-transparent hover:bg-input"
                                 }`}
                             >
-                                <div className={isSelected ? "text-blue-500" : "text-gray-600"}>
+                                <div className={isSelected ? "text-blue-500" : "text-muted-foreground"}>
                                     {iconMap[icon.id]}
                                 </div>
-                                <span className={`text-xs font-medium ${isSelected ? "text-blue-500" : "text-gray-500"}`}>
+                                <span className={`text-xs font-medium ${isSelected ? "text-blue-500" : "text-muted-foreground"}`}>
                                     {icon.name}
                                 </span>
                             </button>
@@ -82,22 +82,22 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     })}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50">
+                <div className="flex flex-col items-center justify-center gap-3 py-8 px-6 rounded-xl border-2 border-dashed border-border bg-muted">
                     {value.startsWith("data:") ? (
                         <div className="flex flex-col items-center gap-2">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={value} alt="Custom icon" className="w-12 h-12 object-contain" />
-                            <p className="text-sm text-gray-500">Icon uploaded!</p>
+                            <p className="text-sm text-muted-foreground">Icon uploaded!</p>
                         </div>
                     ) : (
                         <>
-                            {/* <Upload className="w-8 h-8 text-gray-400" />
-                            <p className="text-sm text-gray-500">Upload your custom icon</p> */}
+                            {/* <Upload className="w-8 h-8 text-muted-foreground/70" />
+                            <p className="text-sm text-muted-foreground">Upload your custom icon</p> */}
                         </>
                     )}
                     <Label
                         htmlFor="icon-upload"
-                        className="cursor-pointer px-5 py-2.5 rounded-xl text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+                        className="cursor-pointer px-5 py-2.5 rounded-xl text-sm font-medium bg-card border border-border hover:bg-muted transition-colors"
                     >
                         {value.startsWith("data:") ? "Change Icon" : "Select File"}
                     </Label>

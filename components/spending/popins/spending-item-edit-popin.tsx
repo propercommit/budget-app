@@ -97,7 +97,7 @@ export function SpendingItemEditPopin({
                         <button
                             onClick={onClose}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                         >
                             Cancel
                         </button>
@@ -121,7 +121,7 @@ export function SpendingItemEditPopin({
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={isFormValid
                                 ? { backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }
-                                : { backgroundColor: "#E5E5EA", color: "#8E8E93", cursor: "not-allowed" }
+                                : { backgroundColor: "var(--border)", color: "var(--muted-foreground)", cursor: "not-allowed" }
                             }
                         >
                             {isCreate ? "Create" : "Save Changes"}
@@ -139,7 +139,7 @@ export function SpendingItemEditPopin({
         >
             <div className="space-y-5">
                 <div className="space-y-2">
-                    <label htmlFor="spending-name" className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label htmlFor="spending-name" className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Name
                     </label>
                     <input
@@ -150,16 +150,16 @@ export function SpendingItemEditPopin({
                         placeholder="e.g., Fuel, Netflix, Groceries"
                         aria-required="true"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
 
                 <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
 
                 <fieldset className="space-y-2">
-                    <legend className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <legend className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Category
                     </legend>
                     <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Select a category">
@@ -171,8 +171,8 @@ export function SpendingItemEditPopin({
                                 aria-checked={selectedCategory === cat.name}
                                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95"
                                 style={{
-                                    backgroundColor: selectedCategory === cat.name ? cat.color : "#F5F5F7",
-                                    color: selectedCategory === cat.name ? "white" : "#6E6E73",
+                                    backgroundColor: selectedCategory === cat.name ? cat.color : "var(--muted)",
+                                    color: selectedCategory === cat.name ? "white" : "var(--muted-foreground)",
                                 }}
                             >
                                 <span className="text-sm [&>svg]:w-4 [&>svg]:h-4" aria-hidden="true">
@@ -196,11 +196,11 @@ export function SpendingItemEditPopin({
                 </fieldset>
 
                 <div className="space-y-2">
-                    <label htmlFor="spending-budget" className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label htmlFor="spending-budget" className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Monthly Budget
                     </label>
                     <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold" style={{ color: "#8E8E93" }} aria-hidden="true">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
                             {CURRENCY_SYMBOLS[settings.currency]}
                         </span>
                         <input
@@ -212,16 +212,16 @@ export function SpendingItemEditPopin({
                             aria-required="true"
                             aria-label="Monthly budget amount"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                             onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                         />
                     </div>
-                    <p className="text-xs truncate max-w-[160px]" style={{ color: "#6E6E73" }}>Set how much you want to spend per month</p>
+                    <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>Set how much you want to spend per month</p>
                 </div>
 
                 <fieldset className="space-y-2 max-w-full overflow-hidden">
-                    <legend className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <legend className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Date Range
                     </legend>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -234,13 +234,13 @@ export function SpendingItemEditPopin({
                                 aria-required="true"
                                 aria-label="Start date"
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: startDate ? "#1D1D1F" : "#6E6E73", WebkitAppearance: "none", minWidth: 0 }}
+                                style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: startDate ? "var(--foreground)" : "var(--muted-foreground)", WebkitAppearance: "none", minWidth: 0 }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>Start</p>
+                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>Start</p>
                         </div>
-                        <svg className="hidden sm:block w-5 h-5 flex-shrink-0" style={{ color: "#C7C7CC" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <svg className="hidden sm:block w-5 h-5 flex-shrink-0 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
                         <div className="w-full sm:flex-1 min-w-0">
@@ -251,18 +251,18 @@ export function SpendingItemEditPopin({
                                 onChange={(e) => setEndDate(e.target.value)}
                                 aria-label="End date (optional)"
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: endDate ? "#1D1D1F" : "#6E6E73", WebkitAppearance: "none", minWidth: 0 }}
+                                style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: endDate ? "var(--foreground)" : "var(--muted-foreground)", WebkitAppearance: "none", minWidth: 0 }}
                                 onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>End <span style={{ color: "#AEAEB2" }}>(optional)</span></p>
+                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>End <span className="text-muted-foreground/70">(optional)</span></p>
                         </div>
                     </div>
                 </fieldset>
 
                 <div className="space-y-2">
-                    <label htmlFor="spending-note" className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Note <span className="font-normal" style={{ color: "#6E6E73" }}>(optional)</span>
+                    <label htmlFor="spending-note" className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Note <span className="font-normal" style={{ color: "var(--muted-foreground)" }}>(optional)</span>
                     </label>
                     <textarea
                         id="spending-note"
@@ -272,9 +272,9 @@ export function SpendingItemEditPopin({
                         rows={3}
                         aria-label="Additional notes (optional)"
                         className="w-full px-4 py-3 rounded-xl text-base outline-none transition-all duration-200 resize-none"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
             </div>

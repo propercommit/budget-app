@@ -54,7 +54,7 @@ export function PopinWrapper({
             <div
                 ref={popinRef}
                 tabIndex={-1}
-                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-white rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0"
+                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-card rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0"
                 style={{
                     boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)",
                     maxHeight: "90vh",
@@ -63,19 +63,19 @@ export function PopinWrapper({
                 }}
             >
                 <div className="sm:hidden flex justify-center pt-3 pb-1">
-                    <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "#E5E5EA" }} />
+                    <div className="w-10 h-1 rounded-full bg-border" />
                 </div>
 
                 <div
                     className="flex items-center justify-between px-5 py-4"
-                    style={{ borderBottom: "1px solid #E5E5EA" }}
+                    style={{ borderBottom: "1px solid var(--border)" }}
                 >
                     <div>
-                        <h2 className="text-lg font-semibold" style={{ color: "#1D1D1F" }}>
+                        <h2 className="text-lg font-semibold text-foreground">
                             {title}
                         </h2>
                         {subtitle && (
-                            <p className="text-sm" style={{ color: "#6E6E73" }}>
+                            <p className="text-sm text-muted-foreground">
                                 {subtitle}
                             </p>
                         )}
@@ -84,12 +84,10 @@ export function PopinWrapper({
                         {headerActions}
                         <button
                             onClick={onClose}
-                            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                            style={{ backgroundColor: "#F5F5F7" }}
+                            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted"
                         >
                             <svg
-                                className="w-5 h-5"
-                                style={{ color: "#6E6E73" }}
+                                className="w-5 h-5 text-muted-foreground"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -112,7 +110,7 @@ export function PopinWrapper({
                 {footer && (
                     <div
                         className="px-5 py-4"
-                        style={{ borderTop: "1px solid #E5E5EA" }}
+                        style={{ borderTop: "1px solid var(--border)" }}
                     >
                         {footer}
                     </div>

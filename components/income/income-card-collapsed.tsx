@@ -64,7 +64,7 @@ export function IncomeCardCollapsed({
                         cy="80"
                         r="65"
                         fill="none"
-                        stroke="#E5E5EA"
+                        className="stroke-border"
                         strokeWidth="14"
                         strokeDasharray="8 4"
                     />
@@ -74,12 +74,12 @@ export function IncomeCardCollapsed({
                         <span
                             className="text-xl font-semibold transition-colors duration-200"
                             style={{
-                                color: hoveredType === 'active' ? '#007AFF' : hoveredType === 'passive' ? '#FF9500' : '#1D1D1F'
+                                color: hoveredType === 'active' ? '#007AFF' : hoveredType === 'passive' ? '#FF9500' : 'var(--foreground)'
                             }}
                         >
                             {centerText.amount}
                         </span>
-                        <span className="text-xs text-gray-500">{centerText.label}</span>
+                        <span className="text-xs text-muted-foreground">{centerText.label}</span>
                     </div>
                 }
             />

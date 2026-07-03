@@ -23,7 +23,7 @@ export function InputSlider({label, value, onChange, onCommit, color, colorLight
                 {showAmount === true && <span className="text-sm font-semibold">$ {value}</span>}
             </div>
             <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">$</span>
+                <span className="text-sm text-muted-foreground">$</span>
                 <Input 
                     type="number" 
                     placeholder="0" 
@@ -61,7 +61,7 @@ export function InputSlider({label, value, onChange, onCommit, color, colorLight
                 />
             </div>
         </div>
-            {showLegend === true && <p className="text-xs text-gray-500 mt-3">{legend}</p>}
+            {showLegend === true && <p className="text-xs text-muted-foreground mt-3">{legend}</p>}
     </div>
     
     );

@@ -97,7 +97,7 @@ export function EntryEditPopin({
                         <button
                             onClick={onClose}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                         >
                             Cancel
                         </button>
@@ -117,8 +117,8 @@ export function EntryEditPopin({
                             disabled={!isFormValid}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={{
-                                backgroundColor: isFormValid ? "#34C759" : "#E5E5EA",
-                                color: isFormValid ? "white" : "#8E8E93",
+                                backgroundColor: isFormValid ? "#34C759" : "var(--border)",
+                                color: isFormValid ? "white" : "var(--muted-foreground)",
                                 cursor: isFormValid ? "pointer" : "not-allowed",
                                 boxShadow: isFormValid ? "0 4px 12px rgba(52, 199, 89, 0.3)" : "none",
                             }}
@@ -142,7 +142,7 @@ export function EntryEditPopin({
                     style={{ backgroundColor: `${spendingCategoryColor}15` }}
                 >
                     <span className="text-lg">{iconMap[spendingItemIcon] || spendingItemIcon}</span>
-                    <span className="text-sm font-medium" style={{ color: "#1D1D1F" }}>
+                    <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                         {spendingName}
                     </span>
                     <span
@@ -154,7 +154,7 @@ export function EntryEditPopin({
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Name
                     </label>
                     <input
@@ -163,14 +163,14 @@ export function EntryEditPopin({
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Shell Station, Grocery run"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Amount
                     </label>
                     <div className="relative">
@@ -188,15 +188,15 @@ export function EntryEditPopin({
                             onChange={handleAmountChange}
                             placeholder="0.00"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                             onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                         />
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Type
                     </label>
                     <SegmentedToggle
@@ -210,7 +210,7 @@ export function EntryEditPopin({
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Date
                     </label>
                     <input
@@ -218,18 +218,18 @@ export function EntryEditPopin({
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F", WebkitAppearance: "none" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)", WebkitAppearance: "none" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Receipt <span style={{ color: "#6E6E73", fontWeight: 400 }}>(optional)</span>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Receipt <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional)</span>
                     </label>
                     {receipt ? (
-                        <div className="relative rounded-xl overflow-hidden" style={{ backgroundColor: "#F5F5F7" }}>
+                        <div className="relative rounded-xl overflow-hidden" style={{ backgroundColor: "var(--muted)" }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={receipt} alt="Receipt preview" className="w-full h-40 object-cover" />
                             <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
@@ -244,23 +244,23 @@ export function EntryEditPopin({
                         </div>
                     ) : (
                         <label
-                            className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 hover:bg-gray-50"
-                            style={{ borderColor: "#E5E5EA" }}
+                            className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 hover:bg-muted"
+                            style={{ borderColor: "var(--border)" }}
                         >
-                            <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ backgroundColor: "#F5F5F7" }}>
-                                <svg className="w-5 h-5" style={{ color: "#6E6E73" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--muted)" }}>
+                                <svg className="w-5 h-5" style={{ color: "var(--muted-foreground)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                 </svg>
                             </div>
-                            <span className="text-sm" style={{ color: "#6E6E73" }}>Upload receipt (max 2MB)</span>
+                            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>Upload receipt (max 2MB)</span>
                             <input type="file" accept="image/*" className="hidden" onChange={handleReceiptUpload} />
                         </label>
                     )}
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Link <span style={{ color: "#6E6E73", fontWeight: 400 }}>(optional)</span>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Link <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional)</span>
                     </label>
                     <input
                         type="url"
@@ -268,9 +268,9 @@ export function EntryEditPopin({
                         onChange={(e) => setLink(e.target.value)}
                         placeholder="https://example.com"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
+                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
                         onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>
             </div>
