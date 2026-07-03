@@ -173,9 +173,12 @@ export function EntryEditPopin({
                     <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Amount
                     </label>
-                    <div className="relative">
+                    {/* The prefix sits in flow (not absolutely positioned) so
+                        the gap to the amount holds for any symbol width ($ vs
+                        CHF); the focus ring moves to the wrapper accordingly. */}
+                    <div className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]">
                         <span
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold"
+                            className="flex-shrink-0 text-lg font-semibold"
                             style={{ color: direction === "debit" ? "#FF3B30" : "#34C759" }}
                         >
                             {direction === "debit" ? "−" : "+"}
@@ -187,10 +190,8 @@ export function EntryEditPopin({
                             value={amount}
                             onChange={handleAmountChange}
                             placeholder="0.00"
-                            className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                            className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
+                            style={{ color: "var(--foreground)" }}
                         />
                     </div>
                 </div>
