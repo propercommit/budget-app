@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import { Category } from "@/lib/types";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
@@ -37,7 +38,8 @@ export function ManageCategoriesPopin({
 
     const [query, setQuery] = useState("");
 
-    const normalizedQuery = query.trim().toLowerCase();
+    const trimmedQuery = query.trim();
+    const normalizedQuery = trimmedQuery.toLowerCase();
     const filteredCategories = categories.filter(c => c.label.toLowerCase().includes(normalizedQuery));
 
     return (
@@ -93,9 +95,7 @@ export function ManageCategoriesPopin({
                         className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200 active:scale-95"
                         style={{ backgroundColor: "var(--muted-foreground)", color: "var(--card)" }}
                     >
-                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
-                        </svg>
+                        <X className="w-2.5 h-2.5" strokeWidth={3} />
                     </button>
                 )}
             </div>
@@ -103,7 +103,7 @@ export function ManageCategoriesPopin({
             <div className="mt-4 flex flex-col gap-2.5">
                 {filteredCategories.length === 0 && (
                     <p className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        {normalizedQuery.length > 0 ? `No categories match "${query.trim()}".` : "No categories found"}
+                        {trimmedQuery.length > 0 ? `No categories match "${trimmedQuery}".` : "No categories found"}
                     </p>
                 )}
 

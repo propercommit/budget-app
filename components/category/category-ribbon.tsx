@@ -1,7 +1,7 @@
 "use client";
 
 import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Settings2 } from "lucide-react";
+import { ChevronDown, Settings2 } from "lucide-react";
 import { iconMap } from "@/lib/icon-map";
 
 /**
@@ -10,6 +10,9 @@ import { iconMap } from "@/lib/icon-map";
  * would overflow, so the pills, "+N" and "+ Category" always share one line.
  */
 const MAX_VISIBLE_CATEGORIES = 5;
+
+/** Shared look of every pill-shaped button in the ribbon. */
+const PILL_CLASSES = "flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95";
 
 interface Category {
     name: string;
@@ -38,7 +41,7 @@ function CategoryPill({ category, isSelected, onSelect, style }: CategoryPillPro
     return (
         <button
             onClick={onSelect}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
+            className={PILL_CLASSES}
             style={{
                 backgroundColor: isSelected ? category.color : "var(--card)",
                 color: isSelected ? "white" : "var(--muted-foreground)",
@@ -70,13 +73,43 @@ function AllPill({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
     );
 }
 
+interface OverflowTogglePillProps {
+    count: number;
+    isOpen: boolean;
+    onToggle: () => void;
+}
+
+/** The "+N" pill that expands/collapses the hidden categories into the peek row. */
+function OverflowTogglePill({ count, isOpen, onToggle }: OverflowTogglePillProps) {
+    return (
+        <button
+            onClick={onToggle}
+            title="Show more categories"
+            aria-expanded={isOpen}
+            className={PILL_CLASSES}
+            style={{
+                backgroundColor: isOpen ? "rgba(0, 122, 255, 0.08)" : "var(--card)",
+                color: isOpen ? "#007AFF" : "var(--foreground)",
+                border: isOpen ? "1px solid #007AFF" : "1px solid var(--border)",
+            }}
+        >
+            +{count}
+            <ChevronDown
+                className="w-3.5 h-3.5"
+                strokeWidth={2.2}
+                style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
+            />
+        </button>
+    );
+}
+
 /** Labeled quick-add pill — same shape as the category pills so create is unmistakable. */
 function NewCategoryPill({ onClick }: { onClick: () => void }) {
     return (
         <button
             onClick={onClick}
             title="New category"
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
+            className={PILL_CLASSES}
             style={{
                 backgroundColor: "var(--card)",
                 border: "1px solid var(--border)",
@@ -218,31 +251,11 @@ export function CategoryRibbon({
                     </div>
 
                     {hiddenCategories.length > 0 && (
-                        <button
-                            onClick={() => setIsPeekOpen(prev => !prev)}
-                            title="Show more categories"
-                            aria-expanded={isPeekOpen}
-                            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
-                            style={{
-                                backgroundColor: isPeekOpen ? "rgba(0, 122, 255, 0.08)" : "var(--card)",
-                                color: isPeekOpen ? "#007AFF" : "var(--foreground)",
-                                border: isPeekOpen ? "1px solid #007AFF" : "1px solid var(--border)",
-                            }}
-                        >
-                            +{hiddenCategories.length}
-                            <svg
-                                className="w-3.5 h-3.5"
-                                style={{ transform: isPeekOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth={2.2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                        </button>
+                        <OverflowTogglePill
+                            count={hiddenCategories.length}
+                            isOpen={isPeekOpen}
+                            onToggle={() => setIsPeekOpen(prev => !prev)}
+                        />
                     )}
 
                     <NewCategoryPill onClick={onAddCategory} />
@@ -250,7 +263,7 @@ export function CategoryRibbon({
                     {/* Manage categories (desktop only; mobile uses the Spending header button) */}
                     <button
                         onClick={onManage}
-                        className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95 bg-muted text-foreground"
+                        className={`${PILL_CLASSES} bg-muted text-foreground`}
                     >
                         <Settings2 className="w-4 h-4" strokeWidth={1.9} />
                         Manage
