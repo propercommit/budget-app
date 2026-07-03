@@ -85,12 +85,25 @@ export function ManageCategoriesPopin({
                     className="flex-1 bg-transparent outline-none text-sm"
                     style={{ color: "var(--foreground)" }}
                 />
+
+                {query.length > 0 && (
+                    <button
+                        onClick={() => setQuery("")}
+                        aria-label="Clear search"
+                        className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all duration-200 active:scale-95"
+                        style={{ backgroundColor: "var(--muted-foreground)", color: "var(--card)" }}
+                    >
+                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             <div className="mt-4 flex flex-col gap-2.5">
                 {filteredCategories.length === 0 && (
                     <p className="py-8 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
-                        No categories found
+                        {normalizedQuery.length > 0 ? `No categories match "${query.trim()}".` : "No categories found"}
                     </p>
                 )}
 
