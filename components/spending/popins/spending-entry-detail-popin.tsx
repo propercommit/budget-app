@@ -42,6 +42,24 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
     const prevEntry = canNavigate && index > 0 ? entries[index - 1] : null;
     const nextEntry = canNavigate && index < entries.length - 1 ? entries[index + 1] : null;
 
+    // Side the incoming entry slides in from, derived from the index delta of
+    // a page turn while open (render-phase adjustment, per the React
+    // "adjusting state when props change" pattern). null — the initial open,
+    // or a reopen — renders without animation, and every navigation path
+    // (keys, swipe, future buttons) gets the animation for free.
+    const currentKey = isOpen && entry !== null ? entry.id : null;
+    const [prevKey, setPrevKey] = useState(currentKey);
+    const [slideFrom, setSlideFrom] = useState<"left" | "right" | null>(null);
+
+    if (prevKey !== currentKey) {
+        setPrevKey(currentKey);
+
+        const oldIndex = prevKey === null ? -1 : entries.findIndex(e => e.id === prevKey);
+
+        if (oldIndex >= 0 && index >= 0 && currentKey !== null) setSlideFrom(index > oldIndex ? "right" : "left");
+        else setSlideFrom(null);
+    }
+
     // Desktop keyboard pager. Inert while the receipt viewer covers the popin.
     useEffect(() => {
         if (!isOpen || onNavigate === undefined || isReceiptViewerOpen) return;
@@ -90,6 +108,8 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
             onClose={onClose}
             title="Entry Details"
             subtitle={canNavigate ? `Entry ${index + 1} of ${entries.length}` : undefined}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             headerActions={
                 <button
                     onClick={onEdit}
@@ -111,7 +131,11 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                 </button>
             }
         >
-            <div className="space-y-5" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+            {/* Remounting on the entry id replays the slide-in per page turn. */}
+            <div
+                key={entry.id}
+                className={`space-y-5 ${slideFrom === null ? "" : `animate-in fade-in duration-300 ${slideFrom === "right" ? "slide-in-from-right-7" : "slide-in-from-left-7"}`}`}
+            >
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: spendingCategoryColor + "15" }}>

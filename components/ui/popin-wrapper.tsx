@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, ReactNode } from "react";
+import { useRef, useEffect, ReactNode, TouchEventHandler } from "react";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 interface PopinWrapperProps {
@@ -12,6 +12,13 @@ interface PopinWrapperProps {
     children: ReactNode;
     footer?: ReactNode;
     zIndex?: number;
+    /**
+     * Touch passthrough to the sheet element, so gestures (e.g. a pager
+     * swipe) cover the whole sheet — header, footer and gutters included —
+     * not just the consumer's content area.
+     */
+    onTouchStart?: TouchEventHandler<HTMLDivElement>;
+    onTouchEnd?: TouchEventHandler<HTMLDivElement>;
 }
 
 export function PopinWrapper({
@@ -23,6 +30,8 @@ export function PopinWrapper({
     children,
     footer,
     zIndex,
+    onTouchStart,
+    onTouchEnd,
 }: PopinWrapperProps) {
     const popinRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +63,8 @@ export function PopinWrapper({
             <div
                 ref={popinRef}
                 tabIndex={-1}
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
                 className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-card rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0"
                 style={{
                     boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)",

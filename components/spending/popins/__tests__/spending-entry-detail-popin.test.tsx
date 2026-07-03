@@ -38,13 +38,20 @@ function renderPopin(overrides: Partial<PopinProps> = {}) {
     ...overrides,
   };
 
-  render(
+  const { rerender } = render(
     <SettingsProvider>
       <EntryDetailPopin {...props} />
     </SettingsProvider>,
   );
 
-  return { onNavigate };
+  const rerenderPopin = (next: Partial<PopinProps>) =>
+    rerender(
+      <SettingsProvider>
+        <EntryDetailPopin {...props} {...next} />
+      </SettingsProvider>,
+    );
+
+  return { onNavigate, rerenderPopin };
 }
 
 function swipe(target: HTMLElement, fromX: number, toX: number, y = 300) {
@@ -108,6 +115,29 @@ describe("EntryDetailPopin — sibling paging", () => {
     fireEvent.touchEnd(content, { changedTouches: [{ clientX: 200, clientY: 400 }] });
 
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("slides the incoming entry in from the side the user paged toward", () => {
+    const { onNavigate, rerenderPopin } = renderPopin();
+    const content = () => screen.getByText("Groceries").closest(".space-y-5") as HTMLElement;
+
+    // Initial open renders without a slide.
+    expect(content().className).not.toContain("animate-in");
+
+    swipe(content(), 300, 100);
+
+    expect(onNavigate).toHaveBeenCalledWith(entries[2]);
+
+    // The parent applies the navigation; the incoming entry slides from the right.
+    rerenderPopin({ entry: entries[2] });
+
+    expect(content().className).toContain("slide-in-from-right-7");
+
+    fireEvent.keyDown(window, { key: "ArrowLeft" });
+
+    rerenderPopin({ entry: entries[1] });
+
+    expect(content().className).toContain("slide-in-from-left-7");
   });
 
   it("shows no pager affordance when the entry is not among the siblings", () => {
