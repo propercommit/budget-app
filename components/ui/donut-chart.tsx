@@ -5,6 +5,9 @@ export interface DonutSegment {
     color: string;
     /** Per-segment overrides (e.g. hover scale/opacity). Merged over the default transition. */
     style?: React.CSSProperties;
+    /** Hover handlers so callers can cross-highlight (e.g. dim the other segments and a legend). */
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
 }
 
 interface DonutChartProps {
@@ -78,6 +81,8 @@ export function DonutChart({
                               strokeDasharray={`${length} ${circumference - length}`}
                               strokeDashoffset={-offset}
                               style={{ transition: "stroke-dasharray 0.5s ease", ...segment.style }}
+                              onMouseEnter={segment.onMouseEnter}
+                              onMouseLeave={segment.onMouseLeave}
                           />
                       ))
                     : emptyContent}
