@@ -131,14 +131,20 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
 
     fireEvent.click(screen.getByText("Budget Overview"));
 
-    // Donut svg = 1 track circle + 1 segment (Food). The negative category
-    // never becomes a slice.
-    expect(container.querySelectorAll("circle")).toHaveLength(2);
+    // Donut svg = 1 track circle + 1 segment (Food), rendered twice (one ring
+    // per breakpoint variant). The negative category never becomes a slice.
+    expect(container.querySelectorAll("circle")).toHaveLength(4);
 
-    // Legend share divides by the positive-slice total the ring uses — Food is
-    // the whole ring, so its share reads 100% (dividing by the net 40 would
-    // print a nonsensical 300% beside a full circle).
-    expect(screen.getByText("100%")).toBeInTheDocument();
+    // The legend share appears on hover and divides by the positive-slice
+    // total the ring uses — Food is the whole ring, so its share reads 100%
+    // (dividing by the net 40 would print a nonsensical 300% beside a full
+    // circle). One readout per breakpoint ring.
+    const legend = screen.getByText("Spending by Category").parentElement as HTMLElement;
+    const foodRow = within(legend).getByText("Food").parentElement as HTMLElement;
+
+    fireEvent.mouseEnter(foodRow);
+
+    expect(screen.getAllByText("100%")).toHaveLength(2);
 
     // The unfiltered "Category Budgets" list still shows the refund category,
     // with its bar clamped to 0% (geometry only — the data stays negative).
@@ -207,5 +213,59 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
     const names = within(section).getAllByText(/^(Light|Full|Most)$/).map((el) => el.textContent);
 
     expect(names).toEqual(["Full", "Most", "Light"]);
+  });
+
+  it("sorts the donut legend by spent, highest first", () => {
+    // Input order is shuffled (40, 200, 160) on purpose.
+    renderCard({
+      totalIncome: 5000,
+      categories: [cat({ label: "Low" }), cat({ label: "High" }), cat({ label: "Mid" })],
+      spendingItems: [
+        item({ id: "l1", spent: 40, budgeted: 400, category: cat({ label: "Low" }) }),
+        item({ id: "h1", spent: 200, budgeted: 400, category: cat({ label: "High" }) }),
+        item({ id: "m1", spent: 160, budgeted: 400, category: cat({ label: "Mid" }) }),
+      ],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // Scope to the donut legend — the Category Budgets section below lists the
+    // same names in its own (usage-sorted) order.
+    const legend = screen.getByText("Spending by Category").parentElement as HTMLElement;
+    const names = within(legend).getAllByText(/^(Low|High|Mid)$/).map((el) => el.textContent);
+
+    expect(names).toEqual(["High", "Mid", "Low"]);
+  });
+
+  it("reveals a category's share on legend hover and dims the other rows", () => {
+    renderCard({
+      totalIncome: 2000,
+      categories: [cat({ label: "Food" }), cat({ label: "Travel", color: "#007AFF" })],
+      spendingItems: [
+        item({ id: "f1", spent: 300, budgeted: 400, category: cat({ label: "Food" }) }),
+        item({ id: "t1", spent: 100, budgeted: 400, category: cat({ label: "Travel" }) }),
+      ],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // No share readout until a category is hovered.
+    expect(screen.queryByText("75%")).not.toBeInTheDocument();
+
+    const legend = screen.getByText("Spending by Category").parentElement as HTMLElement;
+    const foodRow = within(legend).getByText("Food").parentElement as HTMLElement;
+    const travelRow = within(legend).getByText("Travel").parentElement as HTMLElement;
+
+    fireEvent.mouseEnter(foodRow);
+
+    // Food is 300 of the 400 positive total -> 75%, one readout per
+    // breakpoint ring; the non-hovered row dims, the hovered one does not.
+    expect(screen.getAllByText("75%")).toHaveLength(2);
+    expect(travelRow.style.opacity).toBe("0.4");
+    expect(foodRow.style.opacity).toBe("1");
+
+    fireEvent.mouseLeave(foodRow);
+
+    expect(screen.queryByText("75%")).not.toBeInTheDocument();
   });
 });
