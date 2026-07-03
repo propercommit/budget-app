@@ -113,9 +113,10 @@ export function IncomeCardCollapsed({
 
     return (
         <>
-            {/* Desktop: donut beside the figures cluster, centered together. */}
+            {/* Desktop: donut beside the figures cluster, centered together.
+                Sized so the collapsed card stays as flat as its siblings. */}
             <div className="hidden sm:flex items-center justify-center gap-11 py-2">
-                <DonutChart segments={hoverSegments} size={240} strokeWidth={20} radius={100} />
+                <DonutChart segments={hoverSegments} size={160} strokeWidth={14} radius={65} />
 
                 <div className="flex flex-col items-start">
                     <p className="text-[34px] leading-10 font-bold tracking-tight text-foreground">{formatAmount(totalIncome)}</p>
@@ -142,12 +143,12 @@ export function IncomeCardCollapsed({
             <div className="sm:hidden flex flex-col items-center gap-5">
                 <DonutChart
                     segments={segments}
-                    size={190}
-                    strokeWidth={17}
-                    radius={78}
+                    size={150}
+                    strokeWidth={13}
+                    radius={62}
                     centerContent={
                         <div className="flex flex-col items-center justify-center">
-                            <span className="text-2xl font-bold tracking-tight text-foreground">{formatAmount(totalIncome)}</span>
+                            <span className="text-xl font-bold tracking-tight text-foreground">{formatAmount(totalIncome)}</span>
                             <span className="text-xs text-muted-foreground">Total Income</span>
                         </div>
                     }
