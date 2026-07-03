@@ -13,10 +13,10 @@ interface ActionCardProps {
 
 function ActionCard({ icon, iconBg, title, subtitle, onClick }: ActionCardProps) {
     return (
-        <div className="bg-white border-y sm:border sm:rounded-2xl border-gray-200">
+        <div className="bg-card border-y sm:border sm:rounded-2xl border-border">
             <button
                 onClick={onClick}
-                className="w-full px-4 py-5 sm:p-6 flex items-center justify-between hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                className="w-full px-4 py-5 sm:p-6 flex items-center justify-between hover:bg-muted active:bg-input transition-colors touch-manipulation"
             >
                 <div className="flex items-center gap-4">
                     <div
@@ -26,11 +26,11 @@ function ActionCard({ icon, iconBg, title, subtitle, onClick }: ActionCardProps)
                         {icon}
                     </div>
                     <div className="text-left min-w-0">
-                        <h3 className="font-medium text-gray-900">{title}</h3>
-                        <p className="text-sm text-gray-500 truncate">{subtitle}</p>
+                        <h3 className="font-medium text-foreground">{title}</h3>
+                        <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
                     </div>
                 </div>
-                <ChevronLeft className="w-5 h-5 text-gray-400 rotate-180 flex-shrink-0" />
+                <ChevronLeft className="w-5 h-5 text-muted-foreground/70 rotate-180 flex-shrink-0" />
             </button>
         </div>
     );
@@ -60,8 +60,8 @@ interface PasswordCardProps {
 export function PasswordCard({ onClick }: PasswordCardProps) {
     return (
         <ActionCard
-            icon={<Lock className="w-6 h-6 sm:w-5 sm:h-5 text-gray-600" />}
-            iconBg="#F3F4F6"
+            icon={<Lock className="w-6 h-6 sm:w-5 sm:h-5 text-muted-foreground" />}
+            iconBg="var(--muted)"
             title="Password"
             subtitle="Keep your account secure"
             onClick={onClick}
@@ -75,15 +75,15 @@ interface DangerZoneProps {
 
 export function DangerZone({ onDelete }: DangerZoneProps) {
     return (
-        <div className="bg-white border-y sm:border sm:rounded-2xl border-red-200 overflow-hidden">
+        <div className="bg-card border-y sm:border sm:rounded-2xl border-red-200 overflow-hidden">
             <div className="px-4 py-3 sm:px-6 sm:py-4 bg-red-50 border-b border-red-200">
                 <h3 className="font-medium text-red-800">Danger Zone</h3>
             </div>
             <div className="px-4 py-5 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h4 className="font-medium text-gray-900">Delete Account</h4>
-                        <p className="text-sm text-gray-500">
+                        <h4 className="font-medium text-foreground">Delete Account</h4>
+                        <p className="text-sm text-muted-foreground">
                             Permanently delete your account and all data
                         </p>
                     </div>

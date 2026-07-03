@@ -77,11 +77,11 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <main className="min-h-svh flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
+        <main className="min-h-svh flex flex-col bg-gradient-to-b from-background to-muted">
             <header className="pt-6 pb-4 px-4 text-center sm:pt-12">
                 <div className="inline-flex items-center justify-center mb-4">
                     <Logo size="lg" animated={false} />
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                         Budget Planner
                     </h1>
                 </div>
@@ -89,12 +89,12 @@ export default function ForgotPasswordPage() {
 
             <div className="flex-1 flex items-start sm:items-center justify-center px-4 pb-8 sm:pb-12">
                 <div className="w-full max-w-sm sm:max-w-md">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="bg-card rounded-2xl shadow-xl overflow-hidden">
                         <div className="px-5 pt-6 pb-2 sm:px-8 sm:pt-8 sm:pb-4 text-center">
-                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                            <h2 className="text-lg sm:text-xl font-semibold text-foreground">
                                 {submitted ? "Check your email" : "Reset your password"}
                             </h2>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 {submitted
                                     ? "If an account exists for that address, we've sent a link to reset your password."
                                     : "Enter your email and we'll send you a link to reset your password."}
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
                                     <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
                                         <MailCheck className="w-7 h-7 text-green-600" aria-hidden="true" />
                                     </div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                         Didn&apos;t get an email? Check your spam folder, or{" "}
                                         <button
                                             type="button"
@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
                                     <div className="space-y-1.5">
                                         <Label
                                             htmlFor="email"
-                                            className="text-sm font-medium text-gray-700"
+                                            className="text-sm font-medium text-foreground"
                                         >
                                             Email address
                                         </Label>
@@ -156,7 +156,7 @@ export default function ForgotPasswordPage() {
                             )}
                         </div>
 
-                        <div className="px-5 py-4 sm:px-8 sm:py-5 bg-gray-50 text-center">
+                        <div className="px-5 py-4 sm:px-8 sm:py-5 bg-muted text-center">
                             <Link
                                 href="/login"
                                 className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-semibold transition-colors"

@@ -54,7 +54,7 @@ export function EmailModal({
 
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="currentEmail" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="currentEmail" className="text-sm font-medium text-foreground">
                             Current Email
                         </Label>
                         <Input
@@ -62,11 +62,11 @@ export function EmailModal({
                             type="email"
                             value={currentEmail}
                             disabled
-                            className="h-12 text-base bg-gray-50 rounded-xl"
+                            className="h-12 text-base bg-muted rounded-xl"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="newEmail" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="newEmail" className="text-sm font-medium text-foreground">
                             New Email
                         </Label>
                         <Input
@@ -80,7 +80,7 @@ export function EmailModal({
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="emailPassword" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="emailPassword" className="text-sm font-medium text-foreground">
                             Confirm Password
                         </Label>
                         <Input

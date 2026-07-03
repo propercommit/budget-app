@@ -31,7 +31,7 @@ export function ProfileForm({
                     <div className="space-y-2">
                         <Label
                             htmlFor="firstName"
-                            className="text-sm font-medium text-gray-700"
+                            className="text-sm font-medium text-foreground"
                         >
                             First Name
                         </Label>
@@ -47,7 +47,7 @@ export function ProfileForm({
                     <div className="space-y-2">
                         <Label
                             htmlFor="lastName"
-                            className="text-sm font-medium text-gray-700"
+                            className="text-sm font-medium text-foreground"
                         >
                             Last Name
                         </Label>
@@ -69,7 +69,7 @@ export function ProfileForm({
                 className={`w-full mt-6 h-12 text-base font-medium rounded-xl transition-colors touch-manipulation ${
                     hasChanges
                         ? "bg-green-500 hover:bg-green-600 active:bg-green-700"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-muted text-muted-foreground/70 cursor-not-allowed"
                 }`}
             >
                 {isSaving ? (

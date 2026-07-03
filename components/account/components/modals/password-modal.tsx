@@ -44,8 +44,8 @@ export function PasswordModal({
             <DialogContent className="sm:max-w-md lg:max-w-lg xl:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl">
                 <DialogHeader>
                     <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 sm:w-10 sm:h-10 bg-gray-100 rounded-xl flex items-center justify-center">
-                            <Lock className="w-6 h-6 sm:w-5 sm:h-5 text-gray-600" />
+                        <div className="w-12 h-12 sm:w-10 sm:h-10 bg-muted rounded-xl flex items-center justify-center">
+                            <Lock className="w-6 h-6 sm:w-5 sm:h-5 text-muted-foreground" />
                         </div>
                         <div>
                             <DialogTitle className="text-lg">Change Password</DialogTitle>
@@ -56,7 +56,7 @@ export function PasswordModal({
 
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="currentPassword" className="text-sm font-medium text-foreground">
                             Current Password
                         </Label>
                         <Input
@@ -70,7 +70,7 @@ export function PasswordModal({
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="newPassword" className="text-sm font-medium text-foreground">
                             New Password
                         </Label>
                         <Input
@@ -82,10 +82,10 @@ export function PasswordModal({
                             className="h-12 text-base rounded-xl"
                             autoComplete="new-password"
                         />
-                        <p className="text-xs text-gray-500">Must be at least 8 characters</p>
+                        <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="confirmNewPassword" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="confirmNewPassword" className="text-sm font-medium text-foreground">
                             Confirm New Password
                         </Label>
                         <Input

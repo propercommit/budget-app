@@ -11,7 +11,7 @@ interface AccountTabsProps {
 
 export function AccountTabs({ activeTab, onTabChange }: AccountTabsProps) {
     return (
-        <div className="sticky top-[57px] sm:top-[65px] z-30 bg-white border-b border-gray-200">
+        <div className="sticky top-[57px] sm:top-[65px] z-30 bg-card border-b border-border">
             <div className="px-4 sm:max-w-2xl sm:mx-auto">
                 <div className="flex">
                     <button
@@ -19,7 +19,7 @@ export function AccountTabs({ activeTab, onTabChange }: AccountTabsProps) {
                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium border-b-2 transition-colors touch-manipulation ${
                             activeTab === "profile"
                                 ? "border-green-500 text-green-600"
-                                : "border-transparent text-gray-500 active:text-gray-700"
+                                : "border-transparent text-muted-foreground active:text-foreground"
                         }`}
                     >
                         <UserIcon className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -30,7 +30,7 @@ export function AccountTabs({ activeTab, onTabChange }: AccountTabsProps) {
                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium border-b-2 transition-colors touch-manipulation ${
                             activeTab === "settings"
                                 ? "border-green-500 text-green-600"
-                                : "border-transparent text-gray-500 active:text-gray-700"
+                                : "border-transparent text-muted-foreground active:text-foreground"
                         }`}
                     >
                         <Settings className="w-5 h-5 sm:w-4 sm:h-4" />

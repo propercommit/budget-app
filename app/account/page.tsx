@@ -380,14 +380,14 @@ export default function AccountPage() {
     // Loading state
     if (isLoading) {
         return (
-            <div className="min-h-svh flex items-center justify-center bg-gray-50">
+            <div className="min-h-svh flex items-center justify-center bg-background">
                 <Loader2 className="w-8 h-8 animate-spin text-green-500" />
             </div>
         )
     }
 
     return (
-        <div className="min-h-svh bg-gray-50 pb-safe">
+        <div className="min-h-svh bg-background pb-safe">
             <AccountHeader onBack={handleBack} onLogout={() => setActiveModal("logout")} />
             <AccountTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -411,9 +411,9 @@ export default function AccountPage() {
                 {activeTab === "profile" && (
                     <div className="space-y-4 sm:space-y-6 sm:px-4">
                         {/* Profile Card */}
-                        <div className="bg-white border-y sm:border sm:rounded-2xl border-gray-200">
+                        <div className="bg-card border-y sm:border sm:rounded-2xl border-border">
                             <div className="px-4 py-6 sm:p-6">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                                <h2 className="text-lg font-semibold text-foreground mb-6">
                                     Profile Information
                                 </h2>
 
