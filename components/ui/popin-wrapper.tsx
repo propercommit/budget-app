@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, ReactNode } from "react";
+import { useRef, useEffect, ReactNode, TouchEventHandler } from "react";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 interface PopinWrapperProps {
@@ -12,6 +12,24 @@ interface PopinWrapperProps {
     children: ReactNode;
     footer?: ReactNode;
     zIndex?: number;
+    /**
+     * Touch passthrough to the sheet element, so gestures (e.g. a pager
+     * swipe) cover the whole sheet — header, footer and gutters included —
+     * not just the consumer's content area.
+     */
+    onTouchStart?: TouchEventHandler<HTMLDivElement>;
+    onTouchEnd?: TouchEventHandler<HTMLDivElement>;
+    /**
+     * Changing this remounts the sheet (e.g. per pager page turn), replaying
+     * any entrance animation in `sheetClassName` on the whole sheet.
+     */
+    sheetKey?: string | number;
+    /**
+     * Extra classes for the sheet element (e.g. animate-in utilities, or
+     * touch-pan-y for popins that own horizontal gestures — note touch-action
+     * intersects down the tree, so only set it when no child needs pan-x).
+     */
+    sheetClassName?: string;
 }
 
 export function PopinWrapper({
@@ -23,6 +41,10 @@ export function PopinWrapper({
     children,
     footer,
     zIndex,
+    onTouchStart,
+    onTouchEnd,
+    sheetKey,
+    sheetClassName,
 }: PopinWrapperProps) {
     const popinRef = useRef<HTMLDivElement>(null);
 
@@ -45,16 +67,21 @@ export function PopinWrapper({
                     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
         >
+            {/* touch-action none: touches on the dim area must never pan or
+                zoom the page beneath (iOS lets them bleed through otherwise). */}
             <div
                 className="absolute inset-0"
-                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)" }}
+                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)", touchAction: "none", overscrollBehavior: "contain" }}
                 onClick={onClose}
             />
 
             <div
+                key={sheetKey}
                 ref={popinRef}
                 tabIndex={-1}
-                className="relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-card rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0"
+                onTouchStart={onTouchStart}
+                onTouchEnd={onTouchEnd}
+                className={`relative w-full sm:max-w-md lg:max-w-lg xl:max-w-xl bg-card rounded-3xl overflow-hidden outline-none mx-3 sm:mx-0 mb-3 sm:mb-0 ${sheetClassName ?? ""}`}
                 style={{
                     boxShadow: "0 -8px 40px rgba(0, 0, 0, 0.15)",
                     maxHeight: "90vh",
@@ -102,7 +129,9 @@ export function PopinWrapper({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+                {/* overscroll containment: hitting the end of the sheet's own
+                    scroll must not rubber-band into scrolling the page. */}
+                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
                     {children}
                 </div>
 

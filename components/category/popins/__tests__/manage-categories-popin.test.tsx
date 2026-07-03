@@ -84,13 +84,29 @@ describe("ManageCategoriesPopin", () => {
     expect(screen.getByText("Dining")).toBeDefined();
   });
 
-  it("shows the empty state when nothing matches", () => {
+  it("shows a clear button only while a query is typed, and clicking it resets the search", () => {
+    renderPopin();
+    const input = screen.getByPlaceholderText("Search categories");
+
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+
+    fireEvent.change(input, { target: { value: "gro" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+    expect((input as HTMLInputElement).value).toBe("");
+    expect(screen.getByText("Transport")).toBeDefined();
+    expect(screen.getByText("Dining")).toBeDefined();
+  });
+
+  it("shows the empty state, quoting the query, when nothing matches", () => {
     renderPopin();
     const input = screen.getByPlaceholderText("Search categories");
 
     fireEvent.change(input, { target: { value: "zzz" } });
 
-    expect(screen.getByText("No categories found")).toBeDefined();
+    expect(screen.getByText('No categories match "zzz".')).toBeDefined();
     expect(screen.queryByText("Groceries")).toBeNull();
   });
 

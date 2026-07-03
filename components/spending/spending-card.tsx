@@ -79,6 +79,10 @@ export function SpendingCard({
     const [selectedEntry, setSelectedEntry] = useState<SpendingEntry | null>(null);
     const [entryMode, setEntryMode] = useState<"create" | "edit">("create");
 
+    // Snapshot of the list as displayed when the detail popin opened — the
+    // popin pages through these siblings (swipe / arrow keys).
+    const [detailNavEntries, setDetailNavEntries] = useState<SpendingEntry[]>([]);
+
     // Calculations
     const totalSpent = entries.reduce((sum, entry) => applyEntry(sum, entry), 0);
     const spendingEntries = entries.length;
@@ -106,8 +110,9 @@ export function SpendingCard({
         setShowItemEdit(false);
     };
 
-    const handleEntryClick = (entry: SpendingEntry) => {
+    const handleEntryClick = (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => {
         setSelectedEntry(entry);
+        setDetailNavEntries(visibleEntries);
         setShowEntryDetail(true);
     };
 
@@ -224,6 +229,8 @@ export function SpendingCard({
                         onClose={() => { setShowEntryDetail(false); setSelectedEntry(null); }}
                         onEdit={handleEntryDetailToEdit}
                         entry={selectedEntry}
+                        entries={detailNavEntries}
+                        onNavigate={setSelectedEntry}
                         spendingName={spendingName}
                         spendingItemIcon={spendingItemIcon}
                         spendingCategoryColor={spendingCategoryColor}
