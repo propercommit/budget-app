@@ -102,6 +102,12 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
         if (deltaX > 0 && prevEntry !== null) onNavigate(prevEntry);
     };
 
+    // touch-pan-y: horizontal pans are the pager's, and must not turn into a
+    // native scroll of the carousel behind the popin (iOS scroll
+    // bleed-through); vertical panning still scrolls the sheet content. The
+    // slide-in classes replay on the sheetKey remount per page turn.
+    const sheetClassName = `touch-pan-y ${slideFrom === null ? "" : `animate-in fade-in duration-300 ${slideFrom === "right" ? "slide-in-from-right-7" : "slide-in-from-left-7"}`}`;
+
     return (
         <PopinWrapper
             isOpen={isOpen}
@@ -111,7 +117,7 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             sheetKey={entry.id}
-            sheetClassName={slideFrom === null ? undefined : `animate-in fade-in duration-300 ${slideFrom === "right" ? "slide-in-from-right-7" : "slide-in-from-left-7"}`}
+            sheetClassName={sheetClassName}
             headerActions={
                 <button
                     onClick={onEdit}

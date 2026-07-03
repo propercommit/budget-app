@@ -24,7 +24,11 @@ interface PopinWrapperProps {
      * any entrance animation in `sheetClassName` on the whole sheet.
      */
     sheetKey?: string | number;
-    /** Extra classes for the sheet element (e.g. animate-in utilities). */
+    /**
+     * Extra classes for the sheet element (e.g. animate-in utilities, or
+     * touch-pan-y for popins that own horizontal gestures — note touch-action
+     * intersects down the tree, so only set it when no child needs pan-x).
+     */
     sheetClassName?: string;
 }
 
@@ -63,9 +67,11 @@ export function PopinWrapper({
                     '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif',
             }}
         >
+            {/* touch-action none: touches on the dim area must never pan or
+                zoom the page beneath (iOS lets them bleed through otherwise). */}
             <div
                 className="absolute inset-0"
-                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)" }}
+                style={{ backgroundColor: "rgba(0, 0, 0, 0.4)", backdropFilter: "blur(4px)", touchAction: "none", overscrollBehavior: "contain" }}
                 onClick={onClose}
             />
 
@@ -123,7 +129,9 @@ export function PopinWrapper({
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+                {/* overscroll containment: hitting the end of the sheet's own
+                    scroll must not rubber-band into scrolling the page. */}
+                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
                     {children}
                 </div>
 
