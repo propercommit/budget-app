@@ -158,18 +158,18 @@ export function SpendingItemEditPopin({
 
                 <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
 
-                <fieldset className="space-y-2">
+                <fieldset className="space-y-2 min-w-0">
                     <legend className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Category
                     </legend>
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Select a category">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" role="radiogroup" aria-label="Select a category">
                         {categories.map((cat) => (
                             <button
                                 key={cat.name}
                                 onClick={() => setSelectedCategory(cat.name)}
                                 role="radio"
                                 aria-checked={selectedCategory === cat.name}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95"
+                                className="flex flex-shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 active:scale-95"
                                 style={{
                                     backgroundColor: selectedCategory === cat.name ? cat.color : "var(--muted)",
                                     color: selectedCategory === cat.name ? "white" : "var(--muted-foreground)",
@@ -183,7 +183,7 @@ export function SpendingItemEditPopin({
                         ))}
                         <button
                             onClick={onCreateCategory}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 border-2 border-dashed"
+                            className="flex flex-shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 active:scale-95 border-2 border-dashed"
                             style={{ borderColor: "#007AFF", backgroundColor: "rgba(0, 122, 255, 0.05)", color: "#007AFF" }}
                             aria-label="Create new category"
                         >
