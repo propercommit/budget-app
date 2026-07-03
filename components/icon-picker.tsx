@@ -67,7 +67,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                                 }}
                                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all flex-shrink-0 min-w-[72px] ${
                                     isSelected
-                                        ? "bg-blue-50 border-2 border-blue-500"
+                                        ? "bg-blue-50 dark:bg-blue-500/15 border-2 border-blue-500"
                                         : "bg-muted border-2 border-transparent hover:bg-input"
                                 }`}
                             >
