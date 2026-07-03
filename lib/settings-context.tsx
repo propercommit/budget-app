@@ -59,6 +59,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     loadSettings();
   }, []);
 
+  // Mirror the DB-backed darkMode setting onto <html> so the `.dark` token
+  // block in globals.css activates. Runs on the initial async load, on every
+  // toggle, and on optimistic rollback (state reverts → effect re-runs).
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", settings.darkMode);
+  }, [settings.darkMode]);
+
   // Update helpers — optimistic with rollback
   const updateCurrency = useCallback(async (currency: Currency) => {
     const previous = settings.currency;
