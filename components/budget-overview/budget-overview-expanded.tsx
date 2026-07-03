@@ -62,6 +62,34 @@ function ProgressBar({
  */
 const usagePercentage = (spent: number, budget: number): number => budget > 0 ? (spent / budget) * 100 : 0;
 
+// Main-stats tiles share one responsive class stack (compact on mobile, roomier from sm:).
+const STAT_TILE_CLASS = "p-2.5 sm:p-3 rounded-[14px] sm:rounded-2xl";
+const STAT_LABEL_CLASS = "text-[11px] sm:text-xs font-medium mb-0.5 text-muted-foreground";
+const STAT_VALUE_CLASS = "text-[15px] sm:text-lg font-bold whitespace-nowrap";
+
+// ============================================
+// CATEGORY ICON CHIP COMPONENT
+// ============================================
+/** Tinted rounded square holding the category icon; sizing comes from className. */
+function CategoryIconChip({
+    icon,
+    color,
+    className
+}: {
+    icon?: string;
+    color: string;
+    className: string;
+}) {
+    return (
+        <div
+            className={`${className} flex items-center justify-center flex-shrink-0`}
+            style={{ backgroundColor: `${color}1A`, color }}
+        >
+            {icon !== undefined ? (iconMap[icon] ?? icon) : '📁'}
+        </div>
+    );
+}
+
 // ============================================
 // CATEGORY ROW COMPONENT
 // ============================================
@@ -76,18 +104,12 @@ function CategoryRow({
     budget: number;
     color: string;
 }) {
-    const percentage = usagePercentage(spent, budget);
     const isOver = spent > budget;
     const { formatAmount } = useSettings();
 
     return (
         <div className="flex items-center gap-3">
-            <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
-                style={{ backgroundColor: `${color}1A`, color }}
-            >
-                {category.icon !== undefined ? (iconMap[category.icon] ?? category.icon) : '📁'}
-            </div>
+            <CategoryIconChip icon={category.icon} color={color} className="w-9 h-9 rounded-xl text-base" />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium truncate text-foreground">
@@ -107,16 +129,7 @@ function CategoryRow({
                         </span>
                     </span>
                 </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden bg-input">
-                    <div
-                        className="h-full rounded-full transition-all duration-300"
-                        style={{
-                            // Two-sided clamp — see ProgressBar above.
-                            width: `${Math.min(100, Math.max(0, percentage))}%`,
-                            backgroundColor: isOver ? '#FF3B30' : color
-                        }}
-                    />
-                </div>
+                <ProgressBar value={spent} max={budget} color={color} height={6} />
             </div>
         </div>
     );
@@ -145,12 +158,7 @@ function LegendRow({
             onMouseEnter={onHoverStart}
             onMouseLeave={onHoverEnd}
         >
-            <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: `${category.color}1A`, color: category.color }}
-            >
-                {category.icon !== undefined ? (iconMap[category.icon] ?? category.icon) : '📁'}
-            </div>
+            <CategoryIconChip icon={category.icon} color={category.color} className="w-7 h-7 rounded-lg" />
             <span className="text-sm text-foreground whitespace-nowrap">{category.name}</span>
             {/* Dotted leader tying the label to its right-aligned amount. */}
             <span
@@ -217,20 +225,18 @@ export function BudgetOverviewExpanded({
     }));
 
     const hoveredCat = spendingByCategory.find(cat => cat.name === hoveredCategory);
-    const hoveredShare = hoveredCat !== undefined && positiveSpentTotal > 0 ? `${((hoveredCat.spent / positiveSpentTotal) * 100).toFixed(0)}%` : '';
 
     // The share readout sits in the empty space left of the ring; labelClassName
     // carries the per-size offsets (the mobile ring is smaller than the desktop one).
     const renderDonut = (size: number, labelClassName: string) => (
         <div className="relative shrink-0">
-            <div className={`absolute text-right pointer-events-none ${labelClassName}`}>
-                <span
-                    className="font-bold tracking-tight"
-                    style={{ color: hoveredCat !== undefined ? hoveredCat.color : undefined }}
-                >
-                    {hoveredShare}
-                </span>
-            </div>
+            {hoveredCat !== undefined && positiveSpentTotal > 0 && (
+                <div className={`absolute text-right pointer-events-none ${labelClassName}`}>
+                    <span className="font-bold tracking-tight" style={{ color: hoveredCat.color }}>
+                        {((hoveredCat.spent / positiveSpentTotal) * 100).toFixed(0)}%
+                    </span>
+                </div>
+            )}
             <DonutChart
                 segments={donutSegments}
                 size={size}
@@ -358,36 +364,33 @@ export function BudgetOverviewExpanded({
 
                 {/* Main Stats Grid */}
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                        <div className="p-2.5 sm:p-3 rounded-[14px] sm:rounded-2xl bg-muted">
-                            <p className="text-[11px] sm:text-xs font-medium mb-0.5 text-muted-foreground">Income</p>
-                            <p className="text-[15px] sm:text-lg font-bold text-foreground whitespace-nowrap">{formatAmount(totalIncome)}</p>
-                        </div>
-                        <div
-                            className="p-2.5 sm:p-3 rounded-[14px] sm:rounded-2xl"
-                            style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
+                    <div className={`${STAT_TILE_CLASS} bg-muted`}>
+                        <p className={STAT_LABEL_CLASS}>Income</p>
+                        <p className={`${STAT_VALUE_CLASS} text-foreground`}>{formatAmount(totalIncome)}</p>
+                    </div>
+                    <div className={STAT_TILE_CLASS} style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}>
+                        <p className={STAT_LABEL_CLASS}>Spent</p>
+                        <p className={STAT_VALUE_CLASS} style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
+                    </div>
+                    <div
+                        className={STAT_TILE_CLASS}
+                        style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
+                    >
+                        <p className={STAT_LABEL_CLASS}>
+                            {isOverspent ? 'Over by' : (
+                                <>
+                                    <span className="sm:hidden">Left</span>
+                                    <span className="hidden sm:inline">Remaining</span>
+                                </>
+                            )}
+                        </p>
+                        <p
+                            className={STAT_VALUE_CLASS}
+                            style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}
                         >
-                            <p className="text-[11px] sm:text-xs font-medium mb-0.5 text-muted-foreground">Spent</p>
-                            <p className="text-[15px] sm:text-lg font-bold whitespace-nowrap" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
-                        </div>
-                        <div
-                            className="p-2.5 sm:p-3 rounded-[14px] sm:rounded-2xl"
-                            style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
-                        >
-                            <p className="text-[11px] sm:text-xs font-medium mb-0.5 text-muted-foreground">
-                                {isOverspent ? 'Over by' : (
-                                    <>
-                                        <span className="sm:hidden">Left</span>
-                                        <span className="hidden sm:inline">Remaining</span>
-                                    </>
-                                )}
-                            </p>
-                            <p
-                                className="text-[15px] sm:text-lg font-bold whitespace-nowrap"
-                                style={{ color: isOverspent ? '#FF3B30' : '#34C759' }}
-                            >
-                                {isOverspent ? '-' : ''}{formatAmount(Math.abs(remaining))}
-                            </p>
-                        </div>
+                            {isOverspent ? '-' : ''}{formatAmount(Math.abs(remaining))}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

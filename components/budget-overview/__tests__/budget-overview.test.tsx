@@ -53,6 +53,16 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/** The expanded "Spending by Category" tile — the heading's parent wraps the donut and legend rows. */
+function getLegend(): HTMLElement {
+  return screen.getByText("Spending by Category").parentElement as HTMLElement;
+}
+
+/** A legend row (hover target) by its category name. */
+function getLegendRow(name: string): HTMLElement {
+  return within(getLegend()).getByText(name).parentElement as HTMLElement;
+}
+
 describe("BudgetOverviewCard — collapsed totals", () => {
   it("sums spent across items and shows the income remainder", () => {
     renderCard({
@@ -139,18 +149,18 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
     // total the ring uses — Food is the whole ring, so its share reads 100%
     // (dividing by the net 40 would print a nonsensical 300% beside a full
     // circle). One readout per breakpoint ring.
-    const legend = screen.getByText("Spending by Category").parentElement as HTMLElement;
-    const foodRow = within(legend).getByText("Food").parentElement as HTMLElement;
-
-    fireEvent.mouseEnter(foodRow);
+    fireEvent.mouseEnter(getLegendRow("Food"));
 
     expect(screen.getAllByText("100%")).toHaveLength(2);
 
     // The unfiltered "Category Budgets" list still shows the refund category,
     // with its bar clamped to 0% (geometry only — the data stays negative).
-    const categoryBars = container.querySelectorAll<HTMLElement>(".h-1\\.5 > div");
+    const budgets = screen.getByText("Category Budgets").parentElement as HTMLElement;
+    const barWidths = Array.from(budgets.querySelectorAll<HTMLElement>('div[style*="width"]'))
+      .map((bar) => bar.style.width)
+      .filter((width) => width.endsWith("%"));
 
-    expect(Array.from(categoryBars).map((bar) => bar.style.width)).toEqual(["60%", "0%"]);
+    expect(barWidths).toEqual(["60%", "0%"]);
   });
 
   it("omits the donut and clamps every bar to 0% when all categories are net-negative", () => {
@@ -231,8 +241,7 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
 
     // Scope to the donut legend — the Category Budgets section below lists the
     // same names in its own (usage-sorted) order.
-    const legend = screen.getByText("Spending by Category").parentElement as HTMLElement;
-    const names = within(legend).getAllByText(/^(Low|High|Mid)$/).map((el) => el.textContent);
+    const names = within(getLegend()).getAllByText(/^(Low|High|Mid)$/).map((el) => el.textContent);
 
     expect(names).toEqual(["High", "Mid", "Low"]);
   });
@@ -252,9 +261,8 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
     // No share readout until a category is hovered.
     expect(screen.queryByText("75%")).not.toBeInTheDocument();
 
-    const legend = screen.getByText("Spending by Category").parentElement as HTMLElement;
-    const foodRow = within(legend).getByText("Food").parentElement as HTMLElement;
-    const travelRow = within(legend).getByText("Travel").parentElement as HTMLElement;
+    const foodRow = getLegendRow("Food");
+    const travelRow = getLegendRow("Travel");
 
     fireEvent.mouseEnter(foodRow);
 
