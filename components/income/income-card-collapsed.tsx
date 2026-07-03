@@ -113,9 +113,9 @@ export function IncomeCardCollapsed({
 
     return (
         <>
-            {/* Desktop: donut beside the figures cluster, centered together.
+            {/* Desktop: donut beside the figures cluster, aligned left.
                 Sized so the collapsed card stays as flat as its siblings. */}
-            <div className="hidden sm:flex items-center justify-center gap-11 py-2">
+            <div className="hidden sm:flex items-center justify-start gap-11 py-2">
                 <DonutChart segments={hoverSegments} size={160} strokeWidth={14} radius={65} />
 
                 <div className="flex flex-col items-start">
