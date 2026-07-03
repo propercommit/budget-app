@@ -240,16 +240,15 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
         <SectionCard className="mt-6">
             <div className="flex items-center justify-between mb-3 px-1">
-            <p className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>Spending</p>
+            <p className="text-sm font-semibold text-foreground">Spending</p>
             <div className="flex items-center gap-2">
-                <p className="text-xs tabular-nums" style={{ color: "#6E6E73" }}>
+                <p className="text-xs tabular-nums text-muted-foreground">
                 {filteredSpendingItems.length} item{filteredSpendingItems.length !== 1 ? "s" : ""}
                 </p>
                 <button
                 onClick={handleOpenManageCategories}
                 aria-label="Manage categories"
-                className="sm:hidden w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                className="sm:hidden w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted text-foreground"
                 >
                 <Settings2 className="w-4 h-4" strokeWidth={1.9} />
                 </button>

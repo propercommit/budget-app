@@ -40,7 +40,7 @@ function ProgressBar({
     
     return (
         <div 
-            className="w-full rounded-full overflow-hidden bg-gray-200"
+            className="w-full rounded-full overflow-hidden bg-input"
             style={{ height }}
         >
             <div
@@ -82,7 +82,7 @@ function CategoryRow({
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium truncate text-gray-900">
+                    <span className="text-sm font-medium truncate text-foreground">
                         {category.name}
                     </span>
                     <span className="flex items-center flex-shrink-0 ml-2">
@@ -94,12 +94,12 @@ function CategoryRow({
                                 +{formatAmount(spent - budget)}
                             </span>
                         )}
-                        <span className="text-sm text-gray-500 whitespace-nowrap">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
                             {formatAmount(spent)} / {formatAmount(budget)}
                         </span>
                     </span>
                 </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden bg-gray-100">
+                <div className="w-full h-1.5 rounded-full overflow-hidden bg-muted">
                     <div
                         className="h-full rounded-full transition-all duration-300"
                         style={{
@@ -148,8 +148,8 @@ export function BudgetOverviewExpanded({
 
     return (
         <div 
-            className="bg-white rounded-3xl overflow-hidden transition-all duration-300"
-            style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)', border: '1px solid rgba(0, 0, 0, 0.04)' }}
+            className="bg-card rounded-3xl overflow-hidden transition-all duration-300 border border-black/5 dark:border-border"
+            style={{ boxShadow: '0 4px 24px rgba(0, 0, 0, 0.06)' }}
         >
             {/* Header */}
             <div className="px-4 pt-4 sm:px-5 sm:pt-5 cursor-pointer" onClick={onCollapse}>
@@ -160,22 +160,22 @@ export function BudgetOverviewExpanded({
             <div className="px-4 pb-5 sm:px-5">
                 {/* Main Stats Grid */}
                 <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
-                        <div className="flex-1 p-3 rounded-2xl bg-gray-100">
-                            <p className="text-xs font-medium mb-0.5 text-gray-500">Income</p>
-                            <p className="text-lg font-bold text-gray-900">{formatAmount(totalIncome)}</p>
+                        <div className="flex-1 p-3 rounded-2xl bg-muted">
+                            <p className="text-xs font-medium mb-0.5 text-muted-foreground">Income</p>
+                            <p className="text-lg font-bold text-foreground">{formatAmount(totalIncome)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
                             style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
-                            <p className="text-xs font-medium mb-0.5 text-gray-500">Spent</p>
+                            <p className="text-xs font-medium mb-0.5 text-muted-foreground">Spent</p>
                             <p className="text-lg font-bold" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
                         </div>
                         <div 
                             className="flex-1 p-3 rounded-2xl"
                             style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
                         >
-                            <p className="text-xs font-medium mb-0.5 text-gray-500">
+                            <p className="text-xs font-medium mb-0.5 text-muted-foreground">
                                 {isOverspent ? 'Over by' : 'Remaining'}
                             </p>
                             <p 
@@ -190,7 +190,7 @@ export function BudgetOverviewExpanded({
                 {/* Income vs Spent Progress */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-900">Income Used</span>
+                        <span className="text-sm font-medium text-foreground">Income Used</span>
                         <span 
                             className="text-sm font-semibold"
                             style={{ color: isOverspent ? '#FF3B30' : '#007AFF' }}
@@ -205,8 +205,8 @@ export function BudgetOverviewExpanded({
                         height={10}
                     />
                     <div className="flex justify-between mt-1.5">
-                        <span className="text-xs text-gray-400">{formatAmount(0)}</span>
-                        <span className="text-xs text-gray-400">{formatAmount(totalIncome)}</span>
+                        <span className="text-xs text-muted-foreground/70">{formatAmount(0)}</span>
+                        <span className="text-xs text-muted-foreground/70">{formatAmount(totalIncome)}</span>
                     </div>
                 </div>
                 
@@ -214,7 +214,7 @@ export function BudgetOverviewExpanded({
                 {totalBudgeted > 0 && (
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-900">Budget Used</span>
+                            <span className="text-sm font-medium text-foreground">Budget Used</span>
                             <span 
                                 className="text-sm font-semibold"
                                 style={{ color: isOverBudget ? '#FF3B30' : '#34C759' }}
@@ -230,8 +230,8 @@ export function BudgetOverviewExpanded({
                             height={10}
                         />
                         <div className="flex justify-between mt-1.5">
-                            <span className="text-xs text-gray-400">$0</span>
-                            <span className="text-xs text-gray-400">Budget: {formatAmount(totalBudgeted)}</span>
+                            <span className="text-xs text-muted-foreground/70">$0</span>
+                            <span className="text-xs text-muted-foreground/70">Budget: {formatAmount(totalBudgeted)}</span>
                         </div>
                     </div>
                 )}
@@ -239,7 +239,7 @@ export function BudgetOverviewExpanded({
                 {/* Category Breakdown Section */}
                 {categoryBreakdown.length > 0 && (
                     <div>
-                        <h3 className="text-sm font-semibold mb-4 text-gray-900">Spending by Category</h3>
+                        <h3 className="text-sm font-semibold mb-4 text-foreground">Spending by Category</h3>
                         
                         <div className="flex flex-col sm:flex-row gap-6">
                             {/* Donut Chart */}
@@ -249,11 +249,11 @@ export function BudgetOverviewExpanded({
                                         segments={donutSegments}
                                         size={120}
                                         strokeWidth={12}
-                                        trackColor="#F5F5F7"
+                                        trackColor="var(--muted)"
                                         centerContent={
                                             <div className="text-center">
-                                                <p className="text-sm font-bold text-gray-900 text-center leading-tight">{formatAmount(totalSpent)}</p>
-                                                <p className="text-xs text-gray-500">Total</p>
+                                                <p className="text-sm font-bold text-foreground text-center leading-tight">{formatAmount(totalSpent)}</p>
+                                                <p className="text-xs text-muted-foreground">Total</p>
                                             </div>
                                         }
                                     />
@@ -268,11 +268,11 @@ export function BudgetOverviewExpanded({
                                             className="w-3 h-3 rounded-full flex-shrink-0"
                                             style={{ backgroundColor: cat.color }}
                                         />
-                                        <span className="text-sm flex-1 truncate text-gray-900">{cat.name}</span>
-                                        <span className="text-sm font-medium text-gray-500">
+                                        <span className="text-sm flex-1 truncate text-foreground">{cat.name}</span>
+                                        <span className="text-sm font-medium text-muted-foreground">
                                             {formatAmount(cat.spent)}
                                         </span>
-                                        <span className="text-xs text-gray-400">
+                                        <span className="text-xs text-muted-foreground/70">
                                             {positiveSpentTotal > 0 ? ((cat.spent / positiveSpentTotal) * 100).toFixed(0) : 0}%
                                         </span>
                                     </div>
@@ -284,8 +284,8 @@ export function BudgetOverviewExpanded({
                 
                 {/* Category Budget Progress (detailed) */}
                 {categoryBreakdown.some(c => c.budget > 0 || c.spent > 0) && (
-                    <div className="mt-6 pt-6 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold mb-4 text-gray-900">Category Budgets</h3>
+                    <div className="mt-6 pt-6 border-t border-border">
+                        <h3 className="text-sm font-semibold mb-4 text-foreground">Category Budgets</h3>
                         <div className="space-y-4">
                             {categoryBreakdown.filter(c => c.budget > 0 || c.spent > 0).map((cat, i) => (
                                 <CategoryRow 
