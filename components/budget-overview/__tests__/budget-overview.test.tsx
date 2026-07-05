@@ -277,3 +277,33 @@ describe("BudgetOverviewCard — net-credit categories (signed spent)", () => {
     expect(screen.queryByText("75%")).not.toBeInTheDocument();
   });
 });
+
+describe("BudgetOverviewCard — total over-budget row", () => {
+  it("shows the Over Budget row with the overage amount when spending exceeds the total budget", () => {
+    renderCard({
+      totalIncome: 2000,
+      categories: [cat({ label: "Food" })],
+      spendingItems: [item({ spent: 234, budgeted: 200, category: cat({ label: "Food" }) })],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    // totalSpent 234c > totalBudgeted 200c -> overage 34c -> "-0.34 $" in the
+    // Budget Used tile (the per-category chip shows "+0.34 $", a distinct string).
+    expect(screen.getByText("Over Budget")).toBeInTheDocument();
+    expect(screen.getByText("-0.34 $")).toBeInTheDocument();
+  });
+
+  it("omits the Over Budget row when spending is within the total budget", () => {
+    renderCard({
+      totalIncome: 2000,
+      categories: [cat({ label: "Food" })],
+      spendingItems: [item({ spent: 100, budgeted: 200, category: cat({ label: "Food" }) })],
+    });
+
+    fireEvent.click(screen.getByText("Budget Overview"));
+
+    expect(screen.getByText("Budget Used")).toBeInTheDocument();
+    expect(screen.queryByText("Over Budget")).not.toBeInTheDocument();
+  });
+});

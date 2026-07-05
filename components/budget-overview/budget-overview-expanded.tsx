@@ -359,6 +359,14 @@ export function BudgetOverviewExpanded({
                             <span className="text-xs font-semibold" style={{ color: isOverBudget ? '#FF3B30' : '#34C759' }}>{formatAmount(totalSpent)}</span>
                             <span className="text-xs text-muted-foreground/70">Budget: {formatAmount(totalBudgeted)}</span>
                         </div>
+                        {isOverBudget && (
+                            <div className="flex items-center justify-between mt-3">
+                                <span className="text-sm font-medium text-foreground">Over Budget</span>
+                                <span className="text-sm font-semibold" style={{ color: '#FF3B30' }}>
+                                    -{formatAmount(totalSpent - totalBudgeted)}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
 
