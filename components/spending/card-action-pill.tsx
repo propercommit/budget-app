@@ -10,9 +10,9 @@ interface CardActionPillProps {
 }
 
 /**
- * Edit + expand control shared by the spending card headers. The pencil is
- * gated to sm: and up — at mobile carousel width it would crush the item
- * name (editing stays reachable on mobile via the detail popin).
+ * Edit + expand control shared by the spending card headers. Shown at every
+ * width by deliberate choice: in the mobile carousel the pill leaves a long
+ * item name ~45px, so it ellipsizes — the design spec's overflow behavior.
  */
 export function CardActionPill({ isExpanded, onToggle, onEdit }: CardActionPillProps) {
     return (
@@ -23,11 +23,11 @@ export function CardActionPill({ isExpanded, onToggle, onEdit }: CardActionPillP
                     e.stopPropagation();
                     onEdit();
                 }}
-                className="w-10 h-10 hidden sm:flex items-center justify-center hover:bg-input transition-colors touch-manipulation"
+                className="w-10 h-10 flex items-center justify-center hover:bg-input transition-colors touch-manipulation"
             >
                 <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
-            <div className="w-px my-2.5 hidden sm:block bg-border" />
+            <div className="w-px my-2.5 bg-border" />
             <ExpandToggleButton
                 isExpanded={isExpanded}
                 onToggle={onToggle}
