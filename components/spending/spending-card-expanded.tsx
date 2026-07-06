@@ -5,7 +5,8 @@ import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
 import { budgetStatusColor } from "@/lib/spending/budget-status";
 import { spentDisplay } from "@/lib/spending/format-spent";
-import { CardActionPill } from "./card-action-pill";
+import { EditItemButton } from "./edit-item-button";
+import { ExpandToggleBar } from "./expand-toggle-bar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 export interface SpendingEntry {
@@ -75,45 +76,43 @@ export function SpendingCardExpanded({
             className="bg-card border border-(--card-border) rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)]"
         >
             {/* Header section — same as collapsed */}
-            <div className="p-4 sm:p-5">
+            <div className="p-3.5 sm:p-5">
                 {/* Row 1: Header */}
                 <div className="flex items-center justify-between mb-3">
-                    {/* Left — Icon + Name/Category (clickable for detail popin) */}
+                    {/* Left — Icon + Name/Category (clickable for detail popin).
+                        min-w-0 + truncate: a long name must ellipsize, never push
+                        the actions out of the card. */}
                     <button
-                        className="flex items-center gap-3 transition-all duration-200 active:scale-[0.98]"
+                        className="flex items-center gap-[9px] sm:gap-3 min-w-0 transition-all duration-200 active:scale-[0.98]"
                         onClick={onItemDetailClick}
                     >
                         <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
+                            className="w-[34px] h-[34px] rounded-[10px] sm:w-11 sm:h-11 sm:rounded-xl flex items-center justify-center text-xl flex-shrink-0"
                             style={{ backgroundColor: `${spendingCategoryColor}15` }}
                         >
                             {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
-                        <div className="text-left">
-                            <h2 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
+                        <div className="min-w-0 text-left">
+                            <h2 className="text-[15px] leading-[19px] sm:text-base sm:leading-[22px] font-semibold truncate" style={{ color: "var(--foreground)" }}>
                                 {spendingName}
                             </h2>
-                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                            <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
                                 {categoryName}
                             </p>
                         </div>
                     </button>
 
-                    {/* Right — Spent/Budget + Chevron */}
-                    <div className="flex items-center gap-3">
+                    {/* Right — Spent/Budget + Edit */}
+                    <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
                         <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums" style={{ color: spent.color }}>
+                            <p className="text-base sm:text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: spent.color }}>
                                 {spent.label}
                             </p>
-                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
+                            <p className="text-[11px] sm:text-xs whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        <CardActionPill
-                            isExpanded={true}
-                            onToggle={onCollapse}
-                            onEdit={onEditClick}
-                        />
+                        <EditItemButton onEdit={onEditClick} />
                     </div>
                 </div>
 
@@ -149,7 +148,7 @@ export function SpendingCardExpanded({
             </div>
 
             {/* Expanded Content — Entries */}
-            <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+            <div className="px-3.5 pb-[9px] sm:px-5 sm:pb-3.5">
                 <div className="h-px mb-4 bg-border" />
 
                 {/* Search and Sort */}
@@ -204,8 +203,8 @@ export function SpendingCardExpanded({
                             onClick={() => onEntryClick(entry, filteredEntries)}
                             className="w-full flex items-center justify-between py-2 px-0.5 rounded-lg cursor-pointer transition-colors hover:bg-muted text-left"
                         >
-                            <div className="flex flex-col gap-px">
-                                <p className="font-medium text-[13px]" style={{ color: "var(--foreground)" }}>
+                            <div className="flex flex-col gap-px min-w-0">
+                                <p className="font-medium text-[13px] truncate" style={{ color: "var(--foreground)" }}>
                                     {entry.name}
                                 </p>
                                 <p className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
@@ -275,6 +274,9 @@ export function SpendingCardExpanded({
                         Add Entry
                     </span>
                 </button>
+
+                {/* Bottom collapse affordance */}
+                <ExpandToggleBar isExpanded={true} onToggle={onCollapse} />
             </div>
         </div>
     );

@@ -25,7 +25,7 @@ import {
 const LONG_NAME = "Subscriptions & Memberships International";
 
 const longEntries: SpendingEntry[] = [
-  { id: "e1", name: "Annual renewal", date: "2026-06-03", amount: cents(84.2), direction: "debit", receipt: null, link: null },
+  { id: "e1", name: "Annual renewal — international premium family plan", date: "2026-06-03", amount: cents(84.2), direction: "debit", receipt: null, link: null },
 ];
 
 const longCardProps = {
@@ -80,6 +80,26 @@ test("collapsed card contains a long name at carousel width (308px)", async ({ m
     <Providers>
       <div style={{ width: 308 }}>
         <SpendingCard {...longCardProps} isExpanded={false} />
+      </div>
+    </Providers>,
+  );
+
+  const metrics = await cardMetrics(page, LONG_NAME);
+
+  expect(metrics).not.toBeNull();
+
+  expect(metrics?.cardOverflowX).toBe(0);
+
+  expect(metrics?.editInsideCard).toBe(true);
+
+  expect(metrics?.nameTruncated).toBe(true);
+});
+
+test("expanded card contains long item and entry names at carousel width (308px)", async ({ mount, page }) => {
+  await mount(
+    <Providers>
+      <div style={{ width: 308 }}>
+        <SpendingCard {...longCardProps} isExpanded={true} />
       </div>
     </Providers>,
   );
