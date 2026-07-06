@@ -23,7 +23,13 @@ const AT_WARN = { budgetNumber: 40_000, totalSpent: 34_000 };
 // Just under the band: 339.00 of 400.00 (84.75%) stays green.
 const BELOW_WARN = { budgetNumber: 40_000, totalSpent: 33_900 };
 
-function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, onEditClick: () => void = () => {}) {
+interface CardHandlers {
+  onEditClick?: () => void;
+  onExpand?: () => void;
+  onCollapse?: () => void;
+}
+
+function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, handlers: CardHandlers = {}) {
   return render(
     <SettingsProvider>
       <SpendingCardCollapsed
@@ -34,14 +40,14 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, on
         spendingEntries={3}
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
-        onExpand={() => {}}
-        onEditClick={onEditClick}
+        onExpand={handlers.onExpand ?? (() => {})}
+        onEditClick={handlers.onEditClick ?? (() => {})}
       />
     </SettingsProvider>
   ).container;
 }
 
-function renderExpanded(money: { budgetNumber: number; totalSpent: number }, onEditClick: () => void = () => {}) {
+function renderExpanded(money: { budgetNumber: number; totalSpent: number }, handlers: CardHandlers = {}) {
   return render(
     <SettingsProvider>
       <SpendingCardExpanded
@@ -53,11 +59,11 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }, onE
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
         entries={[]}
-        onCollapse={() => {}}
+        onCollapse={handlers.onCollapse ?? (() => {})}
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
-        onEditClick={onEditClick}
+        onEditClick={handlers.onEditClick ?? (() => {})}
       />
     </SettingsProvider>
   ).container;
@@ -97,11 +103,11 @@ describe("SpendingCard — orange warn band from 85% of budget", () => {
   });
 });
 
-describe("SpendingCard — edit pencil in the action pill", () => {
+describe("SpendingCard — header edit button", () => {
   it("fires onEditClick from the collapsed card", () => {
     const onEditClick = vi.fn();
 
-    renderCollapsed(BELOW_WARN, onEditClick);
+    renderCollapsed(BELOW_WARN, { onEditClick });
 
     fireEvent.click(screen.getByLabelText("Edit spending item"));
 
@@ -111,10 +117,32 @@ describe("SpendingCard — edit pencil in the action pill", () => {
   it("fires onEditClick from the expanded card", () => {
     const onEditClick = vi.fn();
 
-    renderExpanded(BELOW_WARN, onEditClick);
+    renderExpanded(BELOW_WARN, { onEditClick });
 
     fireEvent.click(screen.getByLabelText("Edit spending item"));
 
     expect(onEditClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SpendingCard — bottom expand toggle bar", () => {
+  it("fires onExpand from the collapsed card", () => {
+    const onExpand = vi.fn();
+
+    renderCollapsed(BELOW_WARN, { onExpand });
+
+    fireEvent.click(screen.getByLabelText("Show entries"));
+
+    expect(onExpand).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires onCollapse from the expanded card", () => {
+    const onCollapse = vi.fn();
+
+    renderExpanded(BELOW_WARN, { onCollapse });
+
+    fireEvent.click(screen.getByLabelText("Hide entries"));
+
+    expect(onCollapse).toHaveBeenCalledTimes(1);
   });
 });
