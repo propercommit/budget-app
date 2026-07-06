@@ -48,6 +48,7 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }) {
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
         onExpand={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>
   ).container;

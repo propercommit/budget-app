@@ -100,6 +100,10 @@ export function SpendingCard({
         setShowItemEdit(true);
     };
 
+    const handleItemEditClick = () => {
+        setShowItemEdit(true);
+    };
+
     const handleItemSave = (data: Parameters<typeof onItemUpdate>[0]) => {
         onItemUpdate(data);
         setShowItemEdit(false);
@@ -182,6 +186,7 @@ export function SpendingCard({
                 <SpendingCardCollapsed
                     {...sharedCardProps}
                     onExpand={onToggleExpand}
+                    onEditClick={handleItemEditClick}
                 />
             )}
 
