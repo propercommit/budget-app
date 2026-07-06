@@ -13,19 +13,10 @@ import { SettingsProvider } from "@/lib/settings-context";
 import { SpendingCardCollapsed } from "@/components/spending/spending-card-collapsed";
 import { SpendingCardExpanded } from "@/components/spending/spending-card-expanded";
 import { SpendingItemDetailPopin } from "@/components/spending/popins/spending-item-detail-popin";
+import { installRadixJsdomStubs } from "./radix-jsdom-stubs";
 
 // Radix Select (the expanded card's sort control) pokes APIs jsdom lacks.
-beforeAll(() => {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-});
+beforeAll(installRadixJsdomStubs);
 
 // Net-credit month: credits exceeded debits by 89.12 (−8912 cents) on a
 // 300.00 budget, so 389.12 is left. The header must read "+89.12 $" in green —
@@ -46,6 +37,7 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }) {
         spendingItemIcon="shirt"
         spendingCategoryColor="#AF52DE"
         onExpand={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>,
   );
@@ -67,6 +59,7 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }) {
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>,
   );

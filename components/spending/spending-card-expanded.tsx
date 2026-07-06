@@ -1,10 +1,9 @@
 "use client";
 
-import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
-import { spentDisplay } from "@/lib/spending/format-spent";
-import { ExpandToggleButton } from "../ui/expand-toggle-button";
+import { SpendingCardHeader } from "./spending-card-header";
+import { ExpandToggleBar } from "./expand-toggle-bar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 export interface SpendingEntry {
@@ -31,6 +30,7 @@ interface SpendingCardExpandedProps {
     onEntryClick: (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => void;
     onAddEntry: () => void;
     onItemDetailClick: () => void;
+    onEditClick: () => void;
 }
 
 export function SpendingCardExpanded({
@@ -46,15 +46,12 @@ export function SpendingCardExpanded({
     onEntryClick,
     onAddEntry,
     onItemDetailClick,
+    onEditClick,
 }: SpendingCardExpandedProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
 
-    const amountLeft = budgetNumber - totalSpent;
-    const isOverBudget = amountLeft < 0;
-    const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
     const { formatAmount, formatDateShort } = useSettings();
-    const spent = spentDisplay(totalSpent, formatAmount);
 
     const filteredEntries = entries
         .filter((entry) => entry.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -68,92 +65,26 @@ export function SpendingCardExpanded({
 
     return (
         <div
-            className="bg-card border border-(--card-border) rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+            data-spending-card
+            className="bg-card border border-(--card-border) rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)]"
         >
-            {/* Header section — same as collapsed */}
-            <div className="p-4 sm:p-5">
-                {/* Row 1: Header */}
-                <div className="flex items-center justify-between mb-3">
-                    {/* Left — Icon + Name/Category (clickable for detail popin) */}
-                    <button
-                        className="flex items-center gap-3 transition-all duration-200 active:scale-[0.98]"
-                        onClick={onItemDetailClick}
-                    >
-                        <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl"
-                            style={{ backgroundColor: `${spendingCategoryColor}15` }}
-                        >
-                            {iconMap[spendingItemIcon] || spendingItemIcon}
-                        </div>
-                        <div className="text-left">
-                            <h2 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
-                                {spendingName}
-                            </h2>
-                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                                {categoryName}
-                            </p>
-                        </div>
-                    </button>
-
-                    {/* Right — Spent/Budget + Chevron */}
-                    <div className="flex items-center gap-3">
-                        <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums" style={{ color: spent.color }}>
-                                {spent.label}
-                            </p>
-                            <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                                of {formatAmount(budgetNumber)}
-                            </p>
-                        </div>
-                        <ExpandToggleButton
-                            isExpanded={true}
-                            onToggle={onCollapse}
-                        />
-                    </div>
-                </div>
-
-                {/* Row 2: Progress Bar */}
-                <div
-                    className="w-full h-3 rounded-full overflow-hidden bg-input"
-                >
-                    <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                            // Two-sided clamp: a net-credit month has negative spent, and a
-                            // negative width is invalid CSS (dropped → full-width bar).
-                            width: `${Math.min(100, Math.max(0, spentPercent))}%`,
-                            backgroundColor: isOverBudget
-                                ? "#FF3B30"
-                                : spentPercent > 80
-                                    ? "#FF9500"
-                                    : "#34C759",
-                        }}
-                    />
-                </div>
-
-                {/* Row 3: Status */}
-                <div className="flex items-center justify-between mt-3">
-                    <div
-                        className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                        style={{
-                            backgroundColor: isOverBudget
-                                ? "rgba(255, 59, 48, 0.1)"
-                                : "rgba(52, 199, 89, 0.1)",
-                            color: isOverBudget ? "#FF3B30" : "#34C759",
-                        }}
-                    >
-                        {isOverBudget
-                            ? `${formatAmount(Math.abs(amountLeft))} over`
-                            : `${formatAmount(amountLeft)} left`}
-                    </div>
-                    <span className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                        {spendingEntries} {spendingEntries === 1 ? "entry" : "entries"}
-                    </span>
-                </div>
+            {/* Header section — shared with collapsed */}
+            <div className="p-3.5 sm:p-5">
+                <SpendingCardHeader
+                    spendingName={spendingName}
+                    categoryName={categoryName}
+                    budgetNumber={budgetNumber}
+                    totalSpent={totalSpent}
+                    spendingEntries={spendingEntries}
+                    spendingItemIcon={spendingItemIcon}
+                    spendingCategoryColor={spendingCategoryColor}
+                    onEditClick={onEditClick}
+                    onItemDetailClick={onItemDetailClick}
+                />
             </div>
 
             {/* Expanded Content — Entries */}
-            <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+            <div className="px-3.5 pb-[9px] sm:px-5 sm:pb-3.5">
                 <div className="h-px mb-4 bg-border" />
 
                 {/* Search and Sort */}
@@ -200,32 +131,23 @@ export function SpendingCardExpanded({
                     </Select>
                 </div>
 
-                {/* Entry List */}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                {/* Entry List — plain rows; click still opens the entry detail popin */}
+                <div className="max-h-64 overflow-y-auto">
                     {filteredEntries.map((entry) => (
                         <button
                             key={entry.id}
                             onClick={() => onEntryClick(entry, filteredEntries)}
-                            className="w-full flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors hover:bg-input text-left"
-                            style={{ backgroundColor: "var(--muted)" }}
+                            className="w-full flex items-center justify-between py-2 px-0.5 rounded-lg cursor-pointer transition-colors hover:bg-muted text-left"
                         >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base"
-                                    style={{ backgroundColor: `${spendingCategoryColor}20` }}
-                                >
-                                    {iconMap[spendingItemIcon] || spendingItemIcon}
-                                </div>
-                                <div>
-                                    <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>
-                                        {entry.name}
-                                    </p>
-                                    <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>
-                                        {formatDateShort(entry.date)}
-                                    </p>
-                                </div>
+                            <div className="flex flex-col gap-px min-w-0">
+                                <p className="font-medium text-[13px] truncate" style={{ color: "var(--foreground)" }}>
+                                    {entry.name}
+                                </p>
+                                <p className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+                                    {formatDateShort(entry.date)}
+                                </p>
                             </div>
-                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "var(--foreground)" }}>
+                            <p className="font-semibold text-[13px] tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "var(--foreground)" }}>
                                 {entry.direction === "credit" ? "+" : "-"}
                                 {formatAmount(entry.amount)}
                             </p>
@@ -288,6 +210,8 @@ export function SpendingCardExpanded({
                         Add Entry
                     </span>
                 </button>
+
+                <ExpandToggleBar isExpanded={true} onToggle={onCollapse} />
             </div>
         </div>
     );

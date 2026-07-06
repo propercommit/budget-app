@@ -12,19 +12,10 @@ vi.mock("@/lib/api", () => ({
 import { SettingsProvider } from "@/lib/settings-context";
 import { SpendingCardCollapsed } from "@/components/spending/spending-card-collapsed";
 import { SpendingCardExpanded } from "@/components/spending/spending-card-expanded";
+import { installRadixJsdomStubs } from "./radix-jsdom-stubs";
 
 // Radix Select (the expanded card's sort control) pokes APIs jsdom lacks.
-beforeAll(() => {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-});
+beforeAll(installRadixJsdomStubs);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -48,6 +39,7 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }) {
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
         onExpand={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>
   ).container;
@@ -69,6 +61,7 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }) {
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>
   ).container;

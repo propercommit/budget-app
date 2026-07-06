@@ -207,6 +207,24 @@ export const cardCategories = categories.map((c) => ({
   color: c.color,
 }));
 
+/** Baseline SpendingCard props shared by the card specs — spread and override per test (entries stay per-spec). */
+export const baseCardProps = {
+  spendingName: "Groceries",
+  spendingItemIcon: "shopping-cart",
+  categoryName: "Groceries",
+  spendingCategoryColor: "#34C759",
+  budgetNumber: cents(600),
+  startDate: "2026-06-01",
+  categories: cardCategories,
+  onItemUpdate: noop,
+  onItemDelete: noop,
+  onEntryCreate: noop,
+  onEntryUpdate: noop,
+  onEntryDelete: noop,
+  onCreateCategory: noop,
+  onToggleExpand: noop,
+};
+
 /** A three-month `{ label, value }` series shared by chart/trend tests. */
 export const trendSeries = [
   { label: "Apr", value: cents(168) },
