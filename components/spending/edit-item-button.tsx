@@ -15,11 +15,8 @@ export function EditItemButton({ onEdit }: EditItemButtonProps) {
     return (
         <button
             aria-label="Edit spending item"
-            onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-            }}
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted hover:bg-input transition-colors touch-manipulation"
+            onClick={onEdit}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-muted hover:bg-input transition-colors touch-manipulation"
         >
             <Pencil className="w-[15px] h-[15px] text-muted-foreground" />
         </button>

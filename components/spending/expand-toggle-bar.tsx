@@ -18,10 +18,7 @@ export function ExpandToggleBar({ isExpanded, onToggle }: ExpandToggleBarProps) 
         <button
             aria-label={isExpanded ? "Hide entries" : "Show entries"}
             aria-expanded={isExpanded}
-            onClick={(e) => {
-                e.stopPropagation();
-                onToggle();
-            }}
+            onClick={onToggle}
             className="w-full mt-2 py-[5px] sm:py-1.5 rounded-lg flex items-center justify-center hover:bg-foreground/5 transition-colors touch-manipulation"
         >
             <ChevronDown className={cn("w-5 h-5 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")} />

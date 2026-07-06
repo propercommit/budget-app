@@ -23,13 +23,7 @@ const AT_WARN = { budgetNumber: 40_000, totalSpent: 34_000 };
 // Just under the band: 339.00 of 400.00 (84.75%) stays green.
 const BELOW_WARN = { budgetNumber: 40_000, totalSpent: 33_900 };
 
-interface CardHandlers {
-  onEditClick?: () => void;
-  onExpand?: () => void;
-  onCollapse?: () => void;
-}
-
-function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, handlers: CardHandlers = {}) {
+function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, { onEditClick = () => {}, onExpand = () => {} }: { onEditClick?: () => void; onExpand?: () => void } = {}) {
   return render(
     <SettingsProvider>
       <SpendingCardCollapsed
@@ -40,14 +34,14 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, ha
         spendingEntries={3}
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
-        onExpand={handlers.onExpand ?? (() => {})}
-        onEditClick={handlers.onEditClick ?? (() => {})}
+        onExpand={onExpand}
+        onEditClick={onEditClick}
       />
     </SettingsProvider>
   ).container;
 }
 
-function renderExpanded(money: { budgetNumber: number; totalSpent: number }, handlers: CardHandlers = {}) {
+function renderExpanded(money: { budgetNumber: number; totalSpent: number }, { onEditClick = () => {}, onCollapse = () => {} }: { onEditClick?: () => void; onCollapse?: () => void } = {}) {
   return render(
     <SettingsProvider>
       <SpendingCardExpanded
@@ -59,11 +53,11 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }, han
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
         entries={[]}
-        onCollapse={handlers.onCollapse ?? (() => {})}
+        onCollapse={onCollapse}
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
-        onEditClick={handlers.onEditClick ?? (() => {})}
+        onEditClick={onEditClick}
       />
     </SettingsProvider>
   ).container;

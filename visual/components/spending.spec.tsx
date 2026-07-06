@@ -6,7 +6,7 @@ import { SpendingItemEditPopin } from "@/components/spending/popins/spending-ite
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
 import { EntryEditPopin } from "@/components/spending/popins/spending-entry-edit-popin";
 import { Providers } from "../providers";
-import { cardCategories, noop, cents } from "../fixtures";
+import { baseCardProps, cardCategories, noop, cents } from "../fixtures";
 
 /**
  * Spending feature: the carousel card (collapsed + expanded) and every popin
@@ -47,22 +47,9 @@ const refundEntry: SpendingEntry = {
 };
 
 const cardProps = {
-  spendingName: "Groceries",
-  spendingItemIcon: "shopping-cart",
-  categoryName: "Groceries",
-  spendingCategoryColor: "#34C759",
-  budgetNumber: cents(600),
-  startDate: "2026-06-01",
+  ...baseCardProps,
   note: "Weekly supermarket runs",
   entries: cardEntries,
-  categories: cardCategories,
-  onItemUpdate: noop,
-  onItemDelete: noop,
-  onEntryCreate: noop,
-  onEntryUpdate: noop,
-  onEntryDelete: noop,
-  onCreateCategory: noop,
-  onToggleExpand: noop,
 };
 
 test.describe("Spending card", () => {

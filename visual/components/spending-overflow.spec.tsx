@@ -1,11 +1,11 @@
 import { test, expect } from "../test";
+import type { Page } from "@playwright/test";
 import { SpendingCard } from "@/components/spending/spending-card";
 import type { SpendingEntry } from "@/components/spending/spending-card-expanded";
 import { Dashboard } from "@/components/dashboard";
 import { Providers } from "../providers";
 import {
-  cardCategories,
-  noop,
+  baseCardProps,
   cents,
   categories,
   spendingData,
@@ -29,21 +29,12 @@ const longEntries: SpendingEntry[] = [
 ];
 
 const longCardProps = {
+  ...baseCardProps,
   spendingName: LONG_NAME,
   spendingItemIcon: "credit-card",
   categoryName: "Fixed costs and other recurring payments",
   spendingCategoryColor: "#AF52DE",
-  budgetNumber: cents(600),
-  startDate: "2026-06-01",
   entries: longEntries,
-  categories: cardCategories,
-  onItemUpdate: noop,
-  onItemDelete: noop,
-  onEntryCreate: noop,
-  onEntryUpdate: noop,
-  onEntryDelete: noop,
-  onCreateCategory: noop,
-  onToggleExpand: noop,
 };
 
 /** First spending item of the selected month renamed to the long name. */
@@ -52,25 +43,28 @@ const longSpendingData = {
   [SELECTED_MONTH]: spendingData[SELECTED_MONTH].map((item, index) => (index === 0 ? { ...item, name: LONG_NAME } : item)),
 };
 
-/** Measures the card that contains `name`; null when it isn't in the DOM. */
-async function cardMetrics(page: import("@playwright/test").Page, name: string) {
+/** Measures the card that contains `name`; throws when card or button are missing so tests fail with a reason. */
+async function cardMetrics(page: Page, name: string) {
   return page.evaluate((targetName) => {
     const title = Array.from(document.querySelectorAll("h2")).find((h) => h.textContent === targetName);
 
-    if (title === undefined) return null;
+    if (title === undefined) throw new Error(`no card title "${targetName}" in the DOM`);
 
-    const card = title.closest(".bg-card");
+    const card = title.closest("[data-spending-card]");
 
-    if (card === null) return null;
+    if (card === null) throw new Error(`no [data-spending-card] ancestor around "${targetName}"`);
+
+    const editButton = card.querySelector('button[aria-label="Edit spending item"]');
+
+    if (editButton === null) throw new Error("edit button missing from the card");
 
     const cardRect = card.getBoundingClientRect();
-    const editButton = card.querySelector('button[aria-label="Edit spending item"]');
-    const buttonRect = editButton === null ? null : editButton.getBoundingClientRect();
+    const buttonRect = editButton.getBoundingClientRect();
 
     return {
       cardOverflowX: card.scrollWidth - card.clientWidth,
       nameTruncated: title.scrollWidth > title.clientWidth,
-      editInsideCard: buttonRect === null ? false : buttonRect.right <= cardRect.right + 0.5 && buttonRect.left >= cardRect.left - 0.5,
+      editInsideCard: buttonRect.right <= cardRect.right + 0.5 && buttonRect.left >= cardRect.left - 0.5,
     };
   }, name);
 }
@@ -86,13 +80,11 @@ test("collapsed card contains a long name at carousel width (308px)", async ({ m
 
   const metrics = await cardMetrics(page, LONG_NAME);
 
-  expect(metrics).not.toBeNull();
+  expect(metrics.cardOverflowX).toBe(0);
 
-  expect(metrics?.cardOverflowX).toBe(0);
+  expect(metrics.editInsideCard).toBe(true);
 
-  expect(metrics?.editInsideCard).toBe(true);
-
-  expect(metrics?.nameTruncated).toBe(true);
+  expect(metrics.nameTruncated).toBe(true);
 });
 
 test("expanded card contains long item and entry names at carousel width (308px)", async ({ mount, page }) => {
@@ -106,13 +98,11 @@ test("expanded card contains long item and entry names at carousel width (308px)
 
   const metrics = await cardMetrics(page, LONG_NAME);
 
-  expect(metrics).not.toBeNull();
+  expect(metrics.cardOverflowX).toBe(0);
 
-  expect(metrics?.cardOverflowX).toBe(0);
+  expect(metrics.editInsideCard).toBe(true);
 
-  expect(metrics?.editInsideCard).toBe(true);
-
-  expect(metrics?.nameTruncated).toBe(true);
+  expect(metrics.nameTruncated).toBe(true);
 });
 
 test("collapsed card inside the dashboard keeps its edit button in bounds", async ({ mount, page }) => {
@@ -130,9 +120,7 @@ test("collapsed card inside the dashboard keeps its edit button in bounds", asyn
 
   const metrics = await cardMetrics(page, LONG_NAME);
 
-  expect(metrics).not.toBeNull();
+  expect(metrics.cardOverflowX).toBe(0);
 
-  expect(metrics?.cardOverflowX).toBe(0);
-
-  expect(metrics?.editInsideCard).toBe(true);
+  expect(metrics.editInsideCard).toBe(true);
 });
