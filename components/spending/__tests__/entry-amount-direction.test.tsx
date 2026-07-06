@@ -48,6 +48,7 @@ function renderExpandedWith(entries: SpendingEntry[]) {
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
+        onItemEditClick={() => {}}
       />
     </SettingsProvider>,
   );

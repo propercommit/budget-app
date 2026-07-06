@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
@@ -31,6 +32,7 @@ interface SpendingCardExpandedProps {
     onEntryClick: (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => void;
     onAddEntry: () => void;
     onItemDetailClick: () => void;
+    onItemEditClick: () => void;
 }
 
 export function SpendingCardExpanded({
@@ -46,6 +48,7 @@ export function SpendingCardExpanded({
     onEntryClick,
     onAddEntry,
     onItemDetailClick,
+    onItemEditClick,
 }: SpendingCardExpandedProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
@@ -53,6 +56,10 @@ export function SpendingCardExpanded({
     const amountLeft = budgetNumber - totalSpent;
     const isOverBudget = amountLeft < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
+    // Status color shared by the progress bar and the remaining pill: red once
+    // over budget, orange from 85% of budget, green below.
+    const isNearBudget = !isOverBudget && budgetNumber > 0 && totalSpent / budgetNumber >= 0.85;
+    const statusColor = isOverBudget ? "#FF3B30" : isNearBudget ? "#FF9500" : "#34C759";
     const { formatAmount, formatDateShort } = useSettings();
     const spent = spentDisplay(totalSpent, formatAmount);
 
@@ -68,7 +75,7 @@ export function SpendingCardExpanded({
 
     return (
         <div
-            className="bg-card border border-(--card-border) rounded-3xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
+            className="bg-card border border-(--card-border) rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)]"
         >
             {/* Header section — same as collapsed */}
             <div className="p-4 sm:p-5">
@@ -105,10 +112,27 @@ export function SpendingCardExpanded({
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        <ExpandToggleButton
-                            isExpanded={true}
-                            onToggle={onCollapse}
-                        />
+                        {/* Action pill — edit + expand. The pencil only fits from sm: up;
+                            at carousel width it would crush the item name (edit stays
+                            reachable on mobile via the detail popin). */}
+                        <div className="flex items-stretch rounded-full overflow-hidden flex-shrink-0 bg-muted">
+                            <button
+                                aria-label="Edit spending item"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onItemEditClick();
+                                }}
+                                className="w-10 h-10 hidden sm:flex items-center justify-center hover:bg-input transition-colors touch-manipulation"
+                            >
+                                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                            </button>
+                            <div className="w-px my-2.5 hidden sm:block bg-border" />
+                            <ExpandToggleButton
+                                isExpanded={true}
+                                onToggle={onCollapse}
+                                className="w-10 h-10 rounded-none bg-transparent"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -122,11 +146,7 @@ export function SpendingCardExpanded({
                             // Two-sided clamp: a net-credit month has negative spent, and a
                             // negative width is invalid CSS (dropped → full-width bar).
                             width: `${Math.min(100, Math.max(0, spentPercent))}%`,
-                            backgroundColor: isOverBudget
-                                ? "#FF3B30"
-                                : spentPercent > 80
-                                    ? "#FF9500"
-                                    : "#34C759",
+                            backgroundColor: statusColor,
                         }}
                     />
                 </div>
@@ -136,10 +156,9 @@ export function SpendingCardExpanded({
                     <div
                         className="px-2.5 py-1 rounded-full text-xs font-semibold"
                         style={{
-                            backgroundColor: isOverBudget
-                                ? "rgba(255, 59, 48, 0.1)"
-                                : "rgba(52, 199, 89, 0.1)",
-                            color: isOverBudget ? "#FF3B30" : "#34C759",
+                            // 10%-alpha tint of the status color, hex-suffix style as the icon tile.
+                            backgroundColor: `${statusColor}1A`,
+                            color: statusColor,
                         }}
                     >
                         {isOverBudget
@@ -200,32 +219,23 @@ export function SpendingCardExpanded({
                     </Select>
                 </div>
 
-                {/* Entry List */}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                {/* Entry List — plain rows; click still opens the entry detail popin */}
+                <div className="max-h-64 overflow-y-auto">
                     {filteredEntries.map((entry) => (
                         <button
                             key={entry.id}
                             onClick={() => onEntryClick(entry, filteredEntries)}
-                            className="w-full flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors hover:bg-input text-left"
-                            style={{ backgroundColor: "var(--muted)" }}
+                            className="w-full flex items-center justify-between py-2 px-0.5 rounded-lg cursor-pointer transition-colors hover:bg-muted text-left"
                         >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base"
-                                    style={{ backgroundColor: `${spendingCategoryColor}20` }}
-                                >
-                                    {iconMap[spendingItemIcon] || spendingItemIcon}
-                                </div>
-                                <div>
-                                    <p className="font-medium text-sm" style={{ color: "var(--foreground)" }}>
-                                        {entry.name}
-                                    </p>
-                                    <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>
-                                        {formatDateShort(entry.date)}
-                                    </p>
-                                </div>
+                            <div className="flex flex-col gap-px">
+                                <p className="font-medium text-[13px]" style={{ color: "var(--foreground)" }}>
+                                    {entry.name}
+                                </p>
+                                <p className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+                                    {formatDateShort(entry.date)}
+                                </p>
                             </div>
-                            <p className="font-semibold text-sm tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "var(--foreground)" }}>
+                            <p className="font-semibold text-[13px] tabular-nums whitespace-nowrap flex-shrink-0" style={{ color: entry.direction === "credit" ? "#34C759" : "var(--foreground)" }}>
                                 {entry.direction === "credit" ? "+" : "-"}
                                 {formatAmount(entry.amount)}
                             </p>

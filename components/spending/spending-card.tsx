@@ -181,6 +181,7 @@ export function SpendingCard({
                     onEntryClick={handleEntryClick}
                     onAddEntry={handleAddEntry}
                     onItemDetailClick={handleItemDetailClick}
+                    onItemEditClick={handleItemEditClick}
                 />
             ) : (
                 <SpendingCardCollapsed

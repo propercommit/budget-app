@@ -68,6 +68,7 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }) {
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
+        onItemEditClick={() => {}}
       />
     </SettingsProvider>,
   );
