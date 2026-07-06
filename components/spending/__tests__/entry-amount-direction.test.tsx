@@ -13,19 +13,10 @@ import { SettingsProvider } from "@/lib/settings-context";
 import { SpendingCardExpanded } from "@/components/spending/spending-card-expanded";
 import type { SpendingEntry } from "@/components/spending/spending-card-expanded";
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
+import { installRadixJsdomStubs } from "./radix-jsdom-stubs";
 
 // Radix Select (the expanded card's sort control) pokes APIs jsdom lacks.
-beforeAll(() => {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-});
+beforeAll(installRadixJsdomStubs);
 
 // Amounts in integer cents; formatAmount divides by 100 → "42 $" / "100 $".
 const debit: SpendingEntry = { id: "e1", name: "Monthly rent", date: "2026-06-01", amount: 4200, direction: "debit", receipt: null, link: null };
@@ -48,7 +39,7 @@ function renderExpandedWith(entries: SpendingEntry[]) {
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
-        onItemEditClick={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>,
   );

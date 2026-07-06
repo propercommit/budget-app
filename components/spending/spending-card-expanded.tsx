@@ -1,11 +1,11 @@
 "use client";
 
-import { Pencil } from "lucide-react";
 import { iconMap } from "@/lib/icon-map";
 import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
+import { budgetStatusColor } from "@/lib/spending/budget-status";
 import { spentDisplay } from "@/lib/spending/format-spent";
-import { ExpandToggleButton } from "../ui/expand-toggle-button";
+import { CardActionPill } from "./card-action-pill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 export interface SpendingEntry {
@@ -32,7 +32,7 @@ interface SpendingCardExpandedProps {
     onEntryClick: (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => void;
     onAddEntry: () => void;
     onItemDetailClick: () => void;
-    onItemEditClick: () => void;
+    onEditClick: () => void;
 }
 
 export function SpendingCardExpanded({
@@ -48,7 +48,7 @@ export function SpendingCardExpanded({
     onEntryClick,
     onAddEntry,
     onItemDetailClick,
-    onItemEditClick,
+    onEditClick,
 }: SpendingCardExpandedProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOrder, setSortOrder] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
@@ -56,10 +56,7 @@ export function SpendingCardExpanded({
     const amountLeft = budgetNumber - totalSpent;
     const isOverBudget = amountLeft < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
-    // Status color shared by the progress bar and the remaining pill: red once
-    // over budget, orange from 85% of budget, green below.
-    const isNearBudget = !isOverBudget && budgetNumber > 0 && totalSpent / budgetNumber >= 0.85;
-    const statusColor = isOverBudget ? "#FF3B30" : isNearBudget ? "#FF9500" : "#34C759";
+    const status = budgetStatusColor(budgetNumber, totalSpent);
     const { formatAmount, formatDateShort } = useSettings();
     const spent = spentDisplay(totalSpent, formatAmount);
 
@@ -112,27 +109,11 @@ export function SpendingCardExpanded({
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        {/* Action pill — edit + expand. The pencil only fits from sm: up;
-                            at carousel width it would crush the item name (edit stays
-                            reachable on mobile via the detail popin). */}
-                        <div className="flex items-stretch rounded-full overflow-hidden flex-shrink-0 bg-muted">
-                            <button
-                                aria-label="Edit spending item"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onItemEditClick();
-                                }}
-                                className="w-10 h-10 hidden sm:flex items-center justify-center hover:bg-input transition-colors touch-manipulation"
-                            >
-                                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                            </button>
-                            <div className="w-px my-2.5 hidden sm:block bg-border" />
-                            <ExpandToggleButton
-                                isExpanded={true}
-                                onToggle={onCollapse}
-                                className="w-10 h-10 rounded-none bg-transparent"
-                            />
-                        </div>
+                        <CardActionPill
+                            isExpanded={true}
+                            onToggle={onCollapse}
+                            onEdit={onEditClick}
+                        />
                     </div>
                 </div>
 
@@ -146,7 +127,7 @@ export function SpendingCardExpanded({
                             // Two-sided clamp: a net-credit month has negative spent, and a
                             // negative width is invalid CSS (dropped → full-width bar).
                             width: `${Math.min(100, Math.max(0, spentPercent))}%`,
-                            backgroundColor: statusColor,
+                            backgroundColor: status.color,
                         }}
                     />
                 </div>
@@ -155,11 +136,7 @@ export function SpendingCardExpanded({
                 <div className="flex items-center justify-between mt-3">
                     <div
                         className="px-2.5 py-1 rounded-full text-xs font-semibold"
-                        style={{
-                            // 10%-alpha tint of the status color, hex-suffix style as the icon tile.
-                            backgroundColor: `${statusColor}1A`,
-                            color: statusColor,
-                        }}
+                        style={{ backgroundColor: status.tint, color: status.color }}
                     >
                         {isOverBudget
                             ? `${formatAmount(Math.abs(amountLeft))} over`

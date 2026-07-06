@@ -12,19 +12,10 @@ vi.mock("@/lib/api", () => ({
 import { SettingsProvider } from "@/lib/settings-context";
 import { SpendingCardCollapsed } from "@/components/spending/spending-card-collapsed";
 import { SpendingCardExpanded } from "@/components/spending/spending-card-expanded";
+import { installRadixJsdomStubs } from "./radix-jsdom-stubs";
 
 // Radix Select (the expanded card's sort control) pokes APIs jsdom lacks.
-beforeAll(() => {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-});
+beforeAll(installRadixJsdomStubs);
 
 // Warn-band boundary, in integer cents: 340.00 of 400.00 is exactly 85%,
 // the threshold where bar and pill turn orange while still under budget.
@@ -50,7 +41,7 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }, on
   ).container;
 }
 
-function renderExpanded(money: { budgetNumber: number; totalSpent: number }, onItemEditClick: () => void = () => {}) {
+function renderExpanded(money: { budgetNumber: number; totalSpent: number }, onEditClick: () => void = () => {}) {
   return render(
     <SettingsProvider>
       <SpendingCardExpanded
@@ -66,7 +57,7 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }, onI
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
-        onItemEditClick={onItemEditClick}
+        onEditClick={onEditClick}
       />
     </SettingsProvider>
   ).container;
@@ -117,13 +108,13 @@ describe("SpendingCard — edit pencil in the action pill", () => {
     expect(onEditClick).toHaveBeenCalledTimes(1);
   });
 
-  it("fires onItemEditClick from the expanded card", () => {
-    const onItemEditClick = vi.fn();
+  it("fires onEditClick from the expanded card", () => {
+    const onEditClick = vi.fn();
 
-    renderExpanded(BELOW_WARN, onItemEditClick);
+    renderExpanded(BELOW_WARN, onEditClick);
 
     fireEvent.click(screen.getByLabelText("Edit spending item"));
 
-    expect(onItemEditClick).toHaveBeenCalledTimes(1);
+    expect(onEditClick).toHaveBeenCalledTimes(1);
   });
 });

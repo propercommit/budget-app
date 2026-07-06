@@ -95,12 +95,10 @@ export function SpendingCard({
         setShowItemDetail(true);
     };
 
-    const handleItemDetailToEdit = () => {
+    // Opens the edit popin from the header pencil or the detail popin's Edit
+    // button; closing the detail popin is a no-op when it wasn't open.
+    const handleItemEditOpen = () => {
         setShowItemDetail(false);
-        setShowItemEdit(true);
-    };
-
-    const handleItemEditClick = () => {
         setShowItemEdit(true);
     };
 
@@ -165,6 +163,7 @@ export function SpendingCard({
         spendingEntries,
         spendingItemIcon,
         spendingCategoryColor,
+        onEditClick: handleItemEditOpen,
     };
 
     // Check if any popin is open
@@ -181,13 +180,11 @@ export function SpendingCard({
                     onEntryClick={handleEntryClick}
                     onAddEntry={handleAddEntry}
                     onItemDetailClick={handleItemDetailClick}
-                    onItemEditClick={handleItemEditClick}
                 />
             ) : (
                 <SpendingCardCollapsed
                     {...sharedCardProps}
                     onExpand={onToggleExpand}
-                    onEditClick={handleItemEditClick}
                 />
             )}
 
@@ -197,7 +194,7 @@ export function SpendingCard({
                     <SpendingItemDetailPopin
                         isOpen={showItemDetail}
                         onClose={() => setShowItemDetail(false)}
-                        onEdit={handleItemDetailToEdit}
+                        onEdit={handleItemEditOpen}
                         spendingName={spendingName}
                         spendingItemIcon={spendingItemIcon}
                         categoryName={categoryName}
