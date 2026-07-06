@@ -4,7 +4,8 @@ import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { budgetStatusColor } from "@/lib/spending/budget-status";
 import { spentDisplay } from "@/lib/spending/format-spent";
-import { CardActionPill } from "./card-action-pill";
+import { EditItemButton } from "./edit-item-button";
+import { ExpandToggleBar } from "./expand-toggle-bar";
 
 interface SpendingCardCollapsedProps {
     spendingName: string;
@@ -38,19 +39,19 @@ export function SpendingCardCollapsed({
 
     return (
         <div className="bg-card border border-(--card-border) rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.05),0_1px_3px_rgba(0,0,0,0.03)]">
-            <div className="p-4 sm:p-5">
+            <div className="p-3.5 pb-[9px] sm:p-5 sm:pb-3.5">
                 {/* Row 1: Header */}
                 <div className="flex items-center justify-between mb-3">
                     {/* Left — Icon + Name/Category */}
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-[9px] sm:gap-3 min-w-0">
                         <div
-                            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                            className="w-[34px] h-[34px] rounded-[10px] sm:w-11 sm:h-11 sm:rounded-xl flex items-center justify-center text-xl flex-shrink-0"
                             style={{ backgroundColor: `${spendingCategoryColor}15` }}
                         >
                             {iconMap[spendingItemIcon] || spendingItemIcon}
                         </div>
                         <div className="min-w-0">
-                            <h2 className="text-base font-semibold truncate" style={{ color: "var(--foreground)" }}>
+                            <h2 className="text-[15px] leading-[19px] sm:text-base sm:leading-[22px] font-semibold truncate" style={{ color: "var(--foreground)" }}>
                                 {spendingName}
                             </h2>
                             <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
@@ -59,21 +60,17 @@ export function SpendingCardCollapsed({
                         </div>
                     </div>
 
-                    {/* Right — Spent/Budget + Chevron */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    {/* Right — Spent/Budget + Edit */}
+                    <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
                         <div className="text-right">
-                            <p className="text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: spent.color }}>
+                            <p className="text-base sm:text-lg font-bold tabular-nums whitespace-nowrap" style={{ color: spent.color }}>
                                {spent.label}
                             </p>
-                            <p className="text-xs whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
+                            <p className="text-[11px] sm:text-xs whitespace-nowrap" style={{ color: "var(--muted-foreground)" }}>
                                 of {formatAmount(budgetNumber)}
                             </p>
                         </div>
-                        <CardActionPill
-                            isExpanded={false}
-                            onToggle={onExpand}
-                            onEdit={onEditClick}
-                        />
+                        <EditItemButton onEdit={onEditClick} />
                     </div>
                 </div>
 
@@ -109,6 +106,9 @@ export function SpendingCardCollapsed({
                         {spendingEntries} {spendingEntries === 1 ? "entry" : "entries"}
                     </span>
                 </div>
+
+                {/* Bottom expand affordance */}
+                <ExpandToggleBar isExpanded={false} onToggle={onExpand} />
             </div>
         </div>
     );
