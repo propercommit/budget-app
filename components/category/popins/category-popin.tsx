@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { ColorPicker } from "@/components/color-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { FieldMessage, fieldInputStyle, fieldValidationProps, focusFirstInvalid } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { CATEGORY_DELETE_WARNING } from "@/lib/constants";
@@ -35,31 +36,22 @@ export function CategoryPopin({
     const [name, setName] = useState(initialName);
     const [selectedIcon, setSelectedIcon] = useState(initialIcon);
     const [selectedColor, setSelectedColor] = useState(initialColor);
-    const [showErrors, setShowErrors] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+
+    const nameRef = useRef<HTMLInputElement>(null);
 
     const isCreate = mode === "create";
-    const isNameValid = name.trim() !== "";
-    const isFormValid = isNameValid;
 
-    const getInputStyle = (isValid: boolean) => ({
-        backgroundColor: "var(--muted)",
-        border: `1px solid ${showErrors && !isValid ? "#FF3B30" : "var(--border)"}`,
-        color: "var(--foreground)",
-    });
-
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-        e.currentTarget.style.borderColor = "#007AFF";
-        e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
-    };
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>, isValid: boolean) => {
-        e.currentTarget.style.borderColor = showErrors && !isValid ? "#FF3B30" : "var(--border)";
-        e.currentTarget.style.boxShadow = "none";
-    };
+    // Validate on submit, clear on input: the error surfaces only after a
+    // failed save and is derived from the live value, so fixing the name
+    // clears it immediately.
+    const nameInvalid = name.trim() === "";
+    const nameError = submitted && nameInvalid;
 
     const handleSave = () => {
-        if (!isFormValid) {
-            setShowErrors(true);
+        if (nameInvalid) {
+            setSubmitted(true);
+            focusFirstInvalid([{ error: nameInvalid, ref: nameRef }]);
             return;
         }
         // The API persists the trimmed label — emit the same value so client
@@ -121,22 +113,23 @@ export function CategoryPopin({
                         Category Name
                     </label>
                     <input
+                        ref={nameRef}
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         maxLength={30}
                         placeholder="e.g., Transport, Food"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={getInputStyle(isNameValid)}
-                        onFocus={handleFocus}
-                        onBlur={(e) => handleBlur(e, isNameValid)}
+                        style={{ ...fieldInputStyle(nameError), color: "var(--foreground)" }}
+                        {...fieldValidationProps(nameError, "category-name-error")}
                     />
-                    <p className="text-xs text-right" style={{ color: name.length >= 25 ? "#FF9500" : "var(--muted-foreground)" }}>
-                        {name.length}/30
-                    </p>
-                    {showErrors && !isNameValid && (
-                        <p className="text-xs mt-1" style={{ color: "#FF3B30" }}>Category name is required</p>
-                    )}
+                    {nameError
+                        ? <FieldMessage id="category-name-error">Enter a category name</FieldMessage>
+                        : (
+                            <p className="text-xs text-right" style={{ color: name.length >= 25 ? "#FF9500" : "var(--muted-foreground)" }}>
+                                {name.length}/30
+                            </p>
+                        )}
                 </div>
 
                 <ColorPicker value={selectedColor} onChange={setSelectedColor} />

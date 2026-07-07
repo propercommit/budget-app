@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
+import { FieldMessage, amountFieldMessage, fieldInputStyle, fieldValidationProps, focusFirstInvalid } from "@/components/ui/field-message";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { iconMap } from "@/lib/icon-map";
-import toast from "react-hot-toast";
 import { compressImage } from "@/lib/compress-image";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
@@ -59,11 +59,27 @@ export function EntryEditPopin({
     const [date, setDate] = useState(entry?.date || new Date().toISOString().split("T")[0]);
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
+    const [submitted, setSubmitted] = useState(false);
+    const [receiptFailed, setReceiptFailed] = useState(false);
     const { settings } = useSettings();
+
+    const nameRef = useRef<HTMLInputElement>(null);
+    const amountRef = useRef<HTMLInputElement>(null);
+    const dateRef = useRef<HTMLInputElement>(null);
 
     const isCreate = mode === "create";
     const parsedAmount = parseAmountToCents(amount);
-    const isFormValid = name.trim() !== "" && parsedAmount !== null && date !== "";
+
+    // Validate on submit, clear on input: errors surface only after a failed
+    // save and are derived from live values, so fixing a field clears its
+    // message immediately.
+    const nameInvalid = name.trim() === "";
+    const amountInvalid = parsedAmount === null;
+    const dateInvalid = date === "";
+
+    const nameError = submitted && nameInvalid;
+    const amountError = submitted && amountInvalid;
+    const dateError = submitted && dateInvalid;
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -74,15 +90,38 @@ export function EntryEditPopin({
     const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            setReceiptFailed(false);
             try {
                 const compressed = await compressImage(file);
                 const reader = new FileReader();
                 reader.onload = (event) => setReceipt(event.target?.result as string);
                 reader.readAsDataURL(compressed);
             } catch {
-                toast.error("Failed to process image, please try again");
+                setReceiptFailed(true);
             }
         }
+    };
+
+    const handleSave = () => {
+
+        if (nameInvalid || parsedAmount === null || dateInvalid) {
+            setSubmitted(true);
+            focusFirstInvalid([
+                { error: nameInvalid, ref: nameRef },
+                { error: amountInvalid, ref: amountRef },
+                { error: dateInvalid, ref: dateRef },
+            ]);
+            return;
+        }
+
+        onSave({
+            name,
+            amount: parsedAmount,
+            direction,
+            date,
+            receipt,
+            link: link || null,
+        });
     };
 
     return (
@@ -102,25 +141,13 @@ export function EntryEditPopin({
                             Cancel
                         </button>
                         <button
-                            onClick={() => {
-                                if (parsedAmount === null) return;
-
-                                onSave({
-                                    name,
-                                    amount: parsedAmount,
-                                    direction,
-                                    date,
-                                    receipt,
-                                    link: link || null,
-                                });
-                            }}
-                            disabled={!isFormValid}
+                            onClick={handleSave}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={{
-                                backgroundColor: isFormValid ? "#34C759" : "var(--border)",
-                                color: isFormValid ? "white" : "var(--muted-foreground)",
-                                cursor: isFormValid ? "pointer" : "not-allowed",
-                                boxShadow: isFormValid ? "0 4px 12px rgba(52, 199, 89, 0.3)" : "none",
+                                backgroundColor: "#34C759",
+                                color: "white",
+                                cursor: "pointer",
+                                boxShadow: "0 4px 12px rgba(52, 199, 89, 0.3)",
                             }}
                         >
                             {isCreate ? "Add Entry" : "Save Changes"}
@@ -158,15 +185,16 @@ export function EntryEditPopin({
                         Name
                     </label>
                     <input
+                        ref={nameRef}
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Shell Station, Grocery run"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                        style={{ ...fieldInputStyle(nameError), color: "var(--foreground)" }}
+                        {...fieldValidationProps(nameError, "entry-name-error")}
                     />
+                    {nameError && <FieldMessage id="entry-name-error">Enter a name</FieldMessage>}
                 </div>
 
                 <div className="space-y-2">
@@ -176,7 +204,14 @@ export function EntryEditPopin({
                     {/* The prefix sits in flow (not absolutely positioned) so
                         the gap to the amount holds for any symbol width ($ vs
                         CHF); the focus ring moves to the wrapper accordingly. */}
-                    <div className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]">
+                    {/* The border lives on the wrapper (focus-within), so the
+                        errored treatment is applied there; inline style wins
+                        over the focus-within utilities, keeping the red border
+                        while focused, per the validation spec. */}
+                    <div
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        style={amountError ? fieldInputStyle(true) : undefined}
+                    >
                         <span
                             className="flex-shrink-0 text-lg font-semibold"
                             style={{ color: direction === "debit" ? "#FF3B30" : "#34C759" }}
@@ -185,6 +220,7 @@ export function EntryEditPopin({
                             {CURRENCY_SYMBOLS[settings.currency]}
                         </span>
                         <input
+                            ref={amountRef}
                             type="text"
                             inputMode="decimal"
                             value={amount}
@@ -192,8 +228,11 @@ export function EntryEditPopin({
                             placeholder="0.00"
                             className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
                             style={{ color: "var(--foreground)" }}
+                            aria-invalid={amountError === true ? true : undefined}
+                            aria-describedby={amountError === true ? "entry-amount-error" : undefined}
                         />
                     </div>
+                    {amountError && <FieldMessage id="entry-amount-error">{amountFieldMessage(amount)}</FieldMessage>}
                 </div>
 
                 <div className="space-y-2">
@@ -215,14 +254,15 @@ export function EntryEditPopin({
                         Date
                     </label>
                     <input
+                        ref={dateRef}
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)", WebkitAppearance: "none" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                        style={{ ...fieldInputStyle(dateError), color: "var(--foreground)", WebkitAppearance: "none" }}
+                        {...fieldValidationProps(dateError, "entry-date-error")}
                     />
+                    {dateError && <FieldMessage id="entry-date-error">Choose a date</FieldMessage>}
                 </div>
 
                 <div className="space-y-2">
@@ -257,6 +297,7 @@ export function EntryEditPopin({
                             <input type="file" accept="image/*" className="hidden" onChange={handleReceiptUpload} />
                         </label>
                     )}
+                    {receiptFailed && <FieldMessage id="entry-receipt-error">Couldn&apos;t process that image — try a different one</FieldMessage>}
                 </div>
 
                 <div className="space-y-2">

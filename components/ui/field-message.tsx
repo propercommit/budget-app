@@ -80,6 +80,21 @@ export function fieldValidationProps(hasError: boolean, messageId: string) {
 }
 
 /**
+ * Field-message copy for an invalid amount/budget input, per the validation
+ * spec's copy table: an empty or zero amount asks for one, anything else that
+ * failed to parse (e.g. a trailing dot) shows the format example. Call only
+ * when the value already failed `parseAmountToCents`.
+ */
+export function amountFieldMessage(raw: string): string {
+
+    const trimmed = raw.trim();
+
+    return trimmed === "" || /^0*\.?0*$/.test(trimmed)
+        ? "Enter an amount"
+        : "Enter a valid amount, like 2500 or 49.90";
+}
+
+/**
  * Focuses the first errored field on a failed submit and scrolls it into the
  * popin's visible area. Pass fields in visual order with their *current*
  * validity (not the submitted-gated one, which is still false during the
