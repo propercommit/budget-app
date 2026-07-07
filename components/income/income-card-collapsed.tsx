@@ -1,14 +1,13 @@
 import { useSettings } from "@/lib/settings-context";
+import { IncomeType, IncomeTypeFigures } from "./income-type-meta";
 import { DonutChart, DonutSegment } from "../ui/donut-chart";
 
 interface IncomeCardCollapsedProps {
     totalIncome: number;
-    activeTotal: number;
-    passiveTotal: number;
-    activePercentage: number;
-    passivePercentage: number;
-    hoveredType: 'active' | 'passive' | null;
-    setHoveredType: (type: 'active' | 'passive' | null) => void;
+    incomeTypes: IncomeTypeFigures[];
+    focusedType: IncomeType | null;
+    setHoveredType: (type: IncomeType | null) => void;
+    onSelectType: (type: IncomeType) => void;
 }
 
 interface BreakdownRowProps {
@@ -17,16 +16,18 @@ interface BreakdownRowProps {
     amount: string;
     percentage: number;
     isDimmed: boolean;
+    onClick: () => void;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
 }
 
 /** Legend row: color dot, type label, amount and its share of the total. */
-function BreakdownRow({ color, label, amount, percentage, isDimmed, onMouseEnter, onMouseLeave }: BreakdownRowProps) {
+function BreakdownRow({ color, label, amount, percentage, isDimmed, onClick, onMouseEnter, onMouseLeave }: BreakdownRowProps) {
     return (
         <div
-            className="flex items-center gap-2.5 transition-opacity duration-200"
-            style={{ opacity: isDimmed ? 0.4 : 1, cursor: onMouseEnter === undefined ? undefined : "pointer" }}
+            className="flex items-center gap-2.5 cursor-pointer transition-opacity duration-200"
+            style={{ opacity: isDimmed ? 0.4 : 1 }}
+            onClick={onClick}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >
@@ -40,31 +41,44 @@ function BreakdownRow({ color, label, amount, percentage, isDimmed, onMouseEnter
 
 /**
  * Collapsed Income card: the Active/Passive donut with a figures cluster.
- * Desktop puts the breakdown beside the donut (hovering a segment or row dims
- * the other type); mobile stacks the donut (total in its center), a hairline
- * divider and the breakdown rows.
+ * Desktop puts the breakdown beside the donut, mobile stacks the donut (figures
+ * in its center), a hairline divider and the breakdown rows.
+ *
+ * The headline figure follows `focusedType` (hover previews, click/tap pins —
+ * the only way in on touch, where hover doesn't exist): it shows the focused
+ * type's total, or the grand total when nothing is focused, and the other
+ * type dims. The mobile donut deliberately gets no hover handlers — a tap
+ * emulates mouseenter without a matching mouseleave, so hover would stick.
  */
 export function IncomeCardCollapsed({
     totalIncome,
-    activeTotal,
-    passiveTotal,
-    activePercentage,
-    passivePercentage,
-    hoveredType,
+    incomeTypes,
+    focusedType,
     setHoveredType,
+    onSelectType,
 }: IncomeCardCollapsedProps) {
 
     const isEmpty = totalIncome === 0;
     const { formatAmount } = useSettings();
 
-    // Single source of truth per income type: the donut segments, the hover
-    // wiring and both breakdown lists all derive from this array.
-    const incomeTypes = [
-        { type: 'active' as const, color: '#007AFF', label: 'Active', total: activeTotal, percentage: activePercentage },
-        { type: 'passive' as const, color: '#FF9500', label: 'Passive', total: passiveTotal, percentage: passivePercentage },
-    ];
+    const focused = incomeTypes.find(t => t.type === focusedType);
+    const focusLabel = focused === undefined ? null : `${focused.label} Income`;
+    const headlineAmount = focused === undefined ? totalIncome : focused.total;
 
-    const segments: DonutSegment[] = incomeTypes.map(t => ({ value: t.percentage, color: t.color }));
+    const isDimmed = (type: IncomeType) => focusedType !== null && focusedType !== type;
+
+    const segmentFor = (t: IncomeTypeFigures): DonutSegment => ({
+        value: t.percentage,
+        color: t.color,
+        style: {
+            transition: 'opacity 0.2s ease-out',
+            opacity: isDimmed(t.type) ? 0.4 : 1,
+            cursor: 'pointer',
+        },
+        onClick: () => onSelectType(t.type),
+    });
+
+    const segments = incomeTypes.map(segmentFor);
 
     // The empty state has no breakdown to show — a single dashed ring reads
     // the same on both viewports.
@@ -96,17 +110,9 @@ export function IncomeCardCollapsed({
         </div>
     );
 
-    const isDimmed = (type: 'active' | 'passive') => hoveredType !== null && hoveredType !== type;
-
-    // Desktop-only decoration: hovering a segment dims the other type.
-    const hoverSegments: DonutSegment[] = incomeTypes.map(t => ({
-        value: t.percentage,
-        color: t.color,
-        style: {
-            transition: 'opacity 0.2s ease-out',
-            opacity: isDimmed(t.type) ? 0.4 : 1,
-            cursor: 'pointer',
-        },
+    // Desktop adds hover previews on top of the shared click wiring.
+    const hoverSegments = incomeTypes.map(t => ({
+        ...segmentFor(t),
         onMouseEnter: () => setHoveredType(t.type),
         onMouseLeave: () => setHoveredType(null),
     }));
@@ -119,8 +125,8 @@ export function IncomeCardCollapsed({
                 <DonutChart segments={hoverSegments} size={160} strokeWidth={14} radius={65} />
 
                 <div className="flex flex-col items-start">
-                    <p className="text-[34px] leading-10 font-bold tracking-tight text-foreground">{formatAmount(totalIncome)}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Total Monthly Income</p>
+                    <p className="text-[34px] leading-10 font-bold tracking-tight text-foreground">{formatAmount(headlineAmount)}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{focusLabel ?? 'Total Monthly Income'}</p>
 
                     <div className="mt-6 flex flex-col gap-3 w-60">
                         {incomeTypes.map(t => (
@@ -131,6 +137,7 @@ export function IncomeCardCollapsed({
                                 amount={formatAmount(t.total)}
                                 percentage={t.percentage}
                                 isDimmed={isDimmed(t.type)}
+                                onClick={() => onSelectType(t.type)}
                                 onMouseEnter={() => setHoveredType(t.type)}
                                 onMouseLeave={() => setHoveredType(null)}
                             />
@@ -139,7 +146,7 @@ export function IncomeCardCollapsed({
                 </div>
             </div>
 
-            {/* Mobile: donut with the total in its center, then the breakdown. */}
+            {/* Mobile: donut with the focused figures in its center, then the breakdown. */}
             <div className="sm:hidden flex flex-col items-center gap-5">
                 <DonutChart
                     segments={segments}
@@ -148,8 +155,8 @@ export function IncomeCardCollapsed({
                     radius={62}
                     centerContent={
                         <div className="flex flex-col items-center justify-center">
-                            <span className="text-xl font-bold tracking-tight text-foreground">{formatAmount(totalIncome)}</span>
-                            <span className="text-xs text-muted-foreground">Total Income</span>
+                            <span className="text-xl font-bold tracking-tight text-foreground">{formatAmount(headlineAmount)}</span>
+                            <span className="text-xs text-muted-foreground">{focusLabel ?? 'Total Income'}</span>
                         </div>
                     }
                 />
@@ -167,7 +174,8 @@ export function IncomeCardCollapsed({
                             label={t.label}
                             amount={formatAmount(t.total)}
                             percentage={t.percentage}
-                            isDimmed={false}
+                            isDimmed={isDimmed(t.type)}
+                            onClick={() => onSelectType(t.type)}
                         />
                     ))}
                 </div>

@@ -2,6 +2,7 @@ import { IncomeSource } from "@/lib/types";
 import { useState } from "react";
 import { IncomeCardCollapsed } from "./income-card-collapsed";
 import { IncomeCardExpanded } from "./income-card-expanded";
+import { INCOME_TYPES, INCOME_TYPE_META, IncomeType, IncomeTypeFigures } from "./income-type-meta";
 import { SectionCard } from "../section-card";
 import { CardHeader } from "../ui/card-header";
 
@@ -14,45 +15,61 @@ interface IncomeCardProps {
 export function IncomeCard({ incomes, onAdd, onSelect }: IncomeCardProps) {
 
     const [isExpanded, setIsExpanded] = useState(false);
-    const [hoveredType, setHoveredType] = useState<'active' | 'passive' | null>(null);
+    const [hoveredType, setHoveredType] = useState<IncomeType | null>(null);
+    const [selectedType, setSelectedType] = useState<IncomeType | null>(null);
     const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
 
     const totalIncome: number = incomes.reduce((sum, income) => sum + income.amount, 0);
-    const activeTotal = incomes.filter(income => income.type === 'active').reduce((sum, income) => sum + income.amount, 0);
-    const passiveTotal = incomes.filter(income => income.type === 'passive').reduce((sum, income) => sum + income.amount, 0);
-    const activePercentage = totalIncome > 0 ? (activeTotal / totalIncome) * 100 : 0;
-    const passivePercentage = totalIncome > 0 ? (passiveTotal / totalIncome) * 100 : 0;
+
+    const incomeTypes: IncomeTypeFigures[] = INCOME_TYPES.map(type => {
+        const total = incomes.filter(income => income.type === type).reduce((sum, income) => sum + income.amount, 0);
+
+        return { type, ...INCOME_TYPE_META[type], total, percentage: totalIncome > 0 ? (total / totalIncome) * 100 : 0 };
+    });
+
+    // What the views focus their figures on: the hovered type while pointing,
+    // else the pinned type, else nothing (grand total).
+    const focusedType = hoveredType ?? selectedType;
+
+    /** Click/tap pins a type's figures; clicking the pinned type again unpins back to the total. */
+    const toggleSelectedType = (type: IncomeType) => setSelectedType(selectedType === type ? null : type);
 
     return (
         <SectionCard className="mt-6">
-            <CardHeader 
+            <CardHeader
                 isExpanded={isExpanded}
-                onToggle={() => setIsExpanded(!isExpanded)}
+                onToggle={() => {
+                    setIsExpanded(!isExpanded);
+
+                    // Hover/selection don't carry across the view switch — mouseleave
+                    // never fires on unmount, so a stale hover would stick otherwise.
+                    setHoveredType(null);
+                    setSelectedType(null);
+                    setHoveredItemId(null);
+                }}
                 title="Income"
             />
 
             {isExpanded ? (
-                <IncomeCardExpanded 
+                <IncomeCardExpanded
                     incomes={incomes}
                     totalIncome={totalIncome}
-                    activePercentage={activePercentage}
-                    passivePercentage={passivePercentage}
+                    incomeTypes={incomeTypes}
                     onAdd={onAdd}
                     onSelect={onSelect}
-                    hoveredType={hoveredType}
+                    focusedType={focusedType}
                     setHoveredType={setHoveredType}
+                    onSelectType={toggleSelectedType}
                     hoveredItemId={hoveredItemId}
                     setHoveredItemId={setHoveredItemId}
                 />
             ) : (
                 <IncomeCardCollapsed
                     totalIncome={totalIncome}
-                    activeTotal={activeTotal}
-                    passiveTotal={passiveTotal}
-                    activePercentage={activePercentage}
-                    passivePercentage={passivePercentage}
-                    hoveredType={hoveredType}
+                    incomeTypes={incomeTypes}
+                    focusedType={focusedType}
                     setHoveredType={setHoveredType}
+                    onSelectType={toggleSelectedType}
                 />
             )}
         </SectionCard>
