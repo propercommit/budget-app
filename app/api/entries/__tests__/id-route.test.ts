@@ -62,7 +62,7 @@ describe("PUT /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: "someone-else" },
+      spendingItem: { series: { userId: "someone-else" } },
     });
     const { status, body } = await readJson(
       await PUT(jsonRequest({ name: "X" }), routeContext("e1"))
@@ -76,7 +76,7 @@ describe("PUT /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: FAKE_USER.id },
+      spendingItem: { series: { userId: FAKE_USER.id } },
     });
     prismaMock.spendingEntry.update.mockResolvedValue({ id: "e1", name: "New" });
 
@@ -92,7 +92,7 @@ describe("PUT /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: FAKE_USER.id },
+      spendingItem: { series: { userId: FAKE_USER.id } },
     });
     prismaMock.spendingEntry.update.mockResolvedValue({ id: "e1" });
     // Amounts are integer cents: 1010 + 2020 = 3030 exactly (was 10.1 + 20.2
@@ -123,7 +123,7 @@ describe("PUT /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: FAKE_USER.id },
+      spendingItem: { series: { userId: FAKE_USER.id } },
     });
     prismaMock.spendingEntry.update.mockResolvedValue({ id: "e1" });
     // Flipping the lone entry to credit turns spent negative — persisted as-is.
@@ -164,7 +164,7 @@ describe("DELETE /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: "someone-else" },
+      spendingItem: { series: { userId: "someone-else" } },
     });
     const { status } = await readJson(
       await DELETE(getRequest("http://localhost"), routeContext("e1"))
@@ -177,7 +177,7 @@ describe("DELETE /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: FAKE_USER.id },
+      spendingItem: { series: { userId: FAKE_USER.id } },
     });
     prismaMock.spendingEntry.delete.mockResolvedValue({ id: "e1" });
     prismaMock.spendingEntry.findMany.mockResolvedValue([{ amount: 500, direction: "debit" }]);
@@ -203,7 +203,7 @@ describe("DELETE /api/entries/[id]", () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue({
       id: "e1",
       spendingItemId: "s1",
-      spendingItem: { userId: FAKE_USER.id },
+      spendingItem: { series: { userId: FAKE_USER.id } },
     });
     prismaMock.spendingEntry.delete.mockResolvedValue({ id: "e1" });
     // Deleting the offsetting debit leaves a lone 150.00 credit → -15000,

@@ -145,7 +145,7 @@ export async function PUT(
         // Find the entry and verify ownership through spending item
         const existingEntry = await prisma.spendingEntry.findUnique({
             where: { id },
-            include: { spendingItem: true },
+            include: { spendingItem: { include: { series: true } } },
         });
 
         if (!existingEntry) {
@@ -155,7 +155,7 @@ export async function PUT(
             );
         }
 
-        if (existingEntry.spendingItem.userId !== user.id) {
+        if (existingEntry.spendingItem.series.userId !== user.id) {
             return NextResponse.json(
                 { error: "Entry not found" },
                 { status: 404 }
@@ -226,7 +226,7 @@ export async function DELETE(
         // Find the entry and verify ownership through spending item
         const existingEntry = await prisma.spendingEntry.findUnique({
             where: { id },
-            include: { spendingItem: true },
+            include: { spendingItem: { include: { series: true } } },
         });
 
         if (!existingEntry) {
@@ -236,7 +236,7 @@ export async function DELETE(
             );
         }
 
-        if (existingEntry.spendingItem.userId !== user.id) {
+        if (existingEntry.spendingItem.series.userId !== user.id) {
             return NextResponse.json(
                 { error: "Entry not found" },
                 { status: 404 }

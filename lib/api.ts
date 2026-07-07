@@ -91,17 +91,30 @@ export async function getSpending(month?: string) {
   return fetchAPI(url);
 }
 
-export async function createSpending(data: {
+/** Creates a new series and its first monthly incarnation in one call. */
+export type CreateSeriesPayload = {
   name: string;
   icon: string;
   categoryId: string;
+  recurring?: boolean;
   budgeted?: number;
-  spent?: number;
   month: string;
+  note?: string | null;
+  /** Ignored by the server since the series refactor; sent by pre-series forms. */
   startDate?: string;
   endDate?: string | null;
+};
+
+/** Resumes/attaches an existing series: creates its incarnation for `month`. */
+export type AttachSeriesPayload = {
+  seriesId: string;
+  month: string;
+  recurring?: boolean;
+  budgeted?: number;
   note?: string | null;
-}) {
+};
+
+export async function createSpending(data: CreateSeriesPayload | AttachSeriesPayload) {
   return fetchAPI("/api/spending", {
     method: "POST",
     body: JSON.stringify(data),
@@ -115,10 +128,10 @@ export async function updateSpending(
     icon?: string;
     categoryId?: string;
     budgeted?: number;
-    spent?: number;
+    note?: string | null;
+    /** Ignored by the server since the series refactor; sent by pre-series forms. */
     startDate?: string;
     endDate?: string | null;
-    note?: string | null;
   }
 ) {
   return fetchAPI(`/api/spending/${id}`, {

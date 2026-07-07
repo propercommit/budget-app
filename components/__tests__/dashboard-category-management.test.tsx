@@ -66,7 +66,9 @@ const groceries: Category = { id: "cat-groceries", label: "Groceries", icon: "sh
 const transport: Category = { id: "cat-transport", label: "Transport", icon: "car", color: "#007AFF" };
 
 const item = (over: Partial<SpendingItem> & Pick<SpendingItem, "id" | "name" | "categoryId" | "category">): SpendingItem => ({
+  seriesId: `series-${over.id}`,
   icon: "shopping-cart",
+  recurring: true,
   budgeted: 20000,
   spent: 0,
   month: MONTH,

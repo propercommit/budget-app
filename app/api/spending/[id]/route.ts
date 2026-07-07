@@ -2,12 +2,25 @@ import { NextResponse } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import {
+    flattenSpendingItem,
+    spendingItemInclude,
+    type SpendingItemWithSeries,
+} from "@/lib/spending/flatten-item";
 
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
 const MIN_AMOUNT_CENTS = 0;
 const MAX_NOTE_LENGTH = 500;
 
+/**
+ * Updates split by ownership (D21): `name`/`icon`/`categoryId` live on the
+ * series and editing them affects every month, past and future;
+ * `budgeted`/`note` belong to this month's incarnation only. `month` is
+ * identity + partition (D18) and is never editable — `month`, `startDate`,
+ * `endDate` and `spent` in the body are ignored (`spent` is owned by the
+ * entries recompute).
+ */
 export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -15,22 +28,19 @@ export async function PUT(
     try {
         const user = await getAuthenticatedUser();
 
-        if (!user) {
+        if (user === null) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const { id } = await params;
         const body = await request.json();
-        const { name, icon, categoryId, budgeted, spent, startDate, endDate, note } = body;
+        const { name, icon, categoryId, budgeted, note } = body;
 
         if (
             name === undefined &&
             icon === undefined &&
             categoryId === undefined &&
             budgeted === undefined &&
-            spent === undefined &&
-            startDate === undefined &&
-            endDate === undefined &&
             note === undefined
         ) {
             return NextResponse.json({ error: "At least one field is required to update" }, { status: 400 });
@@ -66,45 +76,6 @@ export async function PUT(
             }
         }
 
-        // Validate spent if provided — signed: credits can push a card's spent
-        // negative (see lib/spending/math.ts), so only the magnitude is capped
-        if (spent !== undefined) {
-            if (typeof spent !== "number" || !Number.isFinite(spent)) {
-                return NextResponse.json({ error: "Spent must be a valid number" }, { status: 400 });
-            }
-            if (spent < -MAX_AMOUNT_CENTS || spent > MAX_AMOUNT_CENTS) {
-                return NextResponse.json({ error: `Spent must be between ${(-MAX_AMOUNT_CENTS / 100).toLocaleString()} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` }, { status: 400 });
-            }
-        }
-
-        // Validate startDate if provided
-        let parsedStartDate: Date | undefined;
-        if (startDate !== undefined) {
-            if (typeof startDate !== "string") {
-                return NextResponse.json({ error: "Start date must be a string" }, { status: 400 });
-            }
-            parsedStartDate = new Date(startDate);
-            if (isNaN(parsedStartDate.getTime())) {
-                return NextResponse.json({ error: "Start date must be a valid date" }, { status: 400 });
-            }
-        }
-
-        // Validate endDate if provided (null clears it)
-        let parsedEndDate: Date | null | undefined;
-        if (endDate !== undefined) {
-            if (endDate === null || endDate === "") {
-                parsedEndDate = null;
-            } else {
-                if (typeof endDate !== "string") {
-                    return NextResponse.json({ error: "End date must be a string or null" }, { status: 400 });
-                }
-                parsedEndDate = new Date(endDate);
-                if (isNaN(parsedEndDate.getTime())) {
-                    return NextResponse.json({ error: "End date must be a valid date" }, { status: 400 });
-                }
-            }
-        }
-
         // Validate note if provided (null clears it)
         if (note !== undefined && note !== null) {
             if (typeof note !== "string") {
@@ -115,75 +86,68 @@ export async function PUT(
             }
         }
 
-        // Check if spending item exists and belongs to user
+        // Ownership is traversed through the series — items no longer carry a userId.
         const existing = await prisma.spendingItem.findFirst({
-            where: { id, userId: user.id },
+            where: { id, series: { userId: user.id } },
         });
 
-        if (!existing) {
+        if (existing === null) {
             return NextResponse.json({ error: "Spending item not found" }, { status: 404 });
         }
 
         // If categoryId is being updated, verify it exists and belongs to user
-        if (categoryId) {
+        if (categoryId !== undefined) {
             const category = await prisma.category.findFirst({
                 where: { id: categoryId, userId: user.id },
             });
-            if (!category) {
+            if (category === null) {
                 return NextResponse.json({ error: "Category not found" }, { status: 404 });
             }
         }
 
-        // Build update data
-        const updateData: {
-            name?: string;
-            icon?: string;
-            categoryId?: string;
-            budgeted?: number;
-            spent?: number;
-            startDate?: Date;
-            endDate?: Date | null;
-            note?: string | null;
-            month?: string;
-        } = {};
+        const seriesData: { name?: string; icon?: string; categoryId?: string } = {};
 
-        if (name !== undefined) updateData.name = name.trim();
-        if (icon !== undefined) updateData.icon = icon;
-        if (categoryId !== undefined) updateData.categoryId = categoryId;
-        if (budgeted !== undefined) updateData.budgeted = budgeted;
-        if (spent !== undefined) updateData.spent = spent;
-        if (parsedStartDate !== undefined) {
-            updateData.startDate = parsedStartDate;
-            // UTC getters, because date-only strings ("YYYY-MM-DD") parse as UTC
-            // midnight; local getters read the previous month on any server west
-            // of UTC — silently moving the item across months on save.
-            updateData.month = `${parsedStartDate.getUTCFullYear()}-${String(parsedStartDate.getUTCMonth() + 1).padStart(2, "0")}`;
-        }
-        if (parsedEndDate !== undefined) updateData.endDate = parsedEndDate;
-        if (note !== undefined) updateData.note = note || null;
+        if (name !== undefined) seriesData.name = name.trim();
 
-        const spendingItem = await prisma.spendingItem.update({
-            where: { id },
-            data: updateData,
-            include: {
-                category: true,
-                spendingEntries: true,
-            },
+        if (icon !== undefined) seriesData.icon = icon;
+
+        if (categoryId !== undefined) seriesData.categoryId = categoryId;
+
+        const itemData: { budgeted?: number; note?: string | null } = {};
+
+        if (budgeted !== undefined) itemData.budgeted = budgeted;
+
+        if (note !== undefined) itemData.note = typeof note === "string" && note !== "" ? note : null;
+
+        const spendingItem: SpendingItemWithSeries = await prisma.$transaction(async (tx) => {
+
+            if (Object.keys(seriesData).length > 0) {
+                await tx.budgetSeries.update({
+                    where: { id: existing.seriesId },
+                    data: seriesData,
+                });
+            }
+
+            if (Object.keys(itemData).length > 0) {
+                await tx.spendingItem.update({
+                    where: { id },
+                    data: itemData,
+                });
+            }
+
+            return tx.spendingItem.findUniqueOrThrow({
+                where: { id },
+                include: spendingItemInclude,
+            });
         });
 
-        const response = {
-            ...spendingItem,
-            entries: spendingItem.spendingEntries,
-        };
-
-        return NextResponse.json(response);
+        return NextResponse.json(flattenSpendingItem(spendingItem));
     } catch (error) {
-        // A startDate edit re-derives `month`, so the update can land on a month
-        // that already has a same-named item — surface the @@unique(userId, name,
-        // month) violation as a friendly 409 like the POST route does.
+        // Renaming a series collides globally on @@unique([userId, name]) — any
+        // other series with that name, active or dormant, raises a P2002.
         if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
             return NextResponse.json(
-                { error: "A spending item with this name already exists for this month" },
+                { error: "You already have a budget item with this name" },
                 { status: 409 }
             );
         }
@@ -200,24 +164,26 @@ export async function DELETE(
     try {
         const user = await getAuthenticatedUser();
 
-        if (!user) {
+        if (user === null) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const { id } = await params;
 
-        if (!id || typeof id !== "string") {
+        if (typeof id !== "string" || id === "") {
             return NextResponse.json({ error: "Invalid spending item ID" }, { status: 400 });
         }
 
         const existing = await prisma.spendingItem.findFirst({
-            where: { id, userId: user.id },
+            where: { id, series: { userId: user.id } },
         });
 
-        if (!existing) {
+        if (existing === null) {
             return NextResponse.json({ error: "Spending item not found" }, { status: 404 });
         }
 
+        // Deletes this month's incarnation only. The series stays behind (possibly
+        // dormant) — reactivating it is always an explicit user choice (D24).
         await prisma.spendingItem.delete({
             where: { id },
         });

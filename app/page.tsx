@@ -24,26 +24,30 @@ export default async function Home() {
   const cutoffMonth = `${twelveMonthsAgo.getFullYear()}-${String(twelveMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
 
   const spendingItems = await prisma.spendingItem.findMany({
-      where: { userId: user.id,
+      where: { series: { userId: user.id },
         month: { gte: cutoffMonth }
        },
       select: {
           id: true,
-          name: true,
-          icon: true,
           budgeted: true,
           spent: true,
           month: true,
-          startDate: true,
-          endDate: true,
           note: true,
-          categoryId: true,
-          category: {
+          seriesId: true,
+          series: {
               select: {
-                  id: true,
-                  label: true,
+                  name: true,
                   icon: true,
-                  color: true,
+                  recurring: true,
+                  categoryId: true,
+                  category: {
+                      select: {
+                          id: true,
+                          label: true,
+                          icon: true,
+                          color: true,
+                      }
+                  },
               }
           },
           spendingEntries: {
@@ -83,9 +87,9 @@ export default async function Home() {
     // Categories popin can report what a cascade delete would really destroy
     // (the items payload above is cut off at `cutoffMonth`).
     prisma.spendingItem.findMany({
-      where: { userId: user.id, month: { lt: cutoffMonth } },
+      where: { series: { userId: user.id }, month: { lt: cutoffMonth } },
       select: {
-        categoryId: true,
+        series: { select: { categoryId: true } },
         _count: { select: { spendingEntries: true } },
       },
     }),
@@ -93,7 +97,7 @@ export default async function Home() {
 
   const preWindowEntryCounts: Record<string, number> = {};
 
-  for (const item of preWindowItems) preWindowEntryCounts[item.categoryId] = (preWindowEntryCounts[item.categoryId] ?? 0) + item._count.spendingEntries;
+  for (const item of preWindowItems) preWindowEntryCounts[item.series.categoryId] = (preWindowEntryCounts[item.series.categoryId] ?? 0) + item._count.spendingEntries;
   
 
   const mappedCategories = categories.map(c => ({
@@ -108,21 +112,24 @@ export default async function Home() {
     if (!spendingData[item.month]) spendingData[item.month] = [];
     spendingData[item.month].push({
       id: item.id,
-      name: item.name,
-      icon: item.icon,
+      name: item.series.name,
+      icon: item.series.icon,
+      seriesId: item.seriesId,
+      recurring: item.series.recurring,
       budgeted: item.budgeted,
       spent: sumEntries(item.spendingEntries),
       month: item.month,
-      startDate: item.startDate?.toISOString().split("T")[0] ?? `${item.month}-01`,
-      endDate: item.endDate?.toISOString().split("T")[0] ?? null,
+      // Synthesized for pre-series client code; the schema no longer stores item dates.
+      startDate: `${item.month}-01`,
+      endDate: null,
       note: item.note ?? null,
-      categoryId: item.categoryId,
-      category: item.category ? {
-        id: item.category.id,
-        label: item.category.label,
-        icon: item.category.icon,
-        color: item.category.color,
-      } : undefined,
+      categoryId: item.series.categoryId,
+      category: {
+        id: item.series.category.id,
+        label: item.series.category.label,
+        icon: item.series.category.icon,
+        color: item.series.category.color,
+      },
       entries: item.spendingEntries.map(e => ({
         id: e.id,
         name: e.name,

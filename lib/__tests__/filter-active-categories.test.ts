@@ -18,8 +18,10 @@ const item = (
     Partial<SpendingItem>
 ): SpendingItem => ({
   id: `item-${Math.random()}`,
+  seriesId: "series-1",
   name: "thing",
   icon: "tag",
+  recurring: true,
   budgeted: 0,
   spent: 0,
   month: overrides.startDate.slice(0, 7),

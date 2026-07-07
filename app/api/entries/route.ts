@@ -36,9 +36,9 @@ export async function GET(request: Request) {
             );
         }
 
-        // Verify the spending item belongs to this user
+        // Verify the spending item belongs to this user (ownership lives on the series)
         const spendingItem = await prisma.spendingItem.findFirst({
-            where: { id: spendingItemId, userId: user.id },
+            where: { id: spendingItemId, series: { userId: user.id } },
         });
 
         if (!spendingItem) {
@@ -186,9 +186,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // Verify the spending item belongs to this user
+        // Verify the spending item belongs to this user (ownership lives on the series)
         const spendingItem = await prisma.spendingItem.findFirst({
-            where: { id: spendingItemId, userId: user.id },
+            where: { id: spendingItemId, series: { userId: user.id } },
         });
 
         if (!spendingItem) {

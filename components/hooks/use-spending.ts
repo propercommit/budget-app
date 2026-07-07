@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from "@/lib/api";
+import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, type CreateSeriesPayload } from "@/lib/api";
 import { Category, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { showErrorToast } from "@/lib/toast";
@@ -38,13 +38,15 @@ export function useSpending(initialSpendingData?: SpendingData) {
   // =====================
   const createSpending = useCallback(async (
       month: string,
-      data: Parameters<typeof apiCreateSpending>[0],
+      data: CreateSeriesPayload,
       category?: { id: string; label: string; icon: string; color: string }
   ): Promise<SpendingItem | null> => {
       const optimistic: SpendingItem = {
         id: `temp-${crypto.randomUUID()}`,
+        seriesId: `temp-series-${crypto.randomUUID()}`,
         name: data.name,
         icon: data.icon,
+        recurring: data.recurring ?? true,
         categoryId: data.categoryId,
         month,
         budgeted: data.budgeted ?? 0,
@@ -118,14 +120,14 @@ export function useSpending(initialSpendingData?: SpendingData) {
     if (!sourceItems?.length) return;
 
     try {
+      // Attach by seriesId: the series already exists, so a name-shaped create
+      // would 409 (series_dormant). Interim only — Phase 2 replaces this whole
+      // flow with server-side lazy materialization.
       const newItems = await Promise.all(
         sourceItems.map(item =>
           apiCreateSpending({
-            name: item.name,
-            icon: item.icon,
-            categoryId: item.categoryId,
+            seriesId: item.seriesId,
             month: toMonth,
-            startDate: `${toMonth}-01`,
           })
         )
       );

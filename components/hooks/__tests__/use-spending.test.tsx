@@ -38,8 +38,10 @@ const entry = (over: Partial<SpendingEntry> = {}): SpendingEntry => ({
 
 const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
   id: "s1",
+  seriesId: "series-1",
   name: "Eating out",
   icon: "fork",
+  recurring: true,
   budgeted: 20000,
   spent: 0,
   month: MONTH,

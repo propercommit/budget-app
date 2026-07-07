@@ -68,7 +68,7 @@ function entry(
 }
 
 function item(
-  partial: Omit<SpendingItem, "spent" | "category" | "entries"> & {
+  partial: Omit<SpendingItem, "spent" | "category" | "entries" | "recurring"> & {
     categoryId: string;
     entries: SpendingEntry[];
   },
@@ -77,6 +77,7 @@ function item(
 
   return {
     ...partial,
+    recurring: true,
     category,
     spent: sumEntries(partial.entries),
   };
@@ -92,6 +93,7 @@ function monthItems(month: string, scale: number): SpendingItem[] {
   return [
     item({
       id: groceries,
+      seriesId: "series-groceries",
       name: "Groceries",
       icon: "shopping-cart",
       budgeted: cents(600),
@@ -110,6 +112,7 @@ function monthItems(month: string, scale: number): SpendingItem[] {
     }),
     item({
       id: transport,
+      seriesId: "series-transport",
       name: "Transport",
       icon: "car",
       budgeted: cents(200),
@@ -126,6 +129,7 @@ function monthItems(month: string, scale: number): SpendingItem[] {
     // Deliberately over budget to exercise the over-budget card state.
     item({
       id: dining,
+      seriesId: "series-dining",
       name: "Dining out",
       icon: "coffee",
       budgeted: cents(150),
@@ -143,6 +147,7 @@ function monthItems(month: string, scale: number): SpendingItem[] {
     // No entries → no spend yet, full budget remaining.
     item({
       id: housing,
+      seriesId: "series-housing",
       name: "Home supplies",
       icon: "home",
       budgeted: cents(120),
