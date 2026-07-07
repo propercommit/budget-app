@@ -35,7 +35,22 @@ export default function RootLayout({
           {children}
         </SettingsProvider>
         <SpeedInsights />
-        <Toaster />
+        {/* Toast card styling per the validation-system spec; custom Retry
+            toasts (lib/toast.tsx) restate the same card inline. */}
+        <Toaster
+          toastOptions={{
+            style: {
+              background: "var(--card)",
+              color: "var(--foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              padding: "12px 16px",
+              fontSize: 14,
+              fontWeight: 500,
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+            },
+          }}
+        />
         <Analytics />
       </body>
     </html>
