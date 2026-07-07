@@ -32,8 +32,6 @@ const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
   budgeted: 100,
   spent: 0,
   month: "2026-06",
-  startDate: "2026-06-01",
-  endDate: null,
   note: null,
   categoryId: "c1",
   ...over,

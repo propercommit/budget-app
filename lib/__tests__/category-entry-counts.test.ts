@@ -14,7 +14,6 @@ function item(overrides: Partial<SpendingItem> & Pick<SpendingItem, "id" | "mont
     recurring: true,
     budgeted: 0,
     spent: 0,
-    startDate: `${overrides.month}-01`,
     ...overrides,
   };
 }

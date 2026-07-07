@@ -100,9 +100,6 @@ export type CreateSeriesPayload = {
   budgeted?: number;
   month: string;
   note?: string | null;
-  /** Ignored by the server since the series refactor; sent by pre-series forms. */
-  startDate?: string;
-  endDate?: string | null;
 };
 
 /** Resumes/attaches an existing series: creates its incarnation for `month`. */
@@ -129,9 +126,6 @@ export async function updateSpending(
     categoryId?: string;
     budgeted?: number;
     note?: string | null;
-    /** Ignored by the server since the series refactor; sent by pre-series forms. */
-    startDate?: string;
-    endDate?: string | null;
   }
 ) {
   return fetchAPI(`/api/spending/${id}`, {
@@ -144,6 +138,11 @@ export async function deleteSpending(id: string) {
   return fetchAPI(`/api/spending/${id}`, {
     method: "DELETE",
   });
+}
+
+/** The user's series list for the create popin's typeahead. */
+export async function getSeries() {
+  return fetchAPI("/api/spending/series");
 }
 
 /**

@@ -130,9 +130,6 @@ describe("GET /api/spending", () => {
     expect(item.category).toEqual(FAKE_CATEGORY);
     // The raw series object is not leaked alongside the flattened fields.
     expect(item.series).toBeUndefined();
-    // Synthesized compatibility dates until the UI drops them.
-    expect(item.startDate).toBe("2026-06-01");
-    expect(item.endDate).toBeNull();
   });
 
   it("scopes by series ownership and passes the month filter through", async () => {

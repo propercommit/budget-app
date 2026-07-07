@@ -119,9 +119,6 @@ export default async function Home() {
       budgeted: item.budgeted,
       spent: sumEntries(item.spendingEntries),
       month: item.month,
-      // Synthesized for pre-series client code; the schema no longer stores item dates.
-      startDate: `${item.month}-01`,
-      endDate: null,
       note: item.note ?? null,
       categoryId: item.series.categoryId,
       category: {

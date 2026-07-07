@@ -18,6 +18,7 @@ vi.mock("@/lib/api", () => ({
   // Fires on Dashboard mount; rejecting keeps the initial bucket untouched
   // (the hook swallows materialize failures by design).
   materializeMonth: vi.fn().mockRejectedValue(new Error("offline")),
+  getSeries: vi.fn().mockResolvedValue([]),
   getIncomeSources: vi.fn(),
   getAllIncomeSources: vi.fn(),
   createIncomeSource: vi.fn(),
@@ -75,8 +76,6 @@ const item = (over: Partial<SpendingItem> & Pick<SpendingItem, "id" | "name" | "
   budgeted: 20000,
   spent: 0,
   month: MONTH,
-  startDate: `${MONTH}-01`,
-  endDate: null,
   note: null,
   entries: [],
   ...over,

@@ -5,8 +5,20 @@ import { getSpending, createSpending as apiCreateSpending, updateSpending as api
 import { Category, SpendingEntry, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { showErrorToast } from "@/lib/toast";
+import toast from "react-hot-toast";
 
 type SpendingData = Record<string, SpendingItem[]>;
+
+/**
+ * The structured 409s the create endpoint answers when the requested name
+ * already belongs to a series (D24). The popin maps these to inline form
+ * states; they are never surfaced as raw error toasts.
+ */
+export type CreateSpendingConflict = "series_dormant" | "series_active_this_month";
+
+function isCreateSpendingConflict(message: string): message is CreateSpendingConflict {
+  return message === "series_dormant" || message === "series_active_this_month";
+}
 
 /**
  * What the entries endpoints return when an entry's date routed it to another
@@ -58,20 +70,18 @@ export function useSpending(initialSpendingData?: SpendingData) {
   // =====================
   const createSpending = useCallback(async (
       month: string,
-      data: CreateSeriesPayload,
+      data: CreateSeriesPayload & { seriesId?: string },
       category?: { id: string; label: string; icon: string; color: string }
-  ): Promise<SpendingItem | null> => {
+  ): Promise<SpendingItem | CreateSpendingConflict | null> => {
       const optimistic: SpendingItem = {
         id: `temp-${crypto.randomUUID()}`,
-        seriesId: `temp-series-${crypto.randomUUID()}`,
+        seriesId: data.seriesId ?? `temp-series-${crypto.randomUUID()}`,
         name: data.name,
         icon: data.icon,
         recurring: data.recurring ?? true,
         categoryId: data.categoryId,
         month,
         budgeted: data.budgeted ?? 0,
-        startDate: data.startDate ?? `${month}-01`,
-        endDate: data.endDate ?? null,
         note: data.note ?? null,
         spent: 0,
         category: category ?? undefined,
@@ -81,15 +91,27 @@ export function useSpending(initialSpendingData?: SpendingData) {
     updateMonth(month, items => [...items, optimistic]);
 
     try {
-      const real = await apiCreateSpending(data);
+      // A known seriesId means an explicit Resume (D24) — the attach shape;
+      // otherwise the full shape creates the series with its first incarnation.
+      const real = await apiCreateSpending(
+        data.seriesId !== undefined
+          ? { seriesId: data.seriesId, month: data.month, recurring: data.recurring, budgeted: data.budgeted, note: data.note }
+          : data
+      );
+
       updateMonth(month, items => items.map(s => s.id === optimistic.id ? real : s));
       return real;
     } catch (error) {
+      updateMonth(month, items => items.filter(s => s.id !== optimistic.id));
+
+      // Structured 409s are the typeahead's server-side safety net — the
+      // caller maps them to form states, so no toast here.
+      if (error instanceof Error && isCreateSpendingConflict(error.message)) return error.message;
+
       // The popin is already closed, so the toast names what failed and
       // offers to replay the exact call (which re-runs the optimistic flow).
       showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void createSpending(month, data, category); } });
       console.error("Error creating spending:", error);
-      updateMonth(month, items => items.filter(s => s.id !== optimistic.id));
       return null;
     }
   }, []);

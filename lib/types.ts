@@ -27,14 +27,29 @@ export interface SpendingItem {
   budgeted: number;
   spent: number;
   month: string;
-  /** Synthesized `"YYYY-MM-01"` — no longer stored; kept until the UI drops it. */
-  startDate: string;
-  /** Always `null` since the series refactor; kept until the UI drops it. */
-  endDate?: string | null;
   note?: string | null;
   categoryId: string;
   category?: Category;
   entries?: SpendingEntry[];
+}
+
+/**
+ * A series as listed by GET /api/spending/series — the create popin's
+ * typeahead rows. The activity summary tells dormant from active and feeds
+ * the Resume prefill (last budget) and the "Paused · Jan – May 2025" copy.
+ */
+export interface BudgetSeriesSummary {
+  id: string;
+  name: string;
+  icon: string;
+  categoryId: string;
+  categoryLabel: string;
+  categoryColor: string;
+  recurring: boolean;
+  firstActiveMonth: string | null;
+  lastActiveMonth: string | null;
+  /** Integer cents of the latest incarnation's budget; null if none exist. */
+  lastBudgeted: number | null;
 }
 
 export type IncomeSource = {

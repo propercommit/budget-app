@@ -79,7 +79,6 @@ function renderDetailPopin(money: { budgetNumber: number; totalSpent: number }) 
         budgetNumber={money.budgetNumber}
         totalSpent={money.totalSpent}
         entriesCount={2}
-        startDate="2026-06-01"
       />
     </SettingsProvider>,
   );

@@ -23,8 +23,6 @@ interface SpendingCardProps {
     categoryName: string;
     spendingCategoryColor: string;
     budgetNumber: number;
-    startDate: string;
-    endDate?: string;
     note?: string;
     entries: SpendingEntry[];
     categories: Category[];
@@ -34,9 +32,8 @@ interface SpendingCardProps {
         category: string;
         categoryColor: string;
         budget: number;
-        startDate: string;
-        endDate: string;
         note: string;
+        recurring: boolean;
     }) => void;
     onItemDelete: () => void;
     onEntryCreate: (data: EntrySavePayload) => void;
@@ -53,8 +50,6 @@ export function SpendingCard({
     categoryName,
     spendingCategoryColor,
     budgetNumber,
-    startDate,
-    endDate,
     note,
     entries,
     categories,
@@ -202,8 +197,6 @@ export function SpendingCard({
                         budgetNumber={budgetNumber}
                         totalSpent={totalSpent}
                         entriesCount={spendingEntries}
-                        startDate={startDate}
-                        endDate={endDate}
                         note={note}
                     />
 
@@ -222,8 +215,6 @@ export function SpendingCard({
                         initialIcon={spendingItemIcon}
                         initialCategory={categoryName}
                         initialBudget={budgetNumber}
-                        initialStartDate={startDate}
-                        initialEndDate={endDate}
                         initialNote={note}
                     />
 

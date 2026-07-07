@@ -13,6 +13,7 @@
  * no-spend items to exercise every card state.
  */
 import type {
+  BudgetSeriesSummary,
   Category,
   IncomeSource,
   SpendingEntry,
@@ -98,8 +99,6 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       icon: "shopping-cart",
       budgeted: cents(600),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: "Weekly supermarket runs",
       categoryId: "cat-groceries",
       entries: [
@@ -117,8 +116,6 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       icon: "car",
       budgeted: cents(200),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: null,
       categoryId: "cat-transport",
       entries: [
@@ -134,8 +131,6 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       icon: "coffee",
       budgeted: cents(150),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: "Restaurants & cafés",
       categoryId: "cat-dining",
       entries: [
@@ -152,8 +147,6 @@ function monthItems(month: string, scale: number): SpendingItem[] {
       icon: "home",
       budgeted: cents(120),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: null,
       categoryId: "cat-housing",
       entries: [],
@@ -205,6 +198,38 @@ export const allIncomeSources: IncomeSource[] = [
 /** A single income source for feature-component tests. */
 export const incomeSource: IncomeSource = incomeSources[0];
 
+/**
+ * Series list for the create popin's typeahead specs: one dormant series
+ * (Resume row) and one active in {@link SELECTED_MONTH} (disabled row); both
+ * match a "net" query so a single screenshot exercises every row state.
+ */
+export const seriesOptions: BudgetSeriesSummary[] = [
+  {
+    id: "ser-netflix",
+    name: "Netflix",
+    icon: "film",
+    categoryId: "cat-fun",
+    categoryLabel: "Entertainment",
+    categoryColor: "#AF52DE",
+    recurring: true,
+    firstActiveMonth: "2025-01",
+    lastActiveMonth: "2025-05",
+    lastBudgeted: cents(18.9),
+  },
+  {
+    id: "ser-internet",
+    name: "Internet",
+    icon: "home",
+    categoryId: "cat-housing",
+    categoryLabel: "Housing",
+    categoryColor: "#FF3B30",
+    recurring: true,
+    firstActiveMonth: "2026-01",
+    lastActiveMonth: SELECTED_MONTH,
+    lastBudgeted: cents(49),
+  },
+];
+
 /** Category shape (`{ name, icon, color }`) that card components expect. */
 export const cardCategories = categories.map((c) => ({
   name: c.label,
@@ -219,7 +244,6 @@ export const baseCardProps = {
   categoryName: "Groceries",
   spendingCategoryColor: "#34C759",
   budgetNumber: cents(600),
-  startDate: "2026-06-01",
   categories: cardCategories,
   onItemUpdate: noop,
   onItemDelete: noop,

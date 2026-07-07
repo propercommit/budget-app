@@ -17,7 +17,7 @@ vi.mock("@/lib/toast", () => ({
   showErrorToast: vi.fn(),
 }));
 
-import { useSpending } from "@/components/hooks/use-spending";
+import { useSpending, type CreateSpendingConflict } from "@/components/hooks/use-spending";
 import * as api from "@/lib/api";
 import { showErrorToast } from "@/lib/toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
@@ -46,8 +46,6 @@ const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
   budgeted: 20000,
   spent: 0,
   month: MONTH,
-  startDate: "2026-06-01",
-  endDate: null,
   note: null,
   categoryId: "c1",
   entries: [],
@@ -70,7 +68,7 @@ describe("useSpending — spending item create (optimistic)", () => {
 
     const { result } = renderHook(() => useSpending(data([])));
 
-    let pending!: Promise<SpendingItem | null>;
+    let pending!: Promise<SpendingItem | CreateSpendingConflict | null>;
     act(() => {
       pending = result.current.createSpending(MONTH, {
         name: "Eating out",
@@ -96,7 +94,7 @@ describe("useSpending — spending item create (optimistic)", () => {
     vi.mocked(api.createSpending).mockRejectedValue(new Error("x"));
     const { result } = renderHook(() => useSpending(data([])));
 
-    let returned: SpendingItem | null = item();
+    let returned: SpendingItem | CreateSpendingConflict | null = item();
     await act(async () => {
       returned = await result.current.createSpending(MONTH, {
         name: "Eating out",

@@ -21,10 +21,6 @@ export type SpendingItemWithSeries = SpendingItem & {
  * always consumed: `name`/`icon`/`categoryId`/`category` are lifted off the
  * series onto the item, `spendingEntries` is renamed `entries`, and
  * `seriesId`/`recurring` are exposed for series-aware flows (typeahead, resume).
- *
- * `startDate`/`endDate` no longer exist in the schema; they are synthesized
- * (`"YYYY-MM-01"` / `null`) purely so pre-series client code keeps rendering
- * until the UI drops them.
  */
 export function flattenSpendingItem(item: SpendingItemWithSeries) {
 
@@ -38,8 +34,6 @@ export function flattenSpendingItem(item: SpendingItemWithSeries) {
     userId: series.userId,
     categoryId: series.categoryId,
     category: series.category,
-    startDate: `${incarnation.month}-01`,
-    endDate: null,
     entries: spendingEntries,
   };
 }
