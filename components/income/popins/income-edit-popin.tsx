@@ -4,7 +4,7 @@ import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
-import { FieldMessage, amountFieldMessage, fieldFocusProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
+import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldFocusProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
@@ -129,10 +129,18 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                     <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Amount <span className="font-normal text-xs" style={{ color: "var(--muted-foreground)" }}>/month</span>
                     </label>
-                    <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold pointer-events-none" style={{ color: "var(--muted-foreground)" }}>
+                    {/* The prefix sits in flow (not absolutely positioned) so
+                        the gap to the amount holds for any symbol width ($ vs
+                        CHF); the focus ring moves to the wrapper accordingly.
+                        The errored inline style wins over the focus-within
+                        utilities, keeping the red border while focused. */}
+                    <div
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        style={amountError ? fieldInputStyle(true) : undefined}
+                    >
+                        <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
                             {CURRENCY_SYMBOLS[settings.currency]}
-                        </div>
+                        </span>
                         <input
                             ref={amountRef}
                             type="text"
@@ -140,9 +148,9 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                             value={amount}
                             onChange={handleAmountChange}
                             placeholder="0.00"
-                            className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={fieldInputStyle(amountError)}
-                            {...fieldValidationProps(amountError, "income-amount-error")}
+                            className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
+                            style={{ color: "var(--foreground)" }}
+                            {...fieldAriaProps(amountError, "income-amount-error")}
                         />
                     </div>
                     {amountError && <FieldMessage id="income-amount-error">{amountFieldMessage(amount)}</FieldMessage>}

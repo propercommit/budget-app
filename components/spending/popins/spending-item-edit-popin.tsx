@@ -228,8 +228,16 @@ export function SpendingItemEditPopin({
                     <label htmlFor="spending-budget" className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Monthly Budget
                     </label>
-                    <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
+                    {/* The prefix sits in flow (not absolutely positioned) so
+                        the gap to the amount holds for any symbol width ($ vs
+                        CHF); the focus ring moves to the wrapper accordingly.
+                        The errored inline style wins over the focus-within
+                        utilities, keeping the red border while focused. */}
+                    <div
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        style={budgetError ? fieldInputStyle(true) : undefined}
+                    >
+                        <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
                             {CURRENCY_SYMBOLS[settings.currency]}
                         </span>
                         <input
@@ -241,9 +249,9 @@ export function SpendingItemEditPopin({
                             placeholder="0"
                             aria-required="true"
                             aria-label="Monthly budget amount"
-                            className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={fieldInputStyle(budgetError)}
-                            {...fieldValidationProps(budgetError, "spending-budget-error")}
+                            className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
+                            style={{ color: "var(--foreground)" }}
+                            {...fieldAriaProps(budgetError, "spending-budget-error")}
                         />
                     </div>
                     {budgetError
