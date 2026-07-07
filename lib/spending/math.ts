@@ -29,3 +29,12 @@ export function unapplyEntry(spent: number, entry: EntryLike): number {
     ? spent - entry.amount
     : spent + entry.amount;
 }
+
+/**
+ * Signed total of a set of entries — {@link applyEntry} folded over zero. The
+ * one way to derive a card's `spent` from its entries; may legitimately be
+ * negative (see module doc).
+ */
+export function sumEntries(entries: EntryLike[]): number {
+  return entries.reduce((sum, entry) => applyEntry(sum, entry), 0);
+}

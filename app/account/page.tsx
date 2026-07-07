@@ -179,13 +179,13 @@ export default function AccountPage() {
         setError(null)
 
         try {
-            const blob = await exportAccountData()
+            const { blob, filename } = await exportAccountData()
 
             const url = URL.createObjectURL(blob)
             const anchor = document.createElement("a")
 
             anchor.href = url
-            anchor.download = `budget-export-${new Date().toISOString().slice(0, 10)}.csv`
+            anchor.download = filename
             document.body.appendChild(anchor)
             anchor.click()
             anchor.remove()

@@ -2,7 +2,9 @@
 // best-effort-but-important Redis/auth writes in the password-recovery flow
 // (session revocation, recovery-session marking, teardown signOut) so a
 // transient Upstash/Supabase hiccup doesn't fail the whole operation back-to-back.
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Resolve after `ms` — the codebase's one setTimeout-as-promise helper (backoff here, response throttling in the account export). */
+export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
     let lastError: unknown;

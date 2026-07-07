@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { applyEntry } from "@/lib/spending/math";
+import { sumEntries } from "@/lib/spending/math";
 
 /**
  * Recalculates and persists a spending item's `spent` as the signed sum of
@@ -17,7 +17,7 @@ export async function updateSpentAmount(spendingItemId: string): Promise<void> {
     select: { amount: true, direction: true },
   });
 
-  const newSpent = allEntries.reduce((sum, entry) => applyEntry(sum, entry), 0);
+  const newSpent = sumEntries(allEntries);
 
   await prisma.spendingItem.update({
     where: { id: spendingItemId },

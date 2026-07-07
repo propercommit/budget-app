@@ -2,14 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { VALID_CURRENCIES, VALID_DATE_FORMATS, Currency, DateFormat } from "@/lib/constants";
+import { VALID_CURRENCIES, VALID_DATE_FORMATS, DEFAULT_USER_SETTINGS, Currency, DateFormat } from "@/lib/constants";
 
-// Default settings for new users
-const DEFAULT_SETTINGS = {
-  currency: "USD" as Currency,
-  dateFormat: "MM/DD/YYYY" as DateFormat,
-  darkMode: false,
-};
 
 // GET /api/settings — Fetch user settings, create with defaults if none exist
 export async function GET() {
@@ -30,7 +24,7 @@ export async function GET() {
     const newSettings = await prisma.userSettings.create({
       data: {
         userId: user.id,
-        ...DEFAULT_SETTINGS,
+        ...DEFAULT_USER_SETTINGS,
       },
     });
 
@@ -105,9 +99,9 @@ export async function PUT(request: Request) {
       update: data,
       create: {
         userId: user.id,
-        currency: currency ?? DEFAULT_SETTINGS.currency,
-        dateFormat: dateFormat ?? DEFAULT_SETTINGS.dateFormat,
-        darkMode: darkMode ?? DEFAULT_SETTINGS.darkMode,
+        currency: currency ?? DEFAULT_USER_SETTINGS.currency,
+        dateFormat: dateFormat ?? DEFAULT_USER_SETTINGS.dateFormat,
+        darkMode: darkMode ?? DEFAULT_USER_SETTINGS.darkMode,
       },
     });
 

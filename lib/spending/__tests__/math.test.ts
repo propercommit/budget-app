@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyEntry, unapplyEntry, type EntryLike } from "@/lib/spending/math";
+import { applyEntry, unapplyEntry, sumEntries, type EntryLike } from "@/lib/spending/math";
 
 // All amounts are integer cents with positive magnitudes; the sign of an
 // entry's effect on `spent` comes solely from its direction.
@@ -49,5 +49,19 @@ describe("unapplyEntry", () => {
 
   it("inverts across a negative total without clamping", () => {
     expect(unapplyEntry(applyEntry(0, credit(15_000)), credit(15_000))).toBe(0);
+  });
+});
+
+describe("sumEntries", () => {
+  it("totals mixed entries with direction-aware signs", () => {
+    expect(sumEntries([debit(20_000), credit(15_000), debit(1_029)])).toBe(6_029);
+  });
+
+  it("returns 0 for no entries", () => {
+    expect(sumEntries([])).toBe(0);
+  });
+
+  it("goes negative when credits outweigh debits, without clamping", () => {
+    expect(sumEntries([debit(500), credit(1_500)])).toBe(-1_000);
   });
 });

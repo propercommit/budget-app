@@ -2,18 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { redis } from "@/lib/redis";
-import { applyEntry } from "@/lib/spending/math";
+import { delay } from "@/lib/retry";
+import { sumEntries } from "@/lib/spending/math";
 import { centsToDecimalString } from "@/lib/money";
 import { buildCsv, type CsvSection } from "@/lib/csv";
-
-// Mirrors the per-route defaults in app/api/settings/route.ts — a user who
-// never opened settings has no UserSettings row, but the export should still
-// state what the app is effectively using.
-const DEFAULT_SETTINGS = {
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    darkMode: false,
-};
+import { DEFAULT_USER_SETTINGS } from "@/lib/constants";
 
 // One export per user per 2 days. The cooldown is claimed atomically (SET NX)
 // BEFORE any database work, so hammering the endpoint costs one Redis call per
@@ -26,10 +19,6 @@ const EXPORT_COOLDOWN_PREFIX = "export-cooldown:";
 // (401/429) requests return immediately — delaying those would hold server
 // functions open longer and make resource exhaustion easier, not harder.
 const EXPORT_DELAY_MS = 5_000;
-
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /** `YYYY-MM-DD` for a stored date, empty cell for a nullable one that's unset. */
 function isoDate(date: Date | null): string {
@@ -133,7 +122,7 @@ export async function GET() {
                     item.category.label,
                     item.icon,
                     centsToDecimalString(item.budgeted),
-                    centsToDecimalString(item.spendingEntries.reduce((sum, entry) => applyEntry(sum, entry), 0)),
+                    centsToDecimalString(sumEntries(item.spendingEntries)),
                     isoDate(item.startDate),
                     isoDate(item.endDate),
                     item.note,
@@ -177,7 +166,7 @@ export async function GET() {
                 rows: [
                     settings !== null
                         ? [settings.currency, settings.dateFormat, settings.darkMode]
-                        : [DEFAULT_SETTINGS.currency, DEFAULT_SETTINGS.dateFormat, DEFAULT_SETTINGS.darkMode],
+                        : [DEFAULT_USER_SETTINGS.currency, DEFAULT_USER_SETTINGS.dateFormat, DEFAULT_USER_SETTINGS.darkMode],
                 ],
             },
         ];
@@ -185,7 +174,7 @@ export async function GET() {
         const csv = buildCsv(sections);
         const filename = `budget-export-${isoDate(new Date())}.csv`;
 
-        await sleep(EXPORT_DELAY_MS);
+        await delay(EXPORT_DELAY_MS);
 
         return new NextResponse(csv, {
             status: 200,
