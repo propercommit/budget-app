@@ -1,6 +1,11 @@
 import { useSettings } from "@/lib/settings-context";
 import { CardHeader } from "../ui/card-header";
 
+// Quick-stat tiles: flex-1 + min-w-fit gives equal thirds while all three amounts
+// fit, but a tile too narrow for its nowrap amount wraps (via the row's flex-wrap)
+// to its own full-width line instead of overflowing the viewport.
+const STAT_TILE_CLASS = "flex-1 min-w-fit p-3 rounded-2xl";
+
 interface BudgetOverviewCollapsedProps {
     totalIncome: number;
     totalSpent: number;
@@ -23,20 +28,20 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                 
                 {/* Quick Stats Row */}
                 <div className="mt-4 space-y-3">
-                    <div className="flex gap-3">
-                        <div className="flex-1 p-3 rounded-2xl bg-muted">
+                    <div className="flex flex-wrap gap-3">
+                        <div className={`${STAT_TILE_CLASS} bg-muted`}>
                             <p className="text-xs font-medium mb-0.5 text-muted-foreground">Income</p>
                             <p className="text-lg font-bold text-foreground whitespace-nowrap">{formatAmount(totalIncome)}</p>
                         </div>
-                        <div 
-                            className="flex-1 p-3 rounded-2xl"
+                        <div
+                            className={STAT_TILE_CLASS}
                             style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
                             <p className="text-xs font-medium mb-0.5 text-muted-foreground">Spent</p>
                             <p className="text-lg font-bold whitespace-nowrap" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
                         </div>
-                        <div 
-                            className="flex-1 p-3 rounded-2xl"
+                        <div
+                            className={STAT_TILE_CLASS}
                             style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
                         >
                             <p className="text-xs font-medium mb-0.5 text-muted-foreground">
