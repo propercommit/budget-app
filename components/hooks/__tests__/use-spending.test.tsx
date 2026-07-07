@@ -435,6 +435,63 @@ describe("useSpending — month isolation", () => {
   });
 });
 
+describe("useSpending — cross-month entry routing (D19)", () => {
+  const routedResult = (targetExists: { targetId: string }) => ({
+    entry: entry({ id: "e-moved", date: "2026-07-15", spendingItemId: targetExists.targetId }),
+    sourceItem: item({ spent: 0, entries: [] }),
+    targetItem: item({
+      id: targetExists.targetId,
+      month: "2026-07",
+      spent: 425,
+      entries: [entry({ id: "e-moved", date: "2026-07-15", spendingItemId: targetExists.targetId })],
+    }),
+  });
+
+  it("createEntry with a cross-month date inserts the target bucket and undoes the optimistic patch", async () => {
+    vi.mocked(api.createEntry).mockResolvedValue(routedResult({ targetId: "s-jul" }));
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", { name: "Coffee", amount: 425, date: "2026-07-15" });
+    });
+
+    // Source item restored to the server copy — the optimistic spent bump is gone.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(0);
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
+
+    // Target month bucket did not exist locally; it is created with the item.
+    expect(result.current.spendingData["2026-07"]).toHaveLength(1);
+    expect(result.current.spendingData["2026-07"][0].spent).toBe(425);
+
+    expect(toast.success).toHaveBeenCalledWith("Moved to July 2026");
+  });
+
+  it("updateEntry with a cross-month date updates an existing target bucket in place", async () => {
+    const preexistingTarget = item({ id: "s-jul", month: "2026-07", spent: 0, entries: [] });
+    vi.mocked(api.updateEntry).mockResolvedValue(routedResult({ targetId: "s-jul" }));
+
+    const { result } = renderHook(() =>
+      useSpending({ [MONTH]: [item({ entries: [entry()], spent: 425 })], "2026-07": [preexistingTarget] })
+    );
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", { name: "Coffee", amount: 425, date: "2026-07-15" });
+    });
+
+    // The entry left the source item...
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(0);
+
+    // ...and landed on the existing July incarnation (updated, not duplicated).
+    expect(result.current.spendingData["2026-07"]).toHaveLength(1);
+    expect(result.current.spendingData["2026-07"][0].spent).toBe(425);
+    expect(result.current.spendingData["2026-07"][0].entries).toHaveLength(1);
+
+    expect(toast.success).toHaveBeenCalledWith("Moved to July 2026");
+  });
+});
+
 describe("useSpending — materializeMonth", () => {
   it("sets the returned bucket for a month with no local state yet", async () => {
     const materialized = [item({ id: "mat-1", month: "2026-07" })];

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
+import { monthOfDate } from "@/lib/spending/month";
+import { flattenSpendingItem, spendingItemInclude } from "@/lib/spending/flatten-item";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
@@ -198,23 +200,70 @@ export async function POST(request: Request) {
             );
         }
 
-        // Create the entry
-        const entry = await prisma.spendingEntry.create({
-            data: {
-                name: name.trim(),
-                amount,
-                direction: direction ?? "debit",
-                receiptUrl: receiptUrl || null,
-                link: link || null,
-                spendingItemId,
-                date: date ? new Date(date) : new Date(),
-            },
+        const entryDate = date ? new Date(date) : new Date();
+        const targetMonth = monthOfDate(entryDate);
+
+        const entryData = {
+            name: name.trim(),
+            amount,
+            direction: (direction ?? "debit") as "debit" | "credit",
+            receiptUrl: receiptUrl || null,
+            link: link || null,
+            date: entryDate,
+        };
+
+        // Same month as the addressed item: attach directly, as always.
+        if (targetMonth === spendingItem.month) {
+            const entry = await prisma.spendingEntry.create({
+                data: { ...entryData, spendingItemId },
+            });
+
+            // Recompute the item's spent as the signed sum of its entries
+            await updateSpentAmount(spendingItemId);
+
+            return NextResponse.json(entry, { status: 201 });
+        }
+
+        // An entry belongs to the month of its date (D19): route it to that
+        // month's incarnation of the same series — creating one at budgeted 0
+        // if the series isn't incarnated there yet (D23) — atomically with the
+        // spent recompute. The addressed item never receives the entry, but is
+        // returned too so the client can roll back its optimistic patch.
+        const routed = await prisma.$transaction(async (tx) => {
+
+            const target = await tx.spendingItem.upsert({
+                where: { seriesId_month: { seriesId: spendingItem.seriesId, month: targetMonth } },
+                update: {},
+                create: { seriesId: spendingItem.seriesId, month: targetMonth, budgeted: 0 },
+            });
+
+            const entry = await tx.spendingEntry.create({
+                data: { ...entryData, spendingItemId: target.id },
+            });
+
+            await updateSpentAmount(target.id, tx);
+
+            const sourceItem = await tx.spendingItem.findUniqueOrThrow({
+                where: { id: spendingItemId },
+                include: spendingItemInclude,
+            });
+
+            const targetItem = await tx.spendingItem.findUniqueOrThrow({
+                where: { id: target.id },
+                include: spendingItemInclude,
+            });
+
+            return { entry, sourceItem, targetItem };
         });
 
-        // Recompute the item's spent as the signed sum of its entries
-        await updateSpentAmount(spendingItemId);
-
-        return NextResponse.json(entry, { status: 201 });
+        return NextResponse.json(
+            {
+                entry: routed.entry,
+                sourceItem: flattenSpendingItem(routed.sourceItem),
+                targetItem: flattenSpendingItem(routed.targetItem),
+            },
+            { status: 201 }
+        );
     } catch (error) {
         console.error("[Entries POST] Failed to create:", error);
         return NextResponse.json(

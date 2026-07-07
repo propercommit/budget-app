@@ -2,11 +2,31 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, materializeMonth as apiMaterializeMonth, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, type CreateSeriesPayload } from "@/lib/api";
-import { Category, SpendingItem } from "@/lib/types";
+import { Category, SpendingEntry, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { showErrorToast } from "@/lib/toast";
 
 type SpendingData = Record<string, SpendingItem[]>;
+
+/**
+ * What the entries endpoints return when an entry's date routed it to another
+ * month's incarnation (D19): the addressed/source item and the target item,
+ * both fresh from the server with recomputed `spent`.
+ */
+type RoutedEntryResult = {
+  entry: SpendingEntry;
+  sourceItem: SpendingItem;
+  targetItem: SpendingItem;
+};
+
+function isRoutedResult(value: unknown): value is RoutedEntryResult {
+  return typeof value === "object" && value !== null && "targetItem" in value;
+}
+
+// Month names deliberately match MonthPicker's hardcoded en-US labels.
+function monthLabel(month: string): string {
+  return new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
 
 export function useSpending(initialSpendingData?: SpendingData) {
   const [spendingData, setSpendingData] = useState<SpendingData>(initialSpendingData ?? {});
@@ -135,6 +155,31 @@ export function useSpending(initialSpendingData?: SpendingData) {
   // =====================
   // Entry CRUD
   // =====================
+
+  /**
+   * Applies a cross-month routing result: the source item is replaced with
+   * the server's copy (which also rolls back any optimistic patch on it) and
+   * the target item is updated or inserted — its month bucket may not exist
+   * locally yet. Ends with the `Moved to {Month}` toast.
+   */
+  const syncRoutedMonths = useCallback(({ sourceItem, targetItem }: RoutedEntryResult) => {
+    setSpendingData(prev => {
+      const next = { ...prev };
+
+      next[sourceItem.month] = (next[sourceItem.month] || []).map(s => s.id === sourceItem.id ? sourceItem : s);
+
+      const targetBucket = next[targetItem.month] || [];
+
+      next[targetItem.month] = targetBucket.some(s => s.id === targetItem.id)
+        ? targetBucket.map(s => s.id === targetItem.id ? targetItem : s)
+        : [...targetBucket, targetItem];
+
+      return next;
+    });
+
+    toast.success(`Moved to ${monthLabel(targetItem.month)}`);
+  }, []);
+
   const createEntry = useCallback(async (
     month: string,
     spendingItemId: string,
@@ -159,6 +204,14 @@ export function useSpending(initialSpendingData?: SpendingData) {
 
     try {
       const real = await apiCreateEntry({ spendingItemId, ...data });
+
+      // A cross-month date routed the entry to another month's incarnation:
+      // replacing the source item below also undoes the optimistic patch.
+      if (isRoutedResult(real)) {
+        syncRoutedMonths(real);
+        return;
+      }
+
       updateMonth(month, items => items.map(s =>
         s.id === spendingItemId
           ? { ...s, entries: (s.entries || []).map(e => e.id === optimistic.id ? real : e) }
@@ -173,7 +226,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
           : s
       ));
     }
-  }, []);
+  }, [syncRoutedMonths]);
 
   const updateEntry = useCallback(async (
     month: string,
@@ -208,7 +261,12 @@ export function useSpending(initialSpendingData?: SpendingData) {
     ));
 
     try {
-      await apiUpdateEntry(entryId, data);
+      const real = await apiUpdateEntry(entryId, data);
+
+      // The new date moved the entry to another month (D19): the server
+      // recomputed both incarnations; replacing the source item also undoes
+      // the optimistic in-place patch above.
+      if (isRoutedResult(real)) syncRoutedMonths(real);
     } catch (error) {
       showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void updateEntry(month, spendingItemId, entryId, data); } });
       console.error("Error updating entry:", error);
@@ -223,7 +281,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
           : s
       ));
     }
-  }, []);
+  }, [syncRoutedMonths]);
 
   const deleteEntry = useCallback(async (
     month: string,
