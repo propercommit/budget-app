@@ -6,30 +6,50 @@ import { DonutChart } from "../ui/donut-chart";
 interface IncomeCardExpandedProps {
     incomes: IncomeSource[];
     totalIncome: number;
+    activeTotal: number;
+    passiveTotal: number;
     activePercentage: number;
     passivePercentage: number;
     onAdd: () => void;
     onSelect: (id: string) => void;
     hoveredType: 'active' | 'passive' | null;
     setHoveredType: (type: 'active' | 'passive' | null) => void;
+    selectedType: 'active' | 'passive' | null;
+    onSelectType: (type: 'active' | 'passive') => void;
     hoveredItemId: string | null;
     setHoveredItemId: (id: string | null) => void;
 }
 
+/**
+ * Expanded Income card: small donut + focused figures, then the source list.
+ * Hovering a legend chip or a source row previews that type (the headline
+ * shows just its total, the rest dims); clicking/tapping a chip pins the type,
+ * clicking it again unpins back to the total. Hover wins while pointing.
+ */
 export function IncomeCardExpanded({
     incomes,
     totalIncome,
+    activeTotal,
+    passiveTotal,
     activePercentage,
     passivePercentage,
     onAdd,
     onSelect,
     hoveredType,
     setHoveredType,
+    selectedType,
+    onSelectType,
     hoveredItemId,
     setHoveredItemId
 }: IncomeCardExpandedProps) {
     const isEmpty = incomes.length === 0;
     const { formatAmount } = useSettings();
+
+    // What the figures focus on: the hovered type while pointing, else the
+    // pinned type, else nothing (grand total).
+    const focusedType = hoveredType ?? selectedType;
+    const headlineAmount = focusedType === 'active' ? activeTotal : focusedType === 'passive' ? passiveTotal : totalIncome;
+    const headlineLabel = focusedType === 'active' ? 'Active Income' : focusedType === 'passive' ? 'Passive Income' : 'Total Monthly';
 
     const segments = [
         {
@@ -37,7 +57,7 @@ export function IncomeCardExpanded({
             color: '#007AFF',
             style: {
                 transition: 'opacity 0.2s ease-out',
-                opacity: hoveredType === 'passive' ? 0.4 : 1,
+                opacity: focusedType === 'passive' ? 0.4 : 1,
             },
         },
         {
@@ -45,7 +65,7 @@ export function IncomeCardExpanded({
             color: '#FF9500',
             style: {
                 transition: 'opacity 0.2s ease-out',
-                opacity: hoveredType === 'active' ? 0.4 : 1,
+                opacity: focusedType === 'active' ? 0.4 : 1,
             },
         },
     ];
@@ -60,7 +80,7 @@ export function IncomeCardExpanded({
 
     return (
         <div className="flex flex-col gap-4">
-            {/* Header row: small donut + total */}
+            {/* Header row: small donut + focused figures */}
             <div className="flex items-center gap-4">
                 <div className="flex-shrink-0">
                     <DonutChart
@@ -82,24 +102,26 @@ export function IncomeCardExpanded({
                     />
                 </div>
                 <div className="min-w-0">
-                    <p className="text-2xl font-bold">{formatAmount(totalIncome)}</p>
-                    <p className="text-sm text-muted-foreground">Total Monthly</p>
+                    <p className="text-2xl font-bold">{formatAmount(headlineAmount)}</p>
+                    <p className="text-sm text-muted-foreground">{headlineLabel}</p>
                     {!isEmpty && (
                         <div className="flex gap-3 mt-1">
-                            <div 
+                            <div
                                 className="flex items-center gap-1.5 cursor-pointer transition-opacity duration-200"
-                                style={{ opacity: hoveredType === 'passive' ? 0.3 : 1 }}
+                                style={{ opacity: focusedType === 'passive' ? 0.3 : 1 }}
+                                onClick={() => onSelectType('active')}
                                 onMouseEnter={() => setHoveredType('active')}
-                                onMouseLeave={() => !hoveredItemId && setHoveredType(null)}
+                                onMouseLeave={() => { if (hoveredItemId === null) setHoveredType(null); }}
                             >
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#007AFF' }} />
                                 <span className="text-xs text-muted-foreground">{Math.round(activePercentage)}% Active</span>
                             </div>
-                            <div 
+                            <div
                                 className="flex items-center gap-1.5 cursor-pointer transition-opacity duration-200"
-                                style={{ opacity: hoveredType === 'active' ? 0.3 : 1 }}
+                                style={{ opacity: focusedType === 'active' ? 0.3 : 1 }}
+                                onClick={() => onSelectType('passive')}
                                 onMouseEnter={() => setHoveredType('passive')}
-                                onMouseLeave={() => !hoveredItemId && setHoveredType(null)}
+                                onMouseLeave={() => { if (hoveredItemId === null) setHoveredType(null); }}
                             >
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF9500' }} />
                                 <span className="text-xs text-muted-foreground">{Math.round(passivePercentage)}% Passive</span>
@@ -124,7 +146,7 @@ export function IncomeCardExpanded({
                     <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
                         Start tracking your income by adding your first source.
                     </p>
-                    <button 
+                    <button
                         onClick={onAdd}
                         className="w-full py-4 px-6 rounded-2xl text-white font-semibold flex items-center justify-center gap-2"
                         style={{ backgroundColor: '#007AFF', boxShadow: '0 4px 12px rgba(0, 122, 255, 0.3)' }}
@@ -143,18 +165,17 @@ export function IncomeCardExpanded({
                     <div className="space-y-2">
                         {incomes.map((income) => {
                             const isHovered = hoveredItemId === income.id;
-                            const isTypeHovered = hoveredType === income.type;
-                            const otherTypeHovered = hoveredType && !isTypeHovered;
+                            const otherTypeFocused = focusedType !== null && focusedType !== income.type;
 
                             return (
                                 <div
                                     key={income.id}
                                     onClick={() => onSelect(income.id)}
                                     className="flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all duration-200"
-                                    style={{ 
+                                    style={{
                                         backgroundColor: isHovered ? 'var(--muted)' : 'transparent',
                                         transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-                                        opacity: otherTypeHovered ? 0.4 : 1
+                                        opacity: otherTypeFocused ? 0.4 : 1
                                     }}
                                     onMouseEnter={() => {
                                         setHoveredItemId(income.id);
@@ -171,9 +192,9 @@ export function IncomeCardExpanded({
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium truncate">{income.name}</p>
                                         <div className="flex items-center gap-1.5">
-                                            <div 
-                                                className="w-2 h-2 rounded-full flex-shrink-0" 
-                                                style={{ backgroundColor: income.type === 'active' ? '#007AFF' : '#FF9500' }} 
+                                            <div
+                                                className="w-2 h-2 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: income.type === 'active' ? '#007AFF' : '#FF9500' }}
                                             />
                                             <span className="text-xs text-muted-foreground capitalize">{income.type}</span>
                                         </div>
@@ -185,7 +206,7 @@ export function IncomeCardExpanded({
                     </div>
 
                     {/* Add button */}
-                    <button 
+                    <button
                         onClick={onAdd}
                         className="w-full py-4 px-6 rounded-2xl border-2 border-dashed border-border flex items-center justify-center gap-2 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
                     >

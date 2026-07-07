@@ -8,6 +8,8 @@ export interface DonutSegment {
     /** Hover handlers for segment-level interactions (e.g. dimming the other segments). */
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
+    /** Click/tap handler for segment-level selection (e.g. pinning a segment's figures). */
+    onClick?: () => void;
 }
 
 interface DonutChartProps {
@@ -83,6 +85,7 @@ export function DonutChart({
                               style={{ transition: "stroke-dasharray 0.5s ease", ...segment.style }}
                               onMouseEnter={segment.onMouseEnter}
                               onMouseLeave={segment.onMouseLeave}
+                              onClick={segment.onClick}
                           />
                       ))
                     : emptyContent}
