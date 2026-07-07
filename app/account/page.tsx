@@ -374,8 +374,15 @@ export default function AccountPage() {
                 return
             }
 
-            await supabase.auth.signOut()
-            router.push("/login")
+            // The account is gone server-side and its tokens are revoked; clear
+            // the (possibly chunked) auth cookies the same way logout does, then
+            // hard-reload so no stale session leaks into the next sign-in.
+            try {
+                await fetch("/auth/signout", { method: "POST" })
+            } catch {
+                await supabase.auth.signOut().catch(() => {})
+            }
+            window.location.assign("/login")
         } catch {
             setError("Failed to delete account. Please try again.")
             setIsSaving(false)
