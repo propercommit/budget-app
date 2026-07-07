@@ -11,13 +11,13 @@ vi.mock("@/lib/api", () => ({
   deleteCategory: vi.fn(),
 }));
 
-vi.mock("react-hot-toast", () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+vi.mock("@/lib/toast", () => ({
+  showErrorToast: vi.fn(),
 }));
 
 import { useCategories } from "@/components/hooks/use-categories";
 import * as api from "@/lib/api";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 import type { Category } from "@/lib/types";
 
 const cat = (over: Partial<Category> = {}): Category => ({
@@ -80,7 +80,7 @@ describe("useCategories — create (optimistic)", () => {
 
     // Temp item replaced in place by the server record.
     expect(result.current.categories).toEqual([server]);
-    expect(toast.error).not.toHaveBeenCalled();
+    expect(showErrorToast).not.toHaveBeenCalled();
   });
 
   it("rolls back the temp item and fires an error toast when the API rejects", async () => {
@@ -94,8 +94,9 @@ describe("useCategories — create (optimistic)", () => {
 
     expect(result.current.categories).toEqual([]);
     expect(returned).toBeNull();
-    // The rejection's message is surfaced (e.g. the friendly duplicate 409).
-    expect(toast.error).toHaveBeenCalledWith("boom");
+    // The rejection's message is surfaced (e.g. the friendly duplicate 409),
+    // with a retry action that can replay the create.
+    expect(showErrorToast).toHaveBeenCalledWith("boom", { retry: expect.any(Function) });
   });
 });
 
@@ -135,10 +136,10 @@ describe("useCategories — update (optimistic)", () => {
 
     expect(ok).toBe(false);
     expect(result.current.categories[0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("A category with this name already exists");
+    expect(showErrorToast).toHaveBeenCalledWith("A category with this name already exists", { retry: expect.any(Function) });
   });
 
-  it("falls back to a generic toast when the rejection has no message", async () => {
+  it("falls back to the named save message when the rejection has no message", async () => {
     vi.mocked(api.updateCategory).mockRejectedValue("kaboom");
     const { result } = renderHook(() => useCategories([cat()]));
 
@@ -146,7 +147,7 @@ describe("useCategories — update (optimistic)", () => {
       await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
     });
 
-    expect(toast.error).toHaveBeenCalledWith("Failed to update category");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Food"', { retry: expect.any(Function) });
   });
 
   it("no-ops when the id is unknown", async () => {
@@ -183,6 +184,6 @@ describe("useCategories — delete (optimistic)", () => {
 
     expect(ok).toBe(false);
     expect(result.current.categories.map((c) => c.id)).toEqual(["c1"]);
-    expect(toast.error).toHaveBeenCalledWith("Category not found");
+    expect(showErrorToast).toHaveBeenCalledWith("Category not found", { retry: expect.any(Function) });
   });
 });
