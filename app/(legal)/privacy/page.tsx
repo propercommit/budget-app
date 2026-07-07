@@ -161,7 +161,7 @@ export default function PrivacyPolicyPage() {
                         <tr>
                             <td>Upstash Inc. (USA)</td>
                             <td>Session security (token blocklist)</td>
-                            <td>[REGION — see Upstash dashboard]</td>
+                            <td>Frankfurt, Germany (EEA)</td>
                         </tr>
                         <tr>
                             <td>Resend (USA)</td>
