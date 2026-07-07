@@ -3,19 +3,21 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
-import { Loader2 } from "lucide-react"
+import { Download, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
+import { useSettings } from "@/lib/settings-context"
+import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS, DATE_FORMAT_OPTIONS } from "@/lib/constants"
 import { AccountHeader } from "@/components/account/components/account-header"
-import { AccountTabs, type ActiveTab } from "@/components/account/components/account-tabs"
 import { ProfileAvatar } from "@/components/account/components/profile-avatar"
 import { ProfileForm } from "@/components/account/components/profile-form"
-import { EmailCard, PasswordCard, DangerZone } from "@/components/account/components/action-cards"
-import { SettingsTab } from "@/components/account/components/settings-tab"
+import { SettingsSection, SettingsRow, SettingsRowDivider } from "@/components/account/components/settings-section"
+import { AppearanceToggle } from "@/components/account/components/appearance-toggle"
 import { EmailModal } from "@/components/account/components/modals/email-modal"
 import { PasswordModal } from "@/components/account/components/modals/password-modal"
 import { DeleteModal } from "@/components/account/components/modals/delete-modal"
 import { LogoutModal } from "@/components/account/components/modals/logout-modal"
+import { PickerModal } from "@/components/account/components/modals/picker-modal"
 
 // Types
 interface UserMetadata {
@@ -24,11 +26,14 @@ interface UserMetadata {
     avatar_url?: string
 }
 
-type ModalType = "email" | "password" | "delete" | "logout" | null
+type ModalType = "email" | "password" | "delete" | "logout" | "currency" | "dateFormat" | null
+
+const CURRENCY_PICKER_OPTIONS = CURRENCY_OPTIONS.map((option) => ({ value: option.code, label: option.label }))
 
 export default function AccountPage() {
     const router = useRouter()
     const supabase = createClient()
+    const { settings, updateCurrency, updateDateFormat, updateDarkMode } = useSettings()
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true)
@@ -38,8 +43,7 @@ export default function AccountPage() {
     // User state
     const [user, setUser] = useState<User | null>(null)
 
-    // Tab & Modal state
-    const [activeTab, setActiveTab] = useState<ActiveTab>("profile")
+    // Modal state
     const [activeModal, setActiveModal] = useState<ModalType>(null)
 
     // Form state - Profile
@@ -380,79 +384,110 @@ export default function AccountPage() {
     // Loading state
     if (isLoading) {
         return (
-            <div className="min-h-svh flex items-center justify-center bg-background">
+            <div className="min-h-svh flex items-center justify-center bg-muted dark:bg-background">
                 <Loader2 className="w-8 h-8 animate-spin text-green-500" />
             </div>
         )
     }
 
     return (
-        <div className="min-h-svh bg-background pb-safe">
-            <AccountHeader onBack={handleBack} onLogout={() => setActiveModal("logout")} />
-            <AccountTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="min-h-svh bg-muted dark:bg-background">
+            <AccountHeader onBack={handleBack} />
 
             {/* Feedback Messages */}
-            {(error || success) && (
-                <div className="px-4 pt-4 sm:max-w-2xl sm:mx-auto">
+            {(error !== null || success !== null) && (
+                <div className="mx-auto max-w-2xl px-4 pt-4">
                     <div
                         role="alert"
-                        className={`p-4 rounded-xl text-sm font-medium ${
-                            success
-                                ? "bg-green-50 text-green-700 border border-green-200"
-                                : "bg-red-50 text-red-700 border border-red-200"
+                        className={`rounded-xl p-4 text-sm font-medium ${
+                            success !== null
+                                ? "border border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-400"
+                                : "border border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400"
                         }`}
                     >
-                        {success || error}
+                        {success ?? error}
                     </div>
                 </div>
             )}
 
-            <main className="py-4 sm:py-6 sm:max-w-2xl sm:mx-auto">
-                {activeTab === "profile" && (
-                    <div className="space-y-4 sm:space-y-6 sm:px-4">
-                        {/* Profile Card */}
-                        <div className="bg-card border-y sm:border sm:rounded-2xl border-border">
-                            <div className="px-4 py-6 sm:p-6">
-                                <h2 className="text-lg font-semibold text-foreground mb-6">
-                                    Profile Information
-                                </h2>
+            <main className="mx-auto flex max-w-2xl flex-col gap-7 px-4 pt-7 pb-16">
+                <ProfileAvatar
+                    avatarUrl={avatarUrl}
+                    initials={initials}
+                    firstName={firstName}
+                    lastName={lastName}
+                    email={userEmail}
+                    isUploading={isUploadingAvatar}
+                    onUpload={handleAvatarUpload}
+                    onRemove={handleRemoveAvatar}
+                    onError={setError}
+                />
 
-                                <ProfileAvatar
-                                    avatarUrl={avatarUrl}
-                                    initials={initials}
-                                    firstName={firstName}
-                                    lastName={lastName}
-                                    email={userEmail}
-                                    isUploading={isUploadingAvatar}
-                                    onUpload={handleAvatarUpload}
-                                    onRemove={handleRemoveAvatar}
-                                    onError={setError}
-                                />
+                <SettingsSection title="Profile">
+                    <ProfileForm
+                        firstName={firstName}
+                        lastName={lastName}
+                        hasChanges={hasProfileChanges}
+                        isSaving={isSaving}
+                        onFirstNameChange={setFirstName}
+                        onLastNameChange={setLastName}
+                        onSave={handleSaveProfile}
+                    />
+                </SettingsSection>
 
-                                <ProfileForm
-                                    firstName={firstName}
-                                    lastName={lastName}
-                                    hasChanges={hasProfileChanges}
-                                    isSaving={isSaving}
-                                    onFirstNameChange={setFirstName}
-                                    onLastNameChange={setLastName}
-                                    onSave={handleSaveProfile}
-                                />
-                            </div>
-                        </div>
-
-                        {!isGoogleUser && (
-                            <>
-                                <EmailCard email={userEmail} onClick={() => setActiveModal("email")} />
-                                <PasswordCard onClick={() => setActiveModal("password")} />
-                            </>
-                        )}
-
-                        <DangerZone onDelete={() => setActiveModal("delete")} />
-                    </div>
+                {!isGoogleUser && (
+                    <SettingsSection title="Security">
+                        <SettingsRow label="Email" detail={userEmail} onClick={() => setActiveModal("email")} />
+                        <SettingsRowDivider />
+                        <SettingsRow label="Password" detail="••••••••" onClick={() => setActiveModal("password")} />
+                    </SettingsSection>
                 )}
 
-                {activeTab === "settings" && <SettingsTab />}
+                <SettingsSection title="Preferences">
+                    <SettingsRow
+                        label="Currency"
+                        detail={`${settings.currency} (${CURRENCY_SYMBOLS[settings.currency]})`}
+                        onClick={() => setActiveModal("currency")}
+                    />
+                    <SettingsRowDivider />
+                    <SettingsRow
+                        label="Date Format"
+                        detail={settings.dateFormat}
+                        onClick={() => setActiveModal("dateFormat")}
+                    />
+                    <SettingsRowDivider />
+                    <div className="flex flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                        <span className="text-base font-medium text-foreground sm:text-[15px]">Appearance</span>
+                        <AppearanceToggle darkMode={settings.darkMode} onChange={updateDarkMode} />
+                    </div>
+                </SettingsSection>
+
+                <SettingsSection title="Data">
+                    <SettingsRow
+                        label="Export Your Data"
+                        description="Download all your budget data as CSV"
+                        trailing={<Download className="h-[18px] w-[18px] flex-none text-green-600" strokeWidth={2} />}
+                    />
+                </SettingsSection>
+
+                <div className="mt-2 flex flex-col gap-4">
+                    <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => setActiveModal("logout")}
+                            className="min-h-12 w-full px-4 py-3.5 text-center text-base font-medium text-red-500 transition-colors hover:bg-red-50 active:bg-red-100 dark:hover:bg-red-500/10 dark:active:bg-red-500/20 sm:text-[15px]"
+                        >
+                            Log Out
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setActiveModal("delete")}
+                        className="self-center p-1 text-[13px] text-muted-foreground transition-colors hover:text-red-500"
+                    >
+                        Delete your account and all data…
+                    </button>
+                </div>
             </main>
 
             {/* Modals */}
@@ -485,6 +520,24 @@ export default function AccountPage() {
                     />
                 </>
             )}
+
+            <PickerModal
+                isOpen={activeModal === "currency"}
+                onClose={closeModal}
+                title="Currency"
+                options={CURRENCY_PICKER_OPTIONS}
+                selected={settings.currency}
+                onSelect={updateCurrency}
+            />
+
+            <PickerModal
+                isOpen={activeModal === "dateFormat"}
+                onClose={closeModal}
+                title="Date Format"
+                options={DATE_FORMAT_OPTIONS}
+                selected={settings.dateFormat}
+                onSelect={updateDateFormat}
+            />
 
             <DeleteModal
                 isOpen={activeModal === "delete"}
