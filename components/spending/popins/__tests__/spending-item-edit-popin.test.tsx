@@ -207,27 +207,51 @@ describe("SpendingItemEditPopin — conflict safety net", () => {
 });
 
 describe("SpendingItemEditPopin — edit mode", () => {
-  it("shows no typeahead, no recurring toggle, and keeps the Save label", () => {
-    render(
+  function renderEditPopin(onSave = vi.fn(), initialRecurring = false) {
+    return render(
       <SettingsProvider>
         <SpendingItemEditPopin
           isOpen={true}
           onClose={vi.fn()}
-          onSave={vi.fn()}
+          onSave={onSave}
           mode="edit"
           categories={categories}
           initialName="Netflix"
           initialIcon="film"
           initialCategory="Entertainment"
           initialBudget={1890}
+          initialRecurring={initialRecurring}
         />
       </SettingsProvider>
     );
+  }
+
+  it("shows no typeahead and keeps the Save label", () => {
+    renderEditPopin();
 
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Netfl" } });
 
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
+  });
+
+  it("seeds the recurring toggle from the series' current value", () => {
+    renderEditPopin();
+
+    const toggle = screen.getByRole("switch", { name: "Recurring" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("Keep this item in this month only")).toBeInTheDocument();
+  });
+
+  it("saves a recurring change made in edit mode", async () => {
+    const onSave = vi.fn();
+    renderEditPopin(onSave);
+
+    fireEvent.click(screen.getByRole("switch", { name: "Recurring" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0].recurring).toBe(true);
+    expect(onSave.mock.calls[0][0].seriesId).toBeUndefined();
   });
 });

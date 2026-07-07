@@ -302,6 +302,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     categoryName={item.category?.label ?? "Uncategorized"}
                     spendingCategoryColor={item.category?.color ?? "#6E6E73"}
                     budgetNumber={item.budgeted}
+                    recurring={item.recurring}
                     note={item.note ?? undefined}
                     entries={(item.entries || []).map((e) => ({
                     id: e.id,
@@ -324,6 +325,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         name: data.name,
                         icon: data.icon,
                         categoryId: cat.id,
+                        recurring: data.recurring,
                         budgeted: data.budget,
                         note: data.note || null,
                     }, {
@@ -332,6 +334,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         icon: data.icon,
                         categoryId: cat.id,
                         category: cat,
+                        recurring: data.recurring,
                         budgeted: data.budget,
                         note: data.note || null,
                     });
@@ -432,6 +435,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         name: data.name,
                         icon: data.icon,
                         categoryId: category.id,
+                        recurring: data.recurring,
                         budgeted: data.budget,
                         note: data.note || null,
                     }, {
@@ -440,6 +444,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         icon: data.icon,
                         categoryId: category.id,
                         category,
+                        recurring: data.recurring,
                         budgeted: data.budget,
                         note: data.note || null,
                     });
@@ -490,6 +495,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             initialIcon={editingSpendingItem?.icon ?? ""}
             initialCategory={editingSpendingItem?.category?.label ?? ""}
             initialBudget={editingSpendingItem?.budgeted ?? 0}
+            initialRecurring={editingSpendingItem?.recurring ?? true}
             initialNote={editingSpendingItem?.note ?? ""}
         />
 

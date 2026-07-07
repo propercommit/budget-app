@@ -14,7 +14,7 @@ const MIN_AMOUNT_CENTS = 0;
 const MAX_NOTE_LENGTH = 500;
 
 /**
- * Updates split by ownership (D21): `name`/`icon`/`categoryId` live on the
+ * Updates split by ownership (D21): `name`/`icon`/`categoryId`/`recurring` live on the
  * series and editing them affects every month, past and future;
  * `budgeted`/`note` belong to this month's incarnation only. `month` is
  * identity + partition (D18) and is never editable — `month`, `startDate`,
@@ -34,12 +34,13 @@ export async function PUT(
 
         const { id } = await params;
         const body = await request.json();
-        const { name, icon, categoryId, budgeted, note } = body;
+        const { name, icon, categoryId, recurring, budgeted, note } = body;
 
         if (
             name === undefined &&
             icon === undefined &&
             categoryId === undefined &&
+            recurring === undefined &&
             budgeted === undefined &&
             note === undefined
         ) {
@@ -64,6 +65,11 @@ export async function PUT(
         // Validate categoryId if provided
         if (categoryId !== undefined && typeof categoryId !== "string") {
             return NextResponse.json({ error: "Category ID must be a string" }, { status: 400 });
+        }
+
+        // Validate recurring if provided
+        if (recurring !== undefined && typeof recurring !== "boolean") {
+            return NextResponse.json({ error: "Recurring must be a boolean" }, { status: 400 });
         }
 
         // Validate budgeted if provided
@@ -105,13 +111,15 @@ export async function PUT(
             }
         }
 
-        const seriesData: { name?: string; icon?: string; categoryId?: string } = {};
+        const seriesData: { name?: string; icon?: string; categoryId?: string; recurring?: boolean } = {};
 
         if (name !== undefined) seriesData.name = name.trim();
 
         if (icon !== undefined) seriesData.icon = icon;
 
         if (categoryId !== undefined) seriesData.categoryId = categoryId;
+
+        if (recurring !== undefined) seriesData.recurring = recurring;
 
         const itemData: { budgeted?: number; note?: string | null } = {};
 

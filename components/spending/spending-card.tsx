@@ -23,6 +23,8 @@ interface SpendingCardProps {
     categoryName: string;
     spendingCategoryColor: string;
     budgetNumber: number;
+    /** Series-level flag, prefills the edit popin's Recurring toggle. */
+    recurring: boolean;
     note?: string;
     entries: SpendingEntry[];
     categories: Category[];
@@ -42,6 +44,7 @@ export function SpendingCard({
     categoryName,
     spendingCategoryColor,
     budgetNumber,
+    recurring,
     note,
     entries,
     categories,
@@ -207,6 +210,7 @@ export function SpendingCard({
                         initialIcon={spendingItemIcon}
                         initialCategory={categoryName}
                         initialBudget={budgetNumber}
+                        initialRecurring={recurring}
                         initialNote={note}
                     />
 

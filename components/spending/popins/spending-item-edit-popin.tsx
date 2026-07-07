@@ -54,6 +54,8 @@ interface SpendingItemEditPopinProps {
     initialIcon?: string;
     initialCategory?: string;
     initialBudget?: number;
+    /** The series' current recurring flag — edit mode starts from it; create defaults ON. */
+    initialRecurring?: boolean;
     initialNote?: string;
     autoSelectCategory?: string | null;
 }
@@ -104,6 +106,7 @@ export function SpendingItemEditPopin({
     initialIcon = "shopping-cart",
     initialCategory = "",
     initialBudget,
+    initialRecurring = true,
     initialNote = "",
     autoSelectCategory = null,
 }: SpendingItemEditPopinProps) {
@@ -112,7 +115,7 @@ export function SpendingItemEditPopin({
     const [selectedCategory, setSelectedCategory] = useState(initialCategory);
     const [budget, setBudget] = useState(initialBudget === undefined ? "" : centsToAmount(initialBudget).toString());
     const [note, setNote] = useState(initialNote);
-    const [recurring, setRecurring] = useState(true);
+    const [recurring, setRecurring] = useState(initialRecurring);
     const [selectedSeries, setSelectedSeries] = useState<BudgetSeriesSummary | null>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [conflict, setConflict] = useState<CreateSpendingConflict | null>(null);
@@ -471,8 +474,7 @@ export function SpendingItemEditPopin({
                     />
                 </div>
 
-                {isCreate && (
-                    <div className="flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl" style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl" style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)" }}>
                         <div>
                             <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Recurring</p>
                             <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
@@ -493,8 +495,7 @@ export function SpendingItemEditPopin({
                                 style={{ width: "27px", height: "27px", left: recurring ? "22px" : "2px", boxShadow: "0 3px 8px rgba(0, 0, 0, 0.15)" }}
                             />
                         </button>
-                    </div>
-                )}
+                </div>
             </div>
         </PopinWrapper>
     );

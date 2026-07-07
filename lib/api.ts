@@ -124,6 +124,7 @@ export async function updateSpending(
     name?: string;
     icon?: string;
     categoryId?: string;
+    recurring?: boolean;
     budgeted?: number;
     note?: string | null;
   }

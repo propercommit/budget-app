@@ -244,6 +244,7 @@ export const baseCardProps = {
   categoryName: "Groceries",
   spendingCategoryColor: "#34C759",
   budgetNumber: cents(600),
+  recurring: true,
   categories: cardCategories,
   onItemUpdate: noop,
   onItemDelete: noop,

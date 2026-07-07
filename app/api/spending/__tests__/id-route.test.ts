@@ -118,13 +118,13 @@ describe("PUT /api/spending/[id]", () => {
     expect(body).toEqual({ error: "Category not found" });
   });
 
-  it("routes name/icon/categoryId to the series — a global edit (D21)", async () => {
+  it("routes name/icon/categoryId/recurring to the series — a global edit (D21)", async () => {
     prismaMock.spendingItem.findFirst.mockResolvedValue(EXISTING_ITEM);
     prismaMock.category.findFirst.mockResolvedValue(FAKE_CATEGORY);
 
     const { status } = await readJson(
       await PUT(
-        jsonRequest({ name: "  New name  ", icon: "zap", categoryId: "cat-1" }),
+        jsonRequest({ name: "  New name  ", icon: "zap", categoryId: "cat-1", recurring: false }),
         routeContext("s1")
       )
     );
@@ -132,10 +132,19 @@ describe("PUT /api/spending/[id]", () => {
     expect(status).toBe(200);
     expect(prismaMock.budgetSeries.update).toHaveBeenCalledWith({
       where: { id: "ser-1" },
-      data: { name: "New name", icon: "zap", categoryId: "cat-1" },
+      data: { name: "New name", icon: "zap", categoryId: "cat-1", recurring: false },
     });
     // No incarnation fields were sent, so the item row is untouched.
     expect(prismaMock.spendingItem.update).not.toHaveBeenCalled();
+  });
+
+  it("400 when recurring is not a boolean", async () => {
+    const { status, body } = await readJson(
+      await PUT(jsonRequest({ recurring: "yes" }), routeContext("s1"))
+    );
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "Recurring must be a boolean" });
+    expect(prismaMock.budgetSeries.update).not.toHaveBeenCalled();
   });
 
   it("routes budgeted/note to the incarnation only", async () => {
