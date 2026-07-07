@@ -183,8 +183,10 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Category not found" }, { status: 404 });
         }
 
-        // Derive month from startDate
-        const month = `${parsedStartDate.getFullYear()}-${String(parsedStartDate.getMonth() + 1).padStart(2, "0")}`;
+        // Derive month from startDate — UTC getters, because date-only strings
+        // ("YYYY-MM-DD") parse as UTC midnight; local getters read the previous
+        // month on any server west of UTC.
+        const month = `${parsedStartDate.getUTCFullYear()}-${String(parsedStartDate.getUTCMonth() + 1).padStart(2, "0")}`;
 
         const spendingItem = await prisma.spendingItem.create({
             data: {

@@ -48,8 +48,12 @@ function getSupabaseAdmin() {
 // ============================================
 // HELPERS
 // ============================================
+// UTC, not local: `new Date(y, m, d)` is local midnight, which lands in the
+// previous UTC day/month when seeding from a UTC+n machine — the API then
+// re-derives `month` from that startDate and collides with the neighbor
+// month's same-named item (P2002) on every no-change save.
 function date(year: number, month: number, day: number) {
-  return new Date(year, month - 1, day);
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 function monthStr(year: number, month: number) {

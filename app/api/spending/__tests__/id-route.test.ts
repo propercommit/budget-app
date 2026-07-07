@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
   FAKE_USER,
   jsonRequest,
@@ -108,6 +109,37 @@ describe("PUT /api/spending/[id]", () => {
     const arg = prismaMock.spendingItem.update.mock.calls[0][0];
     expect(arg.data.month).toBe("2026-01");
     expect(arg.data.startDate).toBeInstanceOf(Date);
+  });
+
+  it("derives month from startDate in UTC, not server-local time", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingItem.update.mockResolvedValue({
+      id: "s1",
+      spendingEntries: [],
+    });
+
+    // 22:00 UTC on June 30 is already July 1 in UTC+2 — local getters would
+    // read "2026-07" on such a machine; the route must stay on the UTC month.
+    await PUT(jsonRequest({ startDate: "2026-06-30T22:00:00.000Z" }), routeContext("s1"));
+
+    const arg = prismaMock.spendingItem.update.mock.calls[0][0];
+    expect(arg.data.month).toBe("2026-06");
+  });
+
+  it("409 when the re-derived month collides with a same-named item (P2002)", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.spendingItem.update.mockRejectedValue(
+      new PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "6",
+      })
+    );
+
+    const { status, body } = await readJson(
+      await PUT(jsonRequest({ startDate: "2026-06-01" }), routeContext("s1"))
+    );
+    expect(status).toBe(409);
+    expect(body).toEqual({ error: "A spending item with this name already exists for this month" });
   });
 
   it("clears endDate when passed null", async () => {
