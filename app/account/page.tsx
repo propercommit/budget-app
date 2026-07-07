@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
+import { AVATARS_BUCKET, avatarFilePath } from "@/lib/avatar-storage"
 import { Download, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
@@ -175,11 +176,10 @@ export default function AccountPage() {
 
         try {
             const fileExt = file.name.split('.').pop()
-            const fileName = `${user?.id}-${Date.now()}.${fileExt}`
-            const filePath = `avatars/${fileName}`
+            const filePath = avatarFilePath(user?.id ?? "", fileExt)
 
             const { error: uploadError } = await supabase.storage
-                .from('avatars')
+                .from(AVATARS_BUCKET)
                 .upload(filePath, file, { upsert: true })
 
             if (uploadError) {
@@ -188,7 +188,7 @@ export default function AccountPage() {
             }
 
             const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
+                .from(AVATARS_BUCKET)
                 .getPublicUrl(filePath)
 
             const { error: updateError } = await supabase.auth.updateUser({
@@ -320,8 +320,7 @@ export default function AccountPage() {
         }
     }
 
-    const handleLogout = async () => {
-        setIsSaving(true)
+    const signOutAndRedirect = async () => {
         try {
             // Authoritative: clears the (possibly chunked) auth cookies via
             // Set-Cookie headers from the server.
@@ -333,6 +332,11 @@ export default function AccountPage() {
         // Hard reload guarantees a fresh cookie jar and a brand-new Supabase
         // client, so no stale session can leak into the next sign-in.
         window.location.assign("/login")
+    }
+
+    const handleLogout = async () => {
+        setIsSaving(true)
+        await signOutAndRedirect()
     }
 
     const handleDeleteAccount = async () => {
@@ -374,15 +378,9 @@ export default function AccountPage() {
                 return
             }
 
-            // The account is gone server-side and its tokens are revoked; clear
-            // the (possibly chunked) auth cookies the same way logout does, then
-            // hard-reload so no stale session leaks into the next sign-in.
-            try {
-                await fetch("/auth/signout", { method: "POST" })
-            } catch {
-                await supabase.auth.signOut().catch(() => {})
-            }
-            window.location.assign("/login")
+            // The account is gone server-side and its tokens are revoked;
+            // clear the local session the same way logout does.
+            await signOutAndRedirect()
         } catch {
             setError("Failed to delete account. Please try again.")
             setIsSaving(false)

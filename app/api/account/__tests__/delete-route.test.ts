@@ -8,33 +8,15 @@ const {
   deleteUserMock,
   storageListMock,
   storageRemoveMock,
-} = vi.hoisted(() => {
-  const model = () => ({
-    findMany: vi.fn(),
-    findFirst: vi.fn(),
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    deleteMany: vi.fn(),
-    upsert: vi.fn(),
-  });
-  return {
-    prismaMock: {
-      user: model(),
-      category: model(),
-      spendingItem: model(),
-      spendingEntry: model(),
-      incomeSource: model(),
-      userSettings: model(),
-    },
-    getAuthenticatedUser: vi.fn(),
-    revokeUserSessions: vi.fn(),
-    deleteUserMock: vi.fn(),
-    storageListMock: vi.fn(),
-    storageRemoveMock: vi.fn(),
-  };
-});
+} = vi.hoisted(() => ({
+  // The route only touches the User row — the DB cascades wipe everything else.
+  prismaMock: { user: { deleteMany: vi.fn() } },
+  getAuthenticatedUser: vi.fn(),
+  revokeUserSessions: vi.fn(),
+  deleteUserMock: vi.fn(),
+  storageListMock: vi.fn(),
+  storageRemoveMock: vi.fn(),
+}));
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ getAuthenticatedUser, revokeUserSessions }));

@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, revokeUserSessions } from "@/lib/auth";
-
-const AVATARS_BUCKET = "avatars";
-const AVATARS_FOLDER = "avatars";
+import { AVATARS_BUCKET, AVATARS_FOLDER, avatarSearchPrefix } from "@/lib/avatar-storage";
 
 /**
  * Builds a service-role Supabase client for admin operations. Reads
@@ -38,7 +36,7 @@ async function deleteAvatarFiles(supabaseAdmin: SupabaseClient, userId: string):
 
     const { data: files, error: listError } = await supabaseAdmin.storage
         .from(AVATARS_BUCKET)
-        .list(AVATARS_FOLDER, { search: `${userId}-` });
+        .list(AVATARS_FOLDER, { search: avatarSearchPrefix(userId) });
 
     if (listError !== null) {
         console.error("Failed to list avatar files for deletion:", listError);
@@ -73,9 +71,13 @@ export async function DELETE() {
         // throwing P2025 once the row is already gone.
         await prisma.user.deleteMany({ where: { id: userId } });
 
-        await deleteAvatarFiles(supabaseAdmin, userId);
-
-        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        // Avatar cleanup is best-effort and independent of the auth-user
+        // delete, so run both concurrently instead of serializing two extra
+        // Storage round trips into the response.
+        const [, { error: authError }] = await Promise.all([
+            deleteAvatarFiles(supabaseAdmin, userId),
+            supabaseAdmin.auth.admin.deleteUser(userId),
+        ]);
 
         // 404 means the auth user is already gone (e.g. a retry after a
         // previous partial failure) — that is the desired end state. Any other
