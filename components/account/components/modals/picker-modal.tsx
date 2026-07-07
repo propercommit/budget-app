@@ -1,7 +1,9 @@
 "use client";
 
+import { Fragment } from "react";
 import { Check } from "lucide-react";
-import { SheetModal } from "./sheet-modal";
+import { InsetDivider } from "../inset-divider";
+import { SheetModal, SheetGroup } from "./sheet-modal";
 
 export interface PickerOption<T extends string> {
     value: T;
@@ -33,29 +35,29 @@ export function PickerModal<T extends string>({
 
     return (
         <SheetModal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-            <div className="overflow-hidden rounded-xl bg-card">
+            <SheetGroup>
                 {options.map((option, index) => (
-                    <button
-                        key={option.value}
-                        type="button"
-                        role="option"
-                        aria-selected={option.value === selected}
-                        onClick={() => {
-                            onSelect(option.value);
-                            onClose();
-                        }}
-                        className={`flex min-h-12 w-full items-center justify-between px-4 py-3 text-left text-base text-foreground transition-colors hover:bg-muted/50 active:bg-muted sm:text-[15px] ${
-                            index > 0 ? "border-t border-border" : ""
-                        }`}
-                    >
-                        {option.label}
-                        <Check
-                            strokeWidth={2.6}
-                            className={`h-5 w-5 flex-none text-green-500 ${option.value === selected ? "opacity-100" : "opacity-0"}`}
-                        />
-                    </button>
+                    <Fragment key={option.value}>
+                        {index > 0 && <InsetDivider />}
+                        <button
+                            type="button"
+                            role="option"
+                            aria-selected={option.value === selected}
+                            onClick={() => {
+                                onSelect(option.value);
+                                onClose();
+                            }}
+                            className="flex min-h-12 w-full items-center justify-between px-4 py-3 text-left text-base text-foreground transition-colors hover:bg-muted/50 active:bg-muted sm:text-[15px]"
+                        >
+                            {option.label}
+                            <Check
+                                strokeWidth={2.6}
+                                className={`h-5 w-5 flex-none text-green-500 ${option.value === selected ? "opacity-100" : "opacity-0"}`}
+                            />
+                        </button>
+                    </Fragment>
                 ))}
-            </div>
+            </SheetGroup>
         </SheetModal>
     );
 }

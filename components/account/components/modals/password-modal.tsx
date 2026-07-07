@@ -1,6 +1,7 @@
 "use client";
 
-import { SheetModal, SheetGroup, SheetDivider, SheetInput, SheetFootnote } from "./sheet-modal";
+import { InsetDivider } from "../inset-divider";
+import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
 
 interface PasswordModalProps {
     isOpen: boolean;
@@ -46,7 +47,7 @@ export function PasswordModal({
                     onChange={(e) => onCurrentPasswordChange(e.target.value)}
                     autoComplete="current-password"
                 />
-                <SheetDivider />
+                <InsetDivider />
                 <SheetInput
                     type="password"
                     placeholder="New password"
@@ -54,7 +55,7 @@ export function PasswordModal({
                     onChange={(e) => onNewPasswordChange(e.target.value)}
                     autoComplete="new-password"
                 />
-                <SheetDivider />
+                <InsetDivider />
                 <SheetInput
                     type="password"
                     placeholder="Confirm new password"

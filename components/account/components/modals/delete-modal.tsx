@@ -1,6 +1,13 @@
 "use client";
 
-import { SheetModal, SheetGroup, SheetDivider, SheetInput, SheetFootnote } from "./sheet-modal";
+import { InsetDivider } from "../inset-divider";
+import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
+
+/**
+ * The exact text a user must type to arm account deletion — shared with the
+ * page's submit guard so the UI gate and the handler can't drift apart.
+ */
+export const DELETE_CONFIRMATION = "DELETE";
 
 interface DeleteModalProps {
     isOpen: boolean;
@@ -33,7 +40,7 @@ export function DeleteModal({
     onSubmit,
 }: DeleteModalProps) {
 
-    const canDelete = confirmText === "DELETE";
+    const canDelete = confirmText === DELETE_CONFIRMATION;
 
     return (
         <SheetModal
@@ -57,7 +64,7 @@ export function DeleteModal({
                 />
                 {!isGoogleUser && (
                     <>
-                        <SheetDivider />
+                        <InsetDivider />
                         <SheetInput
                             type="password"
                             placeholder="Your password"

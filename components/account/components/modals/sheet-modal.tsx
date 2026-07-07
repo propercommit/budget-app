@@ -106,16 +106,10 @@ export function SheetModal({ isOpen, onClose, title, action, size = "md", childr
     );
 }
 
-/** Grouped card holding {@link SheetInput} rows separated by {@link SheetDivider}. */
+/** Grouped card holding {@link SheetInput} rows separated by `InsetDivider`s. */
 export function SheetGroup({ children }: { children: React.ReactNode }) {
 
     return <div className="overflow-hidden rounded-xl bg-card">{children}</div>;
-}
-
-/** Inset hairline between the rows of a {@link SheetGroup}. */
-export function SheetDivider() {
-
-    return <div className="ml-4 h-px bg-border" />;
 }
 
 /**

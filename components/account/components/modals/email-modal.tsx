@@ -1,6 +1,7 @@
 "use client";
 
-import { SheetModal, SheetGroup, SheetDivider, SheetInput, SheetFootnote } from "./sheet-modal";
+import { InsetDivider } from "../inset-divider";
+import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
 
 interface EmailModalProps {
     isOpen: boolean;
@@ -41,7 +42,7 @@ export function EmailModal({
                     <span className="flex-none text-base text-foreground sm:text-[15px]">Current</span>
                     <span className="truncate text-[15px] text-muted-foreground">{currentEmail}</span>
                 </div>
-                <SheetDivider />
+                <InsetDivider />
                 <SheetInput
                     type="email"
                     placeholder="New email address"
@@ -49,7 +50,7 @@ export function EmailModal({
                     onChange={(e) => onNewEmailChange(e.target.value)}
                     autoComplete="email"
                 />
-                <SheetDivider />
+                <InsetDivider />
                 <SheetInput
                     type="password"
                     placeholder="Your password"

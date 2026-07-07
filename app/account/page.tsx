@@ -7,15 +7,16 @@ import { Download, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 import { useSettings } from "@/lib/settings-context"
-import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS, DATE_FORMAT_OPTIONS } from "@/lib/constants"
+import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from "@/lib/constants"
 import { AccountHeader } from "@/components/account/components/account-header"
+import { InsetDivider } from "@/components/account/components/inset-divider"
 import { ProfileAvatar } from "@/components/account/components/profile-avatar"
 import { ProfileForm } from "@/components/account/components/profile-form"
-import { SettingsSection, SettingsRow, SettingsRowDivider } from "@/components/account/components/settings-section"
+import { SettingsSection, SettingsRow } from "@/components/account/components/settings-section"
 import { AppearanceToggle } from "@/components/account/components/appearance-toggle"
 import { EmailModal } from "@/components/account/components/modals/email-modal"
 import { PasswordModal } from "@/components/account/components/modals/password-modal"
-import { DeleteModal } from "@/components/account/components/modals/delete-modal"
+import { DeleteModal, DELETE_CONFIRMATION } from "@/components/account/components/modals/delete-modal"
 import { LogoutModal } from "@/components/account/components/modals/logout-modal"
 import { PickerModal } from "@/components/account/components/modals/picker-modal"
 
@@ -335,7 +336,7 @@ export default function AccountPage() {
     }
 
     const handleDeleteAccount = async () => {
-        if (deleteConfirmText !== "DELETE") {
+        if (deleteConfirmText !== DELETE_CONFIRMATION) {
             setError("Please type DELETE to confirm")
             return
         }
@@ -438,7 +439,7 @@ export default function AccountPage() {
                 {!isGoogleUser && (
                     <SettingsSection title="Security">
                         <SettingsRow label="Email" detail={userEmail} onClick={() => setActiveModal("email")} />
-                        <SettingsRowDivider />
+                        <InsetDivider className="sm:ml-5" />
                         <SettingsRow label="Password" detail="••••••••" onClick={() => setActiveModal("password")} />
                     </SettingsSection>
                 )}
@@ -446,20 +447,20 @@ export default function AccountPage() {
                 <SettingsSection title="Preferences">
                     <SettingsRow
                         label="Currency"
-                        detail={`${settings.currency} (${CURRENCY_SYMBOLS[settings.currency]})`}
+                        detail={CURRENCY_PICKER_OPTIONS.find((option) => option.value === settings.currency)?.label ?? settings.currency}
                         onClick={() => setActiveModal("currency")}
                     />
-                    <SettingsRowDivider />
+                    <InsetDivider className="sm:ml-5" />
                     <SettingsRow
                         label="Date Format"
                         detail={settings.dateFormat}
                         onClick={() => setActiveModal("dateFormat")}
                     />
-                    <SettingsRowDivider />
-                    <div className="flex flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                        <span className="text-base font-medium text-foreground sm:text-[15px]">Appearance</span>
-                        <AppearanceToggle darkMode={settings.darkMode} onChange={updateDarkMode} />
-                    </div>
+                    <InsetDivider className="sm:ml-5" />
+                    <SettingsRow
+                        label="Appearance"
+                        trailing={<AppearanceToggle darkMode={settings.darkMode} onChange={updateDarkMode} />}
+                    />
                 </SettingsSection>
 
                 <SettingsSection title="Data">
@@ -471,7 +472,7 @@ export default function AccountPage() {
                 </SettingsSection>
 
                 <div className="mt-2 flex flex-col gap-4">
-                    <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
+                    <SettingsSection>
                         <button
                             type="button"
                             onClick={() => setActiveModal("logout")}
@@ -479,7 +480,7 @@ export default function AccountPage() {
                         >
                             Log Out
                         </button>
-                    </div>
+                    </SettingsSection>
                     <button
                         type="button"
                         onClick={() => setActiveModal("delete")}

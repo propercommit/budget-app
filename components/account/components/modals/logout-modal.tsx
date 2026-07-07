@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SheetContent } from "./sheet-modal";
 
@@ -33,22 +34,21 @@ export function LogoutModal({ isOpen, onClose, isSaving, onSubmit }: LogoutModal
                     </DialogDescription>
                 </div>
                 <div className="flex flex-col gap-2.5 px-5 pt-5 pb-6">
-                    <button
-                        type="button"
+                    <Button
                         onClick={onClose}
                         disabled={isSaving}
-                        className="h-12 w-full rounded-full bg-green-500 text-base font-semibold text-white transition-colors hover:bg-green-600 active:bg-green-700 sm:text-[15px]"
+                        className="h-12 w-full rounded-full bg-green-500 text-base font-semibold text-white hover:bg-green-600 active:bg-green-700 sm:text-[15px]"
                     >
                         Stay Logged In
-                    </button>
-                    <button
-                        type="button"
+                    </Button>
+                    <Button
+                        variant="ghost"
                         onClick={onSubmit}
                         disabled={isSaving}
-                        className="flex h-12 w-full items-center justify-center rounded-full text-base font-semibold text-red-500 transition-colors hover:bg-red-50 active:bg-red-100 dark:hover:bg-red-500/10 dark:active:bg-red-500/20 sm:text-[15px]"
+                        className="h-12 w-full rounded-full text-base font-semibold text-red-500 hover:bg-red-50 hover:text-red-500 active:bg-red-100 dark:hover:bg-red-500/10 dark:active:bg-red-500/20 sm:text-[15px]"
                     >
                         {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Log Out"}
-                    </button>
+                    </Button>
                 </div>
             </SheetContent>
         </Dialog>
