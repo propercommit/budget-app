@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { applyEntry } from "@/lib/spending/math";
+import { sumEntries } from "@/lib/spending/math";
 import { SpendingCardCollapsed } from "./spending-card-collapsed";
 import { SpendingCardExpanded, SpendingEntry } from "./spending-card-expanded";
 import { SpendingItemDetailPopin } from "./popins/spending-item-detail-popin";
@@ -84,7 +84,7 @@ export function SpendingCard({
     const [detailNavEntries, setDetailNavEntries] = useState<SpendingEntry[]>([]);
 
     // Calculations
-    const totalSpent = entries.reduce((sum, entry) => applyEntry(sum, entry), 0);
+    const totalSpent = sumEntries(entries);
     const spendingEntries = entries.length;
 
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);

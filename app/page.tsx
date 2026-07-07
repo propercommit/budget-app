@@ -2,7 +2,7 @@ import { Dashboard } from "@/components/dashboard";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { SpendingItem } from "@/lib/types";
-import { applyEntry } from "@/lib/spending/math";
+import { sumEntries } from "@/lib/spending/math";
 import { redirect } from "next/navigation";
 
 export const revalidate = 30;
@@ -111,7 +111,7 @@ export default async function Home() {
       name: item.name,
       icon: item.icon,
       budgeted: item.budgeted,
-      spent: item.spendingEntries.reduce((sum, e) => applyEntry(sum, e), 0),
+      spent: sumEntries(item.spendingEntries),
       month: item.month,
       startDate: item.startDate?.toISOString().split("T")[0] ?? `${item.month}-01`,
       endDate: item.endDate?.toISOString().split("T")[0] ?? null,

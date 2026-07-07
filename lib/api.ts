@@ -1,14 +1,18 @@
 const USER_ID = "temp-user";
 
-// Helper to make API requests
-async function fetchAPI(url: string, options?: RequestInit) {
+/**
+ * Shared transport + error surfacing for every API call — the single place
+ * where a failed request becomes a user-facing Error. Returns the ok
+ * `Response`; callers own the success-body parsing (JSON via `fetchAPI`,
+ * binary via `exportAccountData`).
+ */
+async function requestAPI(url: string, options?: RequestInit): Promise<Response> {
   let response: Response;
 
   try {
     response = await fetch(url, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
         "x-user-id": USER_ID,
         ...options?.headers,
       },
@@ -24,6 +28,19 @@ async function fetchAPI(url: string, options?: RequestInit) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error || body.message || "API request failed");
   }
+
+  return response;
+}
+
+// Helper to make JSON API requests
+async function fetchAPI(url: string, options?: RequestInit) {
+  const response = await requestAPI(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
 
   if (response.status === 204) {
     return null;
@@ -222,4 +239,21 @@ export async function updateSettings(data: { currency?: string; dateFormat?: str
     method: "PUT",
     body: JSON.stringify(data),
   });
+}
+
+// ============ ACCOUNT ============
+
+/**
+ * Download the full account data export. Returns the CSV as a Blob plus the
+ * server-chosen filename (from `Content-Disposition` — the one source of
+ * truth for it); the caller turns them into a file download.
+ */
+export async function exportAccountData(): Promise<{ blob: Blob; filename: string }> {
+  const response = await requestAPI("/api/account/export");
+
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match !== null ? match[1] : "budget-export.csv";
+
+  return { blob: await response.blob(), filename };
 }

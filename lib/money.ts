@@ -82,3 +82,20 @@ export function parseAmountToCents(raw: string): number | null {
 export function centsToAmount(cents: number): number {
   return cents / 100;
 }
+
+/**
+ * Render integer minor units (cents) as an exact two-decimal string —
+ * `1029` → `"10.29"`, `-5` → `"-0.05"`. Built from integer division and
+ * padding, never through a float, so it is the safe way to write cents into
+ * text output (CSV export) without `toFixed` on a divided float. Assumes whole
+ * cents (every stored amount is); a fractional input would be truncated.
+ */
+export function centsToDecimalString(cents: number): string {
+
+  const sign = cents < 0 ? "-" : "";
+  const abs = Math.abs(cents);
+  const whole = Math.trunc(abs / 100);
+  const fraction = String(abs % 100).padStart(2, "0");
+
+  return `${sign}${whole}.${fraction}`;
+}
