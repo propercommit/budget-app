@@ -63,7 +63,9 @@ function ProgressBar({
 const usagePercentage = (spent: number, budget: number): number => budget > 0 ? (spent / budget) * 100 : 0;
 
 // Main-stats tiles share one responsive class stack (compact on mobile, roomier from sm:).
-const STAT_TILE_CLASS = "p-2.5 sm:p-3 rounded-[14px] sm:rounded-2xl";
+// flex-1 + min-w-fit: equal thirds while all three fit, but a tile whose nowrap
+// amount is too wide wraps to its own full-width line instead of overflowing.
+const STAT_TILE_CLASS = "flex-1 min-w-fit p-2.5 sm:p-3 rounded-[14px] sm:rounded-2xl";
 const STAT_LABEL_CLASS = "text-[11px] sm:text-xs font-medium mb-0.5 text-muted-foreground";
 const STAT_VALUE_CLASS = "text-[15px] sm:text-lg font-bold whitespace-nowrap";
 
@@ -362,8 +364,8 @@ export function BudgetOverviewExpanded({
                     </div>
                 )}
 
-                {/* Main Stats Grid */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {/* Main Stats Row — wraps when the amounts outgrow the viewport */}
+                <div className="flex flex-wrap gap-2 sm:gap-3">
                     <div className={`${STAT_TILE_CLASS} bg-muted`}>
                         <p className={STAT_LABEL_CLASS}>Income</p>
                         <p className={`${STAT_VALUE_CLASS} text-foreground`}>{formatAmount(totalIncome)}</p>

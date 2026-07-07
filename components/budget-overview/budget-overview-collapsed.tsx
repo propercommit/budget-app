@@ -23,20 +23,23 @@ export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: B
                 
                 {/* Quick Stats Row */}
                 <div className="mt-4 space-y-3">
-                    <div className="flex gap-3">
-                        <div className="flex-1 p-3 rounded-2xl bg-muted">
+                    {/* min-w-fit keeps each nowrap amount readable; flex-wrap drops
+                        tiles that no longer fit onto their own full-width line
+                        instead of overflowing the viewport on narrow screens. */}
+                    <div className="flex flex-wrap gap-3">
+                        <div className="flex-1 min-w-fit p-3 rounded-2xl bg-muted">
                             <p className="text-xs font-medium mb-0.5 text-muted-foreground">Income</p>
                             <p className="text-lg font-bold text-foreground whitespace-nowrap">{formatAmount(totalIncome)}</p>
                         </div>
-                        <div 
-                            className="flex-1 p-3 rounded-2xl"
+                        <div
+                            className="flex-1 min-w-fit p-3 rounded-2xl"
                             style={{ backgroundColor: 'rgba(255, 59, 48, 0.06)' }}
                         >
                             <p className="text-xs font-medium mb-0.5 text-muted-foreground">Spent</p>
                             <p className="text-lg font-bold whitespace-nowrap" style={{ color: '#FF3B30' }}>{formatAmount(totalSpent)}</p>
                         </div>
-                        <div 
-                            className="flex-1 p-3 rounded-2xl"
+                        <div
+                            className="flex-1 min-w-fit p-3 rounded-2xl"
                             style={{ backgroundColor: isOverspent ? 'rgba(255, 59, 48, 0.06)' : 'rgba(52, 199, 89, 0.06)' }}
                         >
                             <p className="text-xs font-medium mb-0.5 text-muted-foreground">
