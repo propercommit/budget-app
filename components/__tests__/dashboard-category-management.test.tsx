@@ -30,6 +30,10 @@ vi.mock("react-hot-toast", () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }));
 
+vi.mock("@/lib/toast", () => ({
+  showErrorToast: vi.fn(),
+}));
+
 // The Header runs its own supabase.auth.getUser() on mount.
 vi.mock("@/lib/supabase", () => ({
   createClient: () => ({
@@ -44,7 +48,7 @@ vi.mock("next/navigation", () => ({
 import { Dashboard } from "@/components/dashboard";
 import { SettingsProvider } from "@/lib/settings-context";
 import * as api from "@/lib/api";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 import type { Category, SpendingItem } from "@/lib/types";
 
 // jsdom lacks ResizeObserver, which children observe on mount.
@@ -135,7 +139,7 @@ describe("Dashboard — category management wiring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete Groceries" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to delete category"));
+    await waitFor(() => expect(showErrorToast).toHaveBeenCalledWith("Failed to delete category", { retry: expect.any(Function) }));
 
     // Dialog closed, row rolled back, popin still searchable, items untouched.
     await waitFor(() => expect(screen.queryByText('Delete "Groceries"?')).toBeNull());
