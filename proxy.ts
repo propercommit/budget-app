@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { RECOVERY_COOKIE } from "@/lib/recovery-cookie"
 
 // Route configuration
-const PUBLIC_ROUTES = ["/login", "/auth"]
+const PUBLIC_ROUTES = ["/login", "/auth", "/privacy", "/terms"]
 const AUTH_ROUTES = ["/login"]
 
 // A password-recovery session (carrying the pw_recovery cookie) may ONLY reach
