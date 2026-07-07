@@ -223,3 +223,29 @@ export async function updateSettings(data: { currency?: string; dateFormat?: str
     body: JSON.stringify(data),
   });
 }
+
+// ============ ACCOUNT ============
+
+/**
+ * Download the full account data export. Returns the CSV as a Blob (not JSON,
+ * so it bypasses `fetchAPI`); the caller turns it into a file download.
+ */
+export async function exportAccountData(): Promise<Blob> {
+  let response: Response;
+
+  try {
+    response = await fetch("/api/account/export", {
+      headers: { "x-user-id": USER_ID },
+    });
+  } catch (error) {
+    console.error("Network error calling /api/account/export", error);
+    throw new Error("Network error. Please try again.");
+  }
+
+  if (response.ok === false) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error || body.message || "Failed to export data");
+  }
+
+  return response.blob();
+}

@@ -8,6 +8,7 @@ import { Download, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 import { useSettings } from "@/lib/settings-context"
+import { exportAccountData } from "@/lib/api"
 import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from "@/lib/constants"
 import { AccountHeader } from "@/components/account/components/account-header"
 import { InsetDivider } from "@/components/account/components/inset-divider"
@@ -41,6 +42,7 @@ export default function AccountPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
 
     // User state
     const [user, setUser] = useState<User | null>(null)
@@ -167,6 +169,33 @@ export default function AccountPage() {
             setError("Failed to update profile. Please try again.")
         } finally {
             setIsSaving(false)
+        }
+    }
+
+    const handleExport = async () => {
+        if (isExporting) return
+
+        setIsExporting(true)
+        setError(null)
+
+        try {
+            const blob = await exportAccountData()
+
+            const url = URL.createObjectURL(blob)
+            const anchor = document.createElement("a")
+
+            anchor.href = url
+            anchor.download = `budget-export-${new Date().toISOString().slice(0, 10)}.csv`
+            document.body.appendChild(anchor)
+            anchor.click()
+            anchor.remove()
+            URL.revokeObjectURL(url)
+
+            setSuccess("Your data has been exported")
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to export data")
+        } finally {
+            setIsExporting(false)
         }
     }
 
@@ -471,8 +500,13 @@ export default function AccountPage() {
                 <SettingsSection title="Data">
                     <SettingsRow
                         label="Export Your Data"
-                        description="Download all your budget data as CSV"
-                        trailing={<Download className="h-[18px] w-[18px] flex-none text-green-600" strokeWidth={2} />}
+                        description="Download all your budget data as CSV (once every 2 days)"
+                        onClick={handleExport}
+                        trailing={
+                            isExporting
+                                ? <Loader2 className="h-[18px] w-[18px] flex-none animate-spin text-green-600" strokeWidth={2} />
+                                : <Download className="h-[18px] w-[18px] flex-none text-green-600" strokeWidth={2} />
+                        }
                     />
                 </SettingsSection>
 
