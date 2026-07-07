@@ -1,43 +1,37 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { INCOME_TYPE_META, IncomeType, IncomeTypeFigures } from "./income-type-meta";
 import { DonutChart } from "../ui/donut-chart";
 
 interface IncomeCardExpandedProps {
     incomes: IncomeSource[];
     totalIncome: number;
-    activeTotal: number;
-    passiveTotal: number;
-    activePercentage: number;
-    passivePercentage: number;
+    incomeTypes: IncomeTypeFigures[];
     onAdd: () => void;
     onSelect: (id: string) => void;
-    hoveredType: 'active' | 'passive' | null;
-    setHoveredType: (type: 'active' | 'passive' | null) => void;
-    selectedType: 'active' | 'passive' | null;
-    onSelectType: (type: 'active' | 'passive') => void;
+    focusedType: IncomeType | null;
+    setHoveredType: (type: IncomeType | null) => void;
+    onSelectType: (type: IncomeType) => void;
     hoveredItemId: string | null;
     setHoveredItemId: (id: string | null) => void;
 }
 
 /**
- * Expanded Income card: small donut + focused figures, then the source list.
- * Hovering a legend chip or a source row previews that type (the headline
- * shows just its total, the rest dims); clicking/tapping a chip pins the type,
- * clicking it again unpins back to the total. Hover wins while pointing.
+ * Expanded Income card: small donut + figures, then the source list.
+ * The headline figure follows `focusedType` (hovering a legend chip or a
+ * source row previews that type, clicking/tapping a chip pins it): it shows
+ * the focused type's total, or the grand total when nothing is focused, and
+ * everything of the other type dims.
  */
 export function IncomeCardExpanded({
     incomes,
     totalIncome,
-    activeTotal,
-    passiveTotal,
-    activePercentage,
-    passivePercentage,
+    incomeTypes,
     onAdd,
     onSelect,
-    hoveredType,
+    focusedType,
     setHoveredType,
-    selectedType,
     onSelectType,
     hoveredItemId,
     setHoveredItemId
@@ -45,30 +39,20 @@ export function IncomeCardExpanded({
     const isEmpty = incomes.length === 0;
     const { formatAmount } = useSettings();
 
-    // What the figures focus on: the hovered type while pointing, else the
-    // pinned type, else nothing (grand total).
-    const focusedType = hoveredType ?? selectedType;
-    const headlineAmount = focusedType === 'active' ? activeTotal : focusedType === 'passive' ? passiveTotal : totalIncome;
-    const headlineLabel = focusedType === 'active' ? 'Active Income' : focusedType === 'passive' ? 'Passive Income' : 'Total Monthly';
+    const focused = incomeTypes.find(t => t.type === focusedType);
+    const headlineAmount = focused === undefined ? totalIncome : focused.total;
+    const headlineLabel = focused === undefined ? 'Total Monthly' : `${focused.label} Income`;
 
-    const segments = [
-        {
-            value: activePercentage,
-            color: '#007AFF',
-            style: {
-                transition: 'opacity 0.2s ease-out',
-                opacity: focusedType === 'passive' ? 0.4 : 1,
-            },
+    const isDimmed = (type: IncomeType) => focusedType !== null && focusedType !== type;
+
+    const segments = incomeTypes.map(t => ({
+        value: t.percentage,
+        color: t.color,
+        style: {
+            transition: 'opacity 0.2s ease-out',
+            opacity: isDimmed(t.type) ? 0.4 : 1,
         },
-        {
-            value: passivePercentage,
-            color: '#FF9500',
-            style: {
-                transition: 'opacity 0.2s ease-out',
-                opacity: focusedType === 'active' ? 0.4 : 1,
-            },
-        },
-    ];
+    }));
 
     const renderIcon = (iconId: string) => {
         if (iconId.startsWith("data:")) {
@@ -106,26 +90,19 @@ export function IncomeCardExpanded({
                     <p className="text-sm text-muted-foreground">{headlineLabel}</p>
                     {!isEmpty && (
                         <div className="flex gap-3 mt-1">
-                            <div
-                                className="flex items-center gap-1.5 cursor-pointer transition-opacity duration-200"
-                                style={{ opacity: focusedType === 'passive' ? 0.3 : 1 }}
-                                onClick={() => onSelectType('active')}
-                                onMouseEnter={() => setHoveredType('active')}
-                                onMouseLeave={() => { if (hoveredItemId === null) setHoveredType(null); }}
-                            >
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#007AFF' }} />
-                                <span className="text-xs text-muted-foreground">{Math.round(activePercentage)}% Active</span>
-                            </div>
-                            <div
-                                className="flex items-center gap-1.5 cursor-pointer transition-opacity duration-200"
-                                style={{ opacity: focusedType === 'active' ? 0.3 : 1 }}
-                                onClick={() => onSelectType('passive')}
-                                onMouseEnter={() => setHoveredType('passive')}
-                                onMouseLeave={() => { if (hoveredItemId === null) setHoveredType(null); }}
-                            >
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF9500' }} />
-                                <span className="text-xs text-muted-foreground">{Math.round(passivePercentage)}% Passive</span>
-                            </div>
+                            {incomeTypes.map(t => (
+                                <div
+                                    key={t.type}
+                                    className="flex items-center gap-1.5 cursor-pointer transition-opacity duration-200"
+                                    style={{ opacity: isDimmed(t.type) ? 0.3 : 1 }}
+                                    onClick={() => onSelectType(t.type)}
+                                    onMouseEnter={() => setHoveredType(t.type)}
+                                    onMouseLeave={() => { if (hoveredItemId === null) setHoveredType(null); }}
+                                >
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                                    <span className="text-xs text-muted-foreground">{Math.round(t.percentage)}% {t.label}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
@@ -165,7 +142,6 @@ export function IncomeCardExpanded({
                     <div className="space-y-2">
                         {incomes.map((income) => {
                             const isHovered = hoveredItemId === income.id;
-                            const otherTypeFocused = focusedType !== null && focusedType !== income.type;
 
                             return (
                                 <div
@@ -175,7 +151,7 @@ export function IncomeCardExpanded({
                                     style={{
                                         backgroundColor: isHovered ? 'var(--muted)' : 'transparent',
                                         transform: isHovered ? 'scale(1.02)' : 'scale(1)',
-                                        opacity: otherTypeFocused ? 0.4 : 1
+                                        opacity: isDimmed(income.type) ? 0.4 : 1
                                     }}
                                     onMouseEnter={() => {
                                         setHoveredItemId(income.id);
@@ -194,7 +170,7 @@ export function IncomeCardExpanded({
                                         <div className="flex items-center gap-1.5">
                                             <div
                                                 className="w-2 h-2 rounded-full flex-shrink-0"
-                                                style={{ backgroundColor: income.type === 'active' ? '#007AFF' : '#FF9500' }}
+                                                style={{ backgroundColor: INCOME_TYPE_META[income.type].color }}
                                             />
                                             <span className="text-xs text-muted-foreground capitalize">{income.type}</span>
                                         </div>

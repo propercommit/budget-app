@@ -1,16 +1,13 @@
 import { useSettings } from "@/lib/settings-context";
+import { IncomeType, IncomeTypeFigures } from "./income-type-meta";
 import { DonutChart, DonutSegment } from "../ui/donut-chart";
 
 interface IncomeCardCollapsedProps {
     totalIncome: number;
-    activeTotal: number;
-    passiveTotal: number;
-    activePercentage: number;
-    passivePercentage: number;
-    hoveredType: 'active' | 'passive' | null;
-    setHoveredType: (type: 'active' | 'passive' | null) => void;
-    selectedType: 'active' | 'passive' | null;
-    onSelectType: (type: 'active' | 'passive') => void;
+    incomeTypes: IncomeTypeFigures[];
+    focusedType: IncomeType | null;
+    setHoveredType: (type: IncomeType | null) => void;
+    onSelectType: (type: IncomeType) => void;
 }
 
 interface BreakdownRowProps {
@@ -47,44 +44,30 @@ function BreakdownRow({ color, label, amount, percentage, isDimmed, onClick, onM
  * Desktop puts the breakdown beside the donut, mobile stacks the donut (figures
  * in its center), a hairline divider and the breakdown rows.
  *
- * Hovering a segment or row previews that type — the headline figure shows just
- * that type's total and the other type dims. Clicking/tapping pins the type
- * (the only way in on touch, where hover doesn't exist); clicking it again
- * unpins back to the total. While hovering, the pointer target wins over the pin.
+ * The headline figure follows `focusedType` (hover previews, click/tap pins —
+ * the only way in on touch, where hover doesn't exist): it shows the focused
+ * type's total, or the grand total when nothing is focused, and the other
+ * type dims. The mobile donut deliberately gets no hover handlers — a tap
+ * emulates mouseenter without a matching mouseleave, so hover would stick.
  */
 export function IncomeCardCollapsed({
     totalIncome,
-    activeTotal,
-    passiveTotal,
-    activePercentage,
-    passivePercentage,
-    hoveredType,
+    incomeTypes,
+    focusedType,
     setHoveredType,
-    selectedType,
     onSelectType,
 }: IncomeCardCollapsedProps) {
 
     const isEmpty = totalIncome === 0;
     const { formatAmount } = useSettings();
 
-    // Single source of truth per income type: the donut segments, the hover/click
-    // wiring and both breakdown lists all derive from this array.
-    const incomeTypes = [
-        { type: 'active' as const, color: '#007AFF', label: 'Active', total: activeTotal, percentage: activePercentage },
-        { type: 'passive' as const, color: '#FF9500', label: 'Passive', total: passiveTotal, percentage: passivePercentage },
-    ];
-
-    // What the figures focus on: the hovered type while pointing, else the pinned
-    // type, else nothing (grand total).
-    const focusedType = hoveredType ?? selectedType;
     const focused = incomeTypes.find(t => t.type === focusedType);
+    const focusLabel = focused === undefined ? null : `${focused.label} Income`;
     const headlineAmount = focused === undefined ? totalIncome : focused.total;
-    const headlineLabel = focused === undefined ? 'Total Monthly Income' : `${focused.label} Income`;
-    const centerLabel = focused === undefined ? 'Total Income' : `${focused.label} Income`;
 
-    const isDimmed = (type: 'active' | 'passive') => focusedType !== null && focusedType !== type;
+    const isDimmed = (type: IncomeType) => focusedType !== null && focusedType !== type;
 
-    const segments: DonutSegment[] = incomeTypes.map(t => ({
+    const segmentFor = (t: IncomeTypeFigures): DonutSegment => ({
         value: t.percentage,
         color: t.color,
         style: {
@@ -93,7 +76,9 @@ export function IncomeCardCollapsed({
             cursor: 'pointer',
         },
         onClick: () => onSelectType(t.type),
-    }));
+    });
+
+    const segments = incomeTypes.map(segmentFor);
 
     // The empty state has no breakdown to show — a single dashed ring reads
     // the same on both viewports.
@@ -126,9 +111,9 @@ export function IncomeCardCollapsed({
     );
 
     // Desktop adds hover previews on top of the shared click wiring.
-    const hoverSegments: DonutSegment[] = segments.map((segment, i) => ({
-        ...segment,
-        onMouseEnter: () => setHoveredType(incomeTypes[i].type),
+    const hoverSegments = incomeTypes.map(t => ({
+        ...segmentFor(t),
+        onMouseEnter: () => setHoveredType(t.type),
         onMouseLeave: () => setHoveredType(null),
     }));
 
@@ -141,7 +126,7 @@ export function IncomeCardCollapsed({
 
                 <div className="flex flex-col items-start">
                     <p className="text-[34px] leading-10 font-bold tracking-tight text-foreground">{formatAmount(headlineAmount)}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{headlineLabel}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{focusLabel ?? 'Total Monthly Income'}</p>
 
                     <div className="mt-6 flex flex-col gap-3 w-60">
                         {incomeTypes.map(t => (
@@ -171,7 +156,7 @@ export function IncomeCardCollapsed({
                     centerContent={
                         <div className="flex flex-col items-center justify-center">
                             <span className="text-xl font-bold tracking-tight text-foreground">{formatAmount(headlineAmount)}</span>
-                            <span className="text-xs text-muted-foreground">{centerLabel}</span>
+                            <span className="text-xs text-muted-foreground">{focusLabel ?? 'Total Income'}</span>
                         </div>
                     }
                 />
