@@ -10,6 +10,7 @@ import type { User } from "@supabase/supabase-js"
 import { useSettings } from "@/lib/settings-context"
 import { exportAccountData } from "@/lib/api"
 import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from "@/lib/constants"
+import { FormBanner } from "@/components/ui/form-banner"
 import { AccountHeader } from "@/components/account/components/account-header"
 import { InsetDivider } from "@/components/account/components/inset-divider"
 import { ProfileAvatar } from "@/components/account/components/profile-avatar"
@@ -65,6 +66,7 @@ export default function AccountPage() {
     const [currentPassword, setCurrentPassword] = useState("")
     const [newPassword, setNewPassword] = useState("")
     const [confirmNewPassword, setConfirmNewPassword] = useState("")
+    const [passwordSubmitted, setPasswordSubmitted] = useState(false)
 
     // Form state - Delete account
     const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -76,6 +78,18 @@ export default function AccountPage() {
 
     // Derived state
     const hasProfileChanges = firstName !== initialFirstName || lastName !== initialLastName
+
+    // Password-modal field errors — validate on submit, clear on input: they
+    // surface after a failed submit and derive from live values, so fixing a
+    // field clears its message immediately. Empty fields stay a banner.
+    const newPasswordError =
+        passwordSubmitted && newPassword.length > 0 && newPassword.length < 8
+            ? "Use at least 8 characters"
+            : null
+    const confirmPasswordError =
+        passwordSubmitted && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword
+            ? "Passwords don't match"
+            : null
     const userEmail = user?.email ?? ""
     const initials = `${firstName?.[0] ?? ""}${lastName?.[0] ?? ""}`.toUpperCase() || "?"
     const isGoogleUser = user?.app_metadata?.provider === "google"
@@ -137,6 +151,7 @@ export default function AccountPage() {
         setConfirmNewPassword("")
         setDeleteConfirmText("")
         setDeletePassword("")
+        setPasswordSubmitted(false)
         setError(null)
     }
 
@@ -301,20 +316,16 @@ export default function AccountPage() {
     }
 
     const handleChangePassword = async () => {
-        if (!currentPassword || !newPassword || !confirmNewPassword) {
+        if (currentPassword === "" || newPassword === "" || confirmNewPassword === "") {
             setError("Please fill in all fields")
             return
         }
 
-        if (newPassword !== confirmNewPassword) {
-            setError("New passwords do not match")
-            return
-        }
+        // Field-level problems render as FieldMessages in the modal (derived
+        // from passwordSubmitted), not as a banner.
+        setPasswordSubmitted(true)
 
-        if (newPassword.length < 8) {
-            setError("Password must be at least 8 characters")
-            return
-        }
+        if (newPassword.length < 8 || newPassword !== confirmNewPassword) return
 
         setIsSaving(true)
         setError(null)
@@ -429,19 +440,13 @@ export default function AccountPage() {
         <div className="min-h-svh bg-muted dark:bg-background">
             <AccountHeader onBack={handleBack} />
 
-            {/* Feedback Messages */}
+            {/* Feedback Messages — page-level results outside any modal.
+                Success never wears error clothes. */}
             {(error !== null || success !== null) && (
                 <div className="mx-auto max-w-2xl px-4 pt-4">
-                    <div
-                        role="alert"
-                        className={`rounded-xl p-4 text-sm font-medium ${
-                            success !== null
-                                ? "border border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-400"
-                                : "border border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400"
-                        }`}
-                    >
-                        {success ?? error}
-                    </div>
+                    {success !== null
+                        ? <FormBanner variant="success">{success}</FormBanner>
+                        : <FormBanner variant="error">{error}</FormBanner>}
                 </div>
             )}
 
@@ -552,6 +557,8 @@ export default function AccountPage() {
                         newPassword={newPassword}
                         confirmPassword={confirmNewPassword}
                         error={activeModal === "password" ? error : null}
+                        newPasswordError={activeModal === "password" ? newPasswordError : null}
+                        confirmPasswordError={activeModal === "password" ? confirmPasswordError : null}
                         isSaving={isSaving}
                         onCurrentPasswordChange={setCurrentPassword}
                         onNewPasswordChange={setNewPassword}
