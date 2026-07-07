@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
+import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
@@ -116,7 +117,10 @@ export function SpendingItemEditPopin({
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [conflict, setConflict] = useState<CreateSpendingConflict | null>(null);
     const [lastAutoSelected, setLastAutoSelected] = useState<string | null>(null);
+    const { submitted, reveal } = useSubmitReveal();
     const nameInputRef = useRef<HTMLInputElement>(null);
+    const categoryGroupRef = useRef<HTMLDivElement>(null);
+    const budgetRef = useRef<HTMLInputElement>(null);
     const { settings } = useSettings();
 
     if (autoSelectCategory && autoSelectCategory !== lastAutoSelected) {
@@ -127,10 +131,17 @@ export function SpendingItemEditPopin({
     const isCreate = mode === "create";
     const isResume = selectedSeries !== null;
     const parsedBudget = parseAmountToCents(budget);
-    const isFormValid =
-        name.trim() !== "" &&
-        parsedBudget !== null &&
-        selectedCategory !== "";
+
+    // Validate on submit, clear on input: errors surface only after a failed
+    // save and are derived from live values, so fixing a field clears its
+    // message immediately.
+    const nameInvalid = name.trim() === "";
+    const categoryInvalid = selectedCategory === "";
+    const budgetInvalid = parsedBudget === null;
+
+    const nameError = submitted && nameInvalid;
+    const categoryError = submitted && categoryInvalid;
+    const budgetError = submitted && budgetInvalid;
 
     const selectedCategoryColor =
         categories.find((c) => c.name === selectedCategory)?.color ?? "#007AFF";
@@ -165,7 +176,14 @@ export function SpendingItemEditPopin({
     };
 
     const handleSubmit = async () => {
-        if (parsedBudget === null) return;
+
+        const invalid = reveal([
+            { error: nameInvalid, ref: nameInputRef },
+            { error: categoryInvalid, ref: categoryGroupRef },
+            { error: budgetInvalid, ref: budgetRef },
+        ]);
+
+        if (invalid || parsedBudget === null) return;
 
         const result = await onSave({
             name,
@@ -208,13 +226,8 @@ export function SpendingItemEditPopin({
                         </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={!isFormValid}
-                            aria-disabled={!isFormValid}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={isFormValid
-                                ? { backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }
-                                : { backgroundColor: "var(--border)", color: "var(--muted-foreground)", cursor: "not-allowed" }
-                            }
+                            style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
                         >
                             {isCreate ? (isResume ? "Resume" : "Create") : "Save Changes"}
                         </button>
@@ -253,19 +266,21 @@ export function SpendingItemEditPopin({
                             aria-expanded={isCreate ? showDropdown : undefined}
                             aria-controls={isCreate ? "series-typeahead" : undefined}
                             className={`w-full ${isCreate ? "pl-11" : "px-4"} pr-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200`}
-                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                            style={fieldInputStyle(nameError || conflict !== null)}
+                            {...fieldValidationProps(nameError || conflict !== null, "spending-name-error")}
                         />
                     </div>
 
                     {conflict !== null && (
-                        <p role="alert" className="text-xs font-medium" style={{ color: "#FF3B30" }}>
-                            {conflict === "series_dormant"
-                                ? "You already have an item with this name — pick it in the list below to resume it."
-                                : `"${name.trim()}" is already in ${selectedMonth !== "" ? monthLabel(selectedMonth) : "this month"}.`}
-                        </p>
+                        <div role="alert">
+                            <FieldMessage id="spending-name-error">
+                                {conflict === "series_dormant"
+                                    ? "You already have an item with this name — pick it in the list below to resume it."
+                                    : `"${name.trim()}" is already in ${selectedMonth !== "" ? monthLabel(selectedMonth) : "this month"}.`}
+                            </FieldMessage>
+                        </div>
                     )}
+                    {conflict === null && nameError && <FieldMessage id="spending-name-error">Enter a name</FieldMessage>}
 
                     {showDropdown && (
                         <div
@@ -362,7 +377,14 @@ export function SpendingItemEditPopin({
                     <legend className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Category
                     </legend>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" role="radiogroup" aria-label="Select a category">
+                    <div
+                        ref={categoryGroupRef}
+                        tabIndex={-1}
+                        className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 outline-none"
+                        role="radiogroup"
+                        aria-label="Select a category"
+                        {...fieldAriaProps(categoryError, "spending-category-error")}
+                    >
                         {categories.map((cat) => (
                             <button
                                 key={cat.name}
@@ -393,17 +415,27 @@ export function SpendingItemEditPopin({
                             <span>New Category</span>
                         </button>
                     </div>
+                    {categoryError && <FieldMessage id="spending-category-error">Choose a category</FieldMessage>}
                 </fieldset>
 
                 <div className="space-y-2">
                     <label htmlFor="spending-budget" className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Monthly Budget
                     </label>
-                    <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
+                    {/* The prefix sits in flow (not absolutely positioned) so
+                        the gap to the amount holds for any symbol width ($ vs
+                        CHF); the focus ring moves to the wrapper accordingly.
+                        The errored inline style wins over the focus-within
+                        utilities, keeping the red border while focused. */}
+                    <div
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        style={budgetError ? fieldInputStyle(true) : undefined}
+                    >
+                        <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
                             {currencySymbol}
                         </span>
                         <input
+                            ref={budgetRef}
                             id="spending-budget"
                             type="number"
                             value={budget}
@@ -411,13 +443,14 @@ export function SpendingItemEditPopin({
                             placeholder="0"
                             aria-required="true"
                             aria-label="Monthly budget amount"
-                            className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                            className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
+                            style={{ color: "var(--foreground)" }}
+                            {...fieldAriaProps(budgetError, "spending-budget-error")}
                         />
                     </div>
-                    <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>Set how much you want to spend per month</p>
+                    {budgetError
+                        ? <FieldMessage id="spending-budget-error">{amountFieldMessage(budget)}</FieldMessage>
+                        : <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>Set how much you want to spend per month</p>}
                 </div>
 
                 <div className="space-y-2">

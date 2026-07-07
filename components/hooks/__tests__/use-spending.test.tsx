@@ -17,9 +17,15 @@ vi.mock("@/lib/toast", () => ({
   showErrorToast: vi.fn(),
 }));
 
+// The routed-entry flow announces the move with a plain success toast.
+vi.mock("react-hot-toast", () => ({
+  default: { error: vi.fn(), success: vi.fn() },
+}));
+
 import { useSpending, type CreateSpendingConflict } from "@/components/hooks/use-spending";
 import * as api from "@/lib/api";
 import { showErrorToast } from "@/lib/toast";
+import toast from "react-hot-toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
 
 const MONTH = "2026-06";
@@ -533,7 +539,7 @@ describe("useSpending — materializeMonth", () => {
 
     expect(result.current.spendingData["2026-07"]).toBeUndefined();
     expect(result.current.spendingData[MONTH]).toEqual(before);
-    expect(toast.error).not.toHaveBeenCalled();
+    expect(showErrorToast).not.toHaveBeenCalled();
   });
 });
 
