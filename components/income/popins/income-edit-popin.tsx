@@ -4,7 +4,7 @@ import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
-import { FieldMessage, amountFieldMessage, fieldInputStyle, fieldValidationProps, focusFirstInvalid } from "@/components/ui/field-message";
+import { FieldMessage, amountFieldMessage, fieldFocusProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
@@ -26,7 +26,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
     const [startDate, setStartDate] = useState(initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '');
     const [endDate, setEndDate] = useState(initialData?.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
     const [note, setNote] = useState(initialData?.note || '');
-    const [submitted, setSubmitted] = useState(false);
+    const { submitted, reveal } = useSubmitReveal();
     const { settings } = useSettings();
 
     const nameRef = useRef<HTMLInputElement>(null);
@@ -56,15 +56,13 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
 
     const handleSave = () => {
 
-        if (nameInvalid || parsedAmount === null || startDateInvalid) {
-            setSubmitted(true);
-            focusFirstInvalid([
-                { error: nameInvalid, ref: nameRef },
-                { error: amountInvalid, ref: amountRef },
-                { error: startDateInvalid, ref: startDateRef },
-            ]);
-            return;
-        }
+        const invalid = reveal([
+            { error: nameInvalid, ref: nameRef },
+            { error: amountInvalid, ref: amountRef },
+            { error: startDateInvalid, ref: startDateRef },
+        ]);
+
+        if (invalid || parsedAmount === null) return;
 
         onSave({
             name,
@@ -121,7 +119,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Monthly Salary"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ ...fieldInputStyle(nameError), color: "var(--foreground)" }}
+                        style={fieldInputStyle(nameError)}
                         {...fieldValidationProps(nameError, "income-name-error")}
                     />
                     {nameError && <FieldMessage id="income-name-error">Enter a name</FieldMessage>}
@@ -143,7 +141,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                             onChange={handleAmountChange}
                             placeholder="0.00"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ ...fieldInputStyle(amountError), color: "var(--foreground)" }}
+                            style={fieldInputStyle(amountError)}
                             {...fieldValidationProps(amountError, "income-amount-error")}
                         />
                     </div>
@@ -174,7 +172,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ ...fieldInputStyle(startDateError), color: "var(--foreground)", WebkitAppearance: 'none', minWidth: 0 }}
+                                style={{ ...fieldInputStyle(startDateError), WebkitAppearance: 'none', minWidth: 0 }}
                                 {...fieldValidationProps(startDateError, "income-start-date-error")}
                             />
                             {startDateError
@@ -190,8 +188,8 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ ...fieldInputStyle(false), color: "var(--foreground)", WebkitAppearance: 'none', minWidth: 0 }}
-                                {...fieldValidationProps(false, "income-end-date-error")}
+                                style={{ ...fieldInputStyle(false), WebkitAppearance: 'none', minWidth: 0 }}
+                                {...fieldFocusProps(false)}
                             />
                             <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>End date (optional)</p>
                         </div>
@@ -208,8 +206,8 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         placeholder="Add any additional details..."
                         rows={3}
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200 resize-none"
-                        style={{ ...fieldInputStyle(false), color: "var(--foreground)" }}
-                        {...fieldValidationProps(false, "income-note-error")}
+                        style={fieldInputStyle(false)}
+                        {...fieldFocusProps(false)}
                     />
                 </div>
             </div>

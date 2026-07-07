@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { ColorPicker } from "@/components/color-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
-import { FieldMessage, fieldInputStyle, fieldValidationProps, focusFirstInvalid } from "@/components/ui/field-message";
+import { FieldMessage, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { CATEGORY_DELETE_WARNING } from "@/lib/constants";
@@ -36,7 +36,7 @@ export function CategoryPopin({
     const [name, setName] = useState(initialName);
     const [selectedIcon, setSelectedIcon] = useState(initialIcon);
     const [selectedColor, setSelectedColor] = useState(initialColor);
-    const [submitted, setSubmitted] = useState(false);
+    const { submitted, reveal } = useSubmitReveal();
 
     const nameRef = useRef<HTMLInputElement>(null);
 
@@ -49,11 +49,8 @@ export function CategoryPopin({
     const nameError = submitted && nameInvalid;
 
     const handleSave = () => {
-        if (nameInvalid) {
-            setSubmitted(true);
-            focusFirstInvalid([{ error: nameInvalid, ref: nameRef }]);
-            return;
-        }
+        if (reveal([{ error: nameInvalid, ref: nameRef }])) return;
+
         // The API persists the trimmed label — emit the same value so client
         // state (snapshots, label filter) never diverges from the server.
         onSave({ name: name.trim(), icon: selectedIcon, color: selectedColor });
@@ -120,7 +117,7 @@ export function CategoryPopin({
                         maxLength={30}
                         placeholder="e.g., Transport, Food"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ ...fieldInputStyle(nameError), color: "var(--foreground)" }}
+                        style={fieldInputStyle(nameError)}
                         {...fieldValidationProps(nameError, "category-name-error")}
                     />
                     {nameError

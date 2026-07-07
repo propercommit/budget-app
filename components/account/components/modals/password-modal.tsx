@@ -2,7 +2,7 @@
 
 import { InsetDivider } from "../inset-divider";
 import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
-import { FieldMessage } from "@/components/ui/field-message";
+import { FieldMessage, fieldAriaProps } from "@/components/ui/field-message";
 import { FormBanner } from "@/components/ui/form-banner";
 
 interface PasswordModalProps {
@@ -63,8 +63,7 @@ export function PasswordModal({
                     value={newPassword}
                     onChange={(e) => onNewPasswordChange(e.target.value)}
                     autoComplete="new-password"
-                    aria-invalid={newPasswordError !== null ? true : undefined}
-                    aria-describedby={newPasswordError !== null ? "newPassword-error" : undefined}
+                    {...fieldAriaProps(newPasswordError !== null, "newPassword-error")}
                 />
                 {newPasswordError !== null && (
                     <div className="px-4 pb-3">
@@ -78,8 +77,7 @@ export function PasswordModal({
                     value={confirmPassword}
                     onChange={(e) => onConfirmPasswordChange(e.target.value)}
                     autoComplete="new-password"
-                    aria-invalid={confirmPasswordError !== null ? true : undefined}
-                    aria-describedby={confirmPasswordError !== null ? "confirmNewPassword-error" : undefined}
+                    {...fieldAriaProps(confirmPasswordError !== null, "confirmNewPassword-error")}
                 />
                 {confirmPasswordError !== null && (
                     <div className="px-4 pb-3">

@@ -1,5 +1,4 @@
-"use client";
-
+import { CSSProperties } from "react";
 import toast from "react-hot-toast";
 
 /**
@@ -13,6 +12,22 @@ import toast from "react-hot-toast";
  * whenever the failed call can be replayed; the button dismisses the toast and
  * re-runs it.
  */
+
+/**
+ * The spec's toast card, shared by the global `<Toaster>` defaults (plain
+ * `toast.error`/`toast.success` calls) and the custom Retry toast below —
+ * `toast.custom` does not inherit `toastOptions.style`, so both spread this.
+ */
+export const TOAST_CARD_STYLE: CSSProperties = {
+    background: "var(--card)",
+    color: "var(--foreground)",
+    border: "1px solid var(--border)",
+    borderRadius: 14,
+    padding: "12px 16px",
+    fontSize: 14,
+    fontWeight: 500,
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+};
 
 /** 18px filled status icon (red circle, white cross), per the toast spec. */
 function ToastErrorIcon() {
@@ -34,15 +49,8 @@ export function showErrorToast(message: string, options?: ErrorToastOptions): vo
         <div
             className="flex items-center"
             style={{
+                ...TOAST_CARD_STYLE,
                 gap: 10,
-                background: "var(--card)",
-                color: "var(--foreground)",
-                border: "1px solid var(--border)",
-                borderRadius: 14,
-                padding: "12px 16px",
-                fontSize: 14,
-                fontWeight: 500,
-                boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
                 opacity: t.visible ? 1 : 0,
                 transform: t.visible ? "translateY(0)" : "translateY(8px)",
                 transition: "opacity 0.3s ease, transform 0.3s ease",

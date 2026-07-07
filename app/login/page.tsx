@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FieldMessage, fieldInputStyle, focusFirstInvalid } from "@/components/ui/field-message"
+import { FieldMessage, fieldAriaProps, fieldInputStyle, useSubmitReveal } from "@/components/ui/field-message"
 import { FormBanner, FormBannerVariant } from "@/components/ui/form-banner"
 import { Loader2 } from "lucide-react"
 import { Logo } from "@/components/logo"
@@ -48,7 +48,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
     const [isGoogleLoading, setIsGoogleLoading] = useState(false)
     const [banner, setBanner] = useState<Banner | null>(null)
-    const [submitted, setSubmitted] = useState(false)
+    const { submitted, reveal, reset: resetSubmitted } = useSubmitReveal()
     const [mode, setMode] = useState<AuthMode>("login")
 
     const firstNameRef = useRef<HTMLInputElement>(null)
@@ -110,17 +110,17 @@ export default function LoginPage() {
 
         // The submit button is never disabled for validation — this reveals
         // the field messages (and terms banner) and focuses the first miss.
-        if (firstNameInvalid || lastNameInvalid || emailInvalid || passwordInvalid || confirmPasswordInvalid || termsInvalid) {
-            setSubmitted(true)
-            focusFirstInvalid([
-                { error: firstNameInvalid, ref: firstNameRef },
-                { error: lastNameInvalid, ref: lastNameRef },
-                { error: emailInvalid, ref: emailRef },
-                { error: passwordInvalid, ref: passwordRef },
-                { error: confirmPasswordInvalid, ref: confirmPasswordRef },
-            ])
-            return
-        }
+        // Terms has no focusable field: its problem surfaces as a banner.
+        const invalid = reveal([
+            { error: firstNameInvalid, ref: firstNameRef },
+            { error: lastNameInvalid, ref: lastNameRef },
+            { error: emailInvalid, ref: emailRef },
+            { error: passwordInvalid, ref: passwordRef },
+            { error: confirmPasswordInvalid, ref: confirmPasswordRef },
+            { error: termsInvalid },
+        ])
+
+        if (invalid) return
 
         setIsLoading(true)
 
@@ -194,7 +194,7 @@ export default function LoginPage() {
         setConfirmPassword("")
         setAcceptedTerms(false)
         setBanner(null)
-        setSubmitted(false)
+        resetSubmitted()
     }
 
     const switchMode = (newMode: AuthMode) => {
@@ -311,8 +311,7 @@ export default function LoginPage() {
                                                 autoComplete="given-name"
                                                 className="h-12 text-base"
                                                 style={firstNameError !== null ? fieldInputStyle(true) : undefined}
-                                                aria-invalid={firstNameError !== null ? true : undefined}
-                                                aria-describedby={firstNameError !== null ? "firstName-error" : undefined}
+                                                {...fieldAriaProps(firstNameError !== null, "firstName-error")}
                                             />
                                             {firstNameError !== null && <FieldMessage id="firstName-error">{firstNameError}</FieldMessage>}
                                         </div>
@@ -335,8 +334,7 @@ export default function LoginPage() {
                                                 autoComplete="family-name"
                                                 className="h-12 text-base"
                                                 style={lastNameError !== null ? fieldInputStyle(true) : undefined}
-                                                aria-invalid={lastNameError !== null ? true : undefined}
-                                                aria-describedby={lastNameError !== null ? "lastName-error" : undefined}
+                                                {...fieldAriaProps(lastNameError !== null, "lastName-error")}
                                             />
                                             {lastNameError !== null && <FieldMessage id="lastName-error">{lastNameError}</FieldMessage>}
                                         </div>
@@ -362,8 +360,7 @@ export default function LoginPage() {
                                         autoComplete="email"
                                         className="h-12 text-base"
                                         style={emailError !== null ? fieldInputStyle(true) : undefined}
-                                        aria-invalid={emailError !== null ? true : undefined}
-                                        aria-describedby={emailError !== null ? "email-error" : undefined}
+                                        {...fieldAriaProps(emailError !== null, "email-error")}
                                     />
                                     {emailError !== null && <FieldMessage id="email-error">{emailError}</FieldMessage>}
                                 </div>
@@ -398,8 +395,7 @@ export default function LoginPage() {
                                         autoComplete={mode === "login" ? "current-password" : "new-password"}
                                         className="h-12 text-base"
                                         style={passwordError !== null ? fieldInputStyle(true) : undefined}
-                                        aria-invalid={passwordError !== null ? true : undefined}
-                                        aria-describedby={passwordError !== null ? "password-error" : undefined}
+                                        {...fieldAriaProps(passwordError !== null, "password-error")}
                                     />
                                     {passwordError !== null
                                         ? <FieldMessage id="password-error">{passwordError}</FieldMessage>
@@ -430,8 +426,7 @@ export default function LoginPage() {
                                             autoComplete="new-password"
                                             className="h-12 text-base"
                                             style={confirmPasswordError !== null ? fieldInputStyle(true) : undefined}
-                                            aria-invalid={confirmPasswordError !== null ? true : undefined}
-                                            aria-describedby={confirmPasswordError !== null ? "confirmPassword-error" : undefined}
+                                            {...fieldAriaProps(confirmPasswordError !== null, "confirmPassword-error")}
                                         />
                                         {confirmPasswordError !== null && <FieldMessage id="confirmPassword-error">{confirmPasswordError}</FieldMessage>}
                                     </div>

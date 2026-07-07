@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
-import { FieldMessage, amountFieldMessage, fieldInputStyle, fieldValidationProps, focusFirstInvalid } from "@/components/ui/field-message";
+import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
@@ -68,7 +68,7 @@ export function SpendingItemEditPopin({
     const [endDate, setEndDate] = useState(initialEndDate);
     const [note, setNote] = useState(initialNote);
     const [lastAutoSelected, setLastAutoSelected] = useState<string | null>(null);
-    const [submitted, setSubmitted] = useState(false);
+    const { submitted, reveal } = useSubmitReveal();
     const { settings } = useSettings();
 
     const nameRef = useRef<HTMLInputElement>(null);
@@ -102,16 +102,14 @@ export function SpendingItemEditPopin({
 
     const handleSave = () => {
 
-        if (nameInvalid || categoryInvalid || parsedBudget === null || startDateInvalid) {
-            setSubmitted(true);
-            focusFirstInvalid([
-                { error: nameInvalid, ref: nameRef },
-                { error: categoryInvalid, ref: categoryGroupRef },
-                { error: budgetInvalid, ref: budgetRef },
-                { error: startDateInvalid, ref: startDateRef },
-            ]);
-            return;
-        }
+        const invalid = reveal([
+            { error: nameInvalid, ref: nameRef },
+            { error: categoryInvalid, ref: categoryGroupRef },
+            { error: budgetInvalid, ref: budgetRef },
+            { error: startDateInvalid, ref: startDateRef },
+        ]);
+
+        if (invalid || parsedBudget === null) return;
 
         onSave({
             name,
@@ -173,7 +171,7 @@ export function SpendingItemEditPopin({
                         placeholder="e.g., Fuel, Netflix, Groceries"
                         aria-required="true"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ ...fieldInputStyle(nameError), color: "var(--foreground)" }}
+                        style={fieldInputStyle(nameError)}
                         {...fieldValidationProps(nameError, "spending-name-error")}
                     />
                     {nameError && <FieldMessage id="spending-name-error">Enter a name</FieldMessage>}
@@ -191,8 +189,7 @@ export function SpendingItemEditPopin({
                         className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 outline-none"
                         role="radiogroup"
                         aria-label="Select a category"
-                        aria-invalid={categoryError === true ? true : undefined}
-                        aria-describedby={categoryError === true ? "spending-category-error" : undefined}
+                        {...fieldAriaProps(categoryError, "spending-category-error")}
                     >
                         {categories.map((cat) => (
                             <button
@@ -245,7 +242,7 @@ export function SpendingItemEditPopin({
                             aria-required="true"
                             aria-label="Monthly budget amount"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ ...fieldInputStyle(budgetError), color: "var(--foreground)" }}
+                            style={fieldInputStyle(budgetError)}
                             {...fieldValidationProps(budgetError, "spending-budget-error")}
                         />
                     </div>

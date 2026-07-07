@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { ErrorIcon } from "@/components/ui/field-message";
 
 /**
  * Form-level banner — one of the three surfaces of the unified validation
@@ -32,13 +33,7 @@ const VARIANTS: Record<FormBannerVariant, VariantSpec> = {
         border: "1px solid rgba(255, 59, 48, 0.25)",
         textColor: "var(--banner-error-text)",
         role: "alert",
-        icon: (
-            <svg style={ICON_STYLE} width="16" height="16" viewBox="0 0 24 24" fill="#FF3B30" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <rect x="11" y="6" width="2" height="8" rx="1" fill="white" />
-                <circle cx="12" cy="17" r="1.3" fill="white" />
-            </svg>
-        ),
+        icon: <ErrorIcon size={16} style={ICON_STYLE} />,
     },
     warning: {
         background: "rgba(255, 149, 0, 0.09)",

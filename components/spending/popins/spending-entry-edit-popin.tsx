@@ -5,7 +5,7 @@ import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
-import { FieldMessage, amountFieldMessage, fieldInputStyle, fieldValidationProps, focusFirstInvalid } from "@/components/ui/field-message";
+import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { iconMap } from "@/lib/icon-map";
@@ -59,7 +59,7 @@ export function EntryEditPopin({
     const [date, setDate] = useState(entry?.date || new Date().toISOString().split("T")[0]);
     const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
     const [link, setLink] = useState(entry?.link || "");
-    const [submitted, setSubmitted] = useState(false);
+    const { submitted, reveal } = useSubmitReveal();
     const [receiptFailed, setReceiptFailed] = useState(false);
     const { settings } = useSettings();
 
@@ -104,15 +104,13 @@ export function EntryEditPopin({
 
     const handleSave = () => {
 
-        if (nameInvalid || parsedAmount === null || dateInvalid) {
-            setSubmitted(true);
-            focusFirstInvalid([
-                { error: nameInvalid, ref: nameRef },
-                { error: amountInvalid, ref: amountRef },
-                { error: dateInvalid, ref: dateRef },
-            ]);
-            return;
-        }
+        const invalid = reveal([
+            { error: nameInvalid, ref: nameRef },
+            { error: amountInvalid, ref: amountRef },
+            { error: dateInvalid, ref: dateRef },
+        ]);
+
+        if (invalid || parsedAmount === null) return;
 
         onSave({
             name,
@@ -191,7 +189,7 @@ export function EntryEditPopin({
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Shell Station, Grocery run"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ ...fieldInputStyle(nameError), color: "var(--foreground)" }}
+                        style={fieldInputStyle(nameError)}
                         {...fieldValidationProps(nameError, "entry-name-error")}
                     />
                     {nameError && <FieldMessage id="entry-name-error">Enter a name</FieldMessage>}
@@ -228,8 +226,7 @@ export function EntryEditPopin({
                             placeholder="0.00"
                             className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
                             style={{ color: "var(--foreground)" }}
-                            aria-invalid={amountError === true ? true : undefined}
-                            aria-describedby={amountError === true ? "entry-amount-error" : undefined}
+                            {...fieldAriaProps(amountError, "entry-amount-error")}
                         />
                     </div>
                     {amountError && <FieldMessage id="entry-amount-error">{amountFieldMessage(amount)}</FieldMessage>}
@@ -259,7 +256,7 @@ export function EntryEditPopin({
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ ...fieldInputStyle(dateError), color: "var(--foreground)", WebkitAppearance: "none" }}
+                        style={{ ...fieldInputStyle(dateError), WebkitAppearance: "none" }}
                         {...fieldValidationProps(dateError, "entry-date-error")}
                     />
                     {dateError && <FieldMessage id="entry-date-error">Choose a date</FieldMessage>}
