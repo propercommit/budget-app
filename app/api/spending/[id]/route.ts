@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
@@ -153,7 +154,10 @@ export async function PUT(
         if (spent !== undefined) updateData.spent = spent;
         if (parsedStartDate !== undefined) {
             updateData.startDate = parsedStartDate;
-            updateData.month = `${parsedStartDate.getFullYear()}-${String(parsedStartDate.getMonth() + 1).padStart(2, "0")}`;
+            // UTC getters, because date-only strings ("YYYY-MM-DD") parse as UTC
+            // midnight; local getters read the previous month on any server west
+            // of UTC — silently moving the item across months on save.
+            updateData.month = `${parsedStartDate.getUTCFullYear()}-${String(parsedStartDate.getUTCMonth() + 1).padStart(2, "0")}`;
         }
         if (parsedEndDate !== undefined) updateData.endDate = parsedEndDate;
         if (note !== undefined) updateData.note = note || null;
@@ -174,6 +178,16 @@ export async function PUT(
 
         return NextResponse.json(response);
     } catch (error) {
+        // A startDate edit re-derives `month`, so the update can land on a month
+        // that already has a same-named item — surface the @@unique(userId, name,
+        // month) violation as a friendly 409 like the POST route does.
+        if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+            return NextResponse.json(
+                { error: "A spending item with this name already exists for this month" },
+                { status: 409 }
+            );
+        }
+
         console.error("[Spending PUT] Failed to update:", error);
         return NextResponse.json({ error: "Failed to update spending item" }, { status: 500 });
     }
