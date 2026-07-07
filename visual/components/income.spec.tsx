@@ -62,6 +62,20 @@ test.describe("Income popins", () => {
     await expect(page).toHaveScreenshot("income-edit-add.png");
   });
 
+  test("edit — add mode, validation revealed", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <IncomePopin isOpen={true} onClose={noop} onSave={noop} mode="add" />
+      </Providers>,
+    );
+
+    // An empty submit reveals the field messages and errored-input styling.
+    await page.getByRole("button", { name: "Add Income" }).click();
+    await expect(page.getByText("Enter a name")).toBeVisible();
+
+    await expect(page).toHaveScreenshot("income-edit-validation.png");
+  });
+
   test("edit — edit mode", async ({ mount, page }) => {
     await mount(
       <Providers>

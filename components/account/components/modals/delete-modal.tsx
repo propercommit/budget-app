@@ -2,6 +2,7 @@
 
 import { InsetDivider } from "../inset-divider";
 import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
+import { FormBanner } from "@/components/ui/form-banner";
 
 /**
  * The exact text a user must type to arm account deletion — shared with the
@@ -49,10 +50,12 @@ export function DeleteModal({
             title="Delete Account"
             action={{ label: "Delete", onClick: onSubmit, disabled: !canDelete, isSaving, destructive: true }}
         >
-            <SheetFootnote tone="destructive">
+            {/* A consequence warning, not an error — warning variant per the
+                validation system ("success/warnings never wear error clothes"). */}
+            <FormBanner variant="warning">
                 Deleting your account permanently removes all spending records, categories and budgets, income
                 sources, uploaded receipts, and your profile.
-            </SheetFootnote>
+            </FormBanner>
 
             <SheetGroup>
                 <SheetInput
@@ -76,7 +79,7 @@ export function DeleteModal({
                 )}
             </SheetGroup>
 
-            {error !== null && <SheetFootnote tone="destructive">{error}</SheetFootnote>}
+            {error !== null && <FormBanner variant="error">{error}</FormBanner>}
 
             <SheetFootnote>The Delete button activates once you type DELETE.</SheetFootnote>
         </SheetModal>

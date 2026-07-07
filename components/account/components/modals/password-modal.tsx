@@ -2,6 +2,8 @@
 
 import { InsetDivider } from "../inset-divider";
 import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
+import { FieldMessage, fieldAriaProps } from "@/components/ui/field-message";
+import { FormBanner } from "@/components/ui/form-banner";
 
 interface PasswordModalProps {
     isOpen: boolean;
@@ -9,7 +11,12 @@ interface PasswordModalProps {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
+    /** Whole-form / server feedback, rendered as an error banner. */
     error: string | null;
+    /** Field message under the new-password input (e.g. too short). */
+    newPasswordError: string | null;
+    /** Field message under the confirm input (passwords don't match). */
+    confirmPasswordError: string | null;
     isSaving: boolean;
     onCurrentPasswordChange: (value: string) => void;
     onNewPasswordChange: (value: string) => void;
@@ -25,6 +32,8 @@ export function PasswordModal({
     newPassword,
     confirmPassword,
     error,
+    newPasswordError,
+    confirmPasswordError,
     isSaving,
     onCurrentPasswordChange,
     onNewPasswordChange,
@@ -54,7 +63,13 @@ export function PasswordModal({
                     value={newPassword}
                     onChange={(e) => onNewPasswordChange(e.target.value)}
                     autoComplete="new-password"
+                    {...fieldAriaProps(newPasswordError !== null, "newPassword-error")}
                 />
+                {newPasswordError !== null && (
+                    <div className="px-4 pb-3">
+                        <FieldMessage id="newPassword-error">{newPasswordError}</FieldMessage>
+                    </div>
+                )}
                 <InsetDivider />
                 <SheetInput
                     type="password"
@@ -62,12 +77,21 @@ export function PasswordModal({
                     value={confirmPassword}
                     onChange={(e) => onConfirmPasswordChange(e.target.value)}
                     autoComplete="new-password"
+                    {...fieldAriaProps(confirmPasswordError !== null, "confirmNewPassword-error")}
                 />
+                {confirmPasswordError !== null && (
+                    <div className="px-4 pb-3">
+                        <FieldMessage id="confirmNewPassword-error">{confirmPasswordError}</FieldMessage>
+                    </div>
+                )}
             </SheetGroup>
 
-            {error !== null && <SheetFootnote tone="destructive">{error}</SheetFootnote>}
+            {error !== null && <FormBanner variant="error">{error}</FormBanner>}
 
-            <SheetFootnote>Your new password must be at least 8 characters.</SheetFootnote>
+            {/* Replaced by the field message while the length rule is failing. */}
+            {newPasswordError === null && (
+                <SheetFootnote>Your new password must be at least 8 characters.</SheetFootnote>
+            )}
         </SheetModal>
     );
 }

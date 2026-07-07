@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
+import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
@@ -67,7 +68,13 @@ export function SpendingItemEditPopin({
     const [endDate, setEndDate] = useState(initialEndDate);
     const [note, setNote] = useState(initialNote);
     const [lastAutoSelected, setLastAutoSelected] = useState<string | null>(null);
+    const { submitted, reveal } = useSubmitReveal();
     const { settings } = useSettings();
+
+    const nameRef = useRef<HTMLInputElement>(null);
+    const categoryGroupRef = useRef<HTMLDivElement>(null);
+    const budgetRef = useRef<HTMLInputElement>(null);
+    const startDateRef = useRef<HTMLInputElement>(null);
 
     if (autoSelectCategory && autoSelectCategory !== lastAutoSelected) {
         setSelectedCategory(autoSelectCategory);
@@ -76,14 +83,45 @@ export function SpendingItemEditPopin({
 
     const isCreate = mode === "create";
     const parsedBudget = parseAmountToCents(budget);
-    const isFormValid =
-        name.trim() !== "" &&
-        parsedBudget !== null &&
-        selectedCategory !== "" &&
-        startDate !== "";
+
+    // Validate on submit, clear on input: errors surface only after a failed
+    // save and are derived from live values, so fixing a field clears its
+    // message immediately.
+    const nameInvalid = name.trim() === "";
+    const categoryInvalid = selectedCategory === "";
+    const budgetInvalid = parsedBudget === null;
+    const startDateInvalid = startDate === "";
+
+    const nameError = submitted && nameInvalid;
+    const categoryError = submitted && categoryInvalid;
+    const budgetError = submitted && budgetInvalid;
+    const startDateError = submitted && startDateInvalid;
 
     const selectedCategoryColor =
         categories.find((c) => c.name === selectedCategory)?.color ?? "#007AFF";
+
+    const handleSave = () => {
+
+        const invalid = reveal([
+            { error: nameInvalid, ref: nameRef },
+            { error: categoryInvalid, ref: categoryGroupRef },
+            { error: budgetInvalid, ref: budgetRef },
+            { error: startDateInvalid, ref: startDateRef },
+        ]);
+
+        if (invalid || parsedBudget === null) return;
+
+        onSave({
+            name,
+            icon: selectedIcon,
+            category: selectedCategory,
+            categoryColor: selectedCategoryColor,
+            budget: parsedBudget,
+            startDate,
+            endDate,
+            note,
+        });
+    };
 
     return (
         <PopinWrapper
@@ -102,27 +140,9 @@ export function SpendingItemEditPopin({
                             Cancel
                         </button>
                         <button
-                            onClick={() => {
-                                if (parsedBudget === null) return;
-
-                                onSave({
-                                    name,
-                                    icon: selectedIcon,
-                                    category: selectedCategory,
-                                    categoryColor: selectedCategoryColor,
-                                    budget: parsedBudget,
-                                    startDate,
-                                    endDate,
-                                    note,
-                                });
-                            }}
-                            disabled={!isFormValid}
-                            aria-disabled={!isFormValid}
+                            onClick={handleSave}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={isFormValid
-                                ? { backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }
-                                : { backgroundColor: "var(--border)", color: "var(--muted-foreground)", cursor: "not-allowed" }
-                            }
+                            style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
                         >
                             {isCreate ? "Create" : "Save Changes"}
                         </button>
@@ -143,6 +163,7 @@ export function SpendingItemEditPopin({
                         Name
                     </label>
                     <input
+                        ref={nameRef}
                         id="spending-name"
                         type="text"
                         value={name}
@@ -150,10 +171,10 @@ export function SpendingItemEditPopin({
                         placeholder="e.g., Fuel, Netflix, Groceries"
                         aria-required="true"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                        style={fieldInputStyle(nameError)}
+                        {...fieldValidationProps(nameError, "spending-name-error")}
                     />
+                    {nameError && <FieldMessage id="spending-name-error">Enter a name</FieldMessage>}
                 </div>
 
                 <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
@@ -162,7 +183,14 @@ export function SpendingItemEditPopin({
                     <legend className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Category
                     </legend>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" role="radiogroup" aria-label="Select a category">
+                    <div
+                        ref={categoryGroupRef}
+                        tabIndex={-1}
+                        className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 outline-none"
+                        role="radiogroup"
+                        aria-label="Select a category"
+                        {...fieldAriaProps(categoryError, "spending-category-error")}
+                    >
                         {categories.map((cat) => (
                             <button
                                 key={cat.name}
@@ -193,6 +221,7 @@ export function SpendingItemEditPopin({
                             <span>New Category</span>
                         </button>
                     </div>
+                    {categoryError && <FieldMessage id="spending-category-error">Choose a category</FieldMessage>}
                 </fieldset>
 
                 <div className="space-y-2">
@@ -204,6 +233,7 @@ export function SpendingItemEditPopin({
                             {CURRENCY_SYMBOLS[settings.currency]}
                         </span>
                         <input
+                            ref={budgetRef}
                             id="spending-budget"
                             type="number"
                             value={budget}
@@ -212,12 +242,13 @@ export function SpendingItemEditPopin({
                             aria-required="true"
                             aria-label="Monthly budget amount"
                             className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                            style={fieldInputStyle(budgetError)}
+                            {...fieldValidationProps(budgetError, "spending-budget-error")}
                         />
                     </div>
-                    <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>Set how much you want to spend per month</p>
+                    {budgetError
+                        ? <FieldMessage id="spending-budget-error">{amountFieldMessage(budget)}</FieldMessage>
+                        : <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--muted-foreground)" }}>Set how much you want to spend per month</p>}
                 </div>
 
                 <fieldset className="space-y-2 max-w-full overflow-hidden">
@@ -227,6 +258,7 @@ export function SpendingItemEditPopin({
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="w-full sm:flex-1 min-w-0">
                             <input
+                                ref={startDateRef}
                                 id="spending-start-date"
                                 type="date"
                                 value={startDate}
@@ -234,11 +266,12 @@ export function SpendingItemEditPopin({
                                 aria-required="true"
                                 aria-label="Start date"
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: startDate ? "var(--foreground)" : "var(--muted-foreground)", WebkitAppearance: "none", minWidth: 0 }}
-                                onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
+                                style={{ ...fieldInputStyle(startDateError), color: startDate ? "var(--foreground)" : "var(--muted-foreground)", WebkitAppearance: "none", minWidth: 0 }}
+                                {...fieldValidationProps(startDateError, "spending-start-date-error")}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>Start</p>
+                            {startDateError
+                                ? <FieldMessage id="spending-start-date-error">Choose a start date</FieldMessage>
+                                : <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>Start</p>}
                         </div>
                         <svg className="hidden sm:block w-5 h-5 flex-shrink-0 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

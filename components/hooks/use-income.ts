@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getIncomeSources, getAllIncomeSources, createIncomeSource as apiCreate, updateIncomeSource as apiUpdate, deleteIncomeSource as apiDelete } from "@/lib/api";
 import { IncomeSource } from "@/lib/types";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 
 export function useIncome(selectedMonth: string, initialIncomeSources?: IncomeSource[], initialAllIncomeSources?: IncomeSource[]) {
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>(initialIncomeSources ?? []);
@@ -59,7 +59,9 @@ export function useIncome(selectedMonth: string, initialIncomeSources?: IncomeSo
       setAllIncomeSources(refreshed);
       return real;
     } catch (error) {
-      toast.error("Failed to create income source");
+      // The popin is already closed, so the toast names what failed and
+      // offers to replay the exact call (which re-runs the optimistic flow).
+      showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void createIncome(month, data); } });
       console.error("Error creating income:", error);
       setIncomeSources(prev => prev.filter(i => i.id !== optimistic.id));
       return null;
@@ -90,7 +92,7 @@ export function useIncome(selectedMonth: string, initialIncomeSources?: IncomeSo
       const refreshed = await getAllIncomeSources();
       setAllIncomeSources(refreshed);
     } catch (error) {
-      toast.error("Failed to update income source");
+      showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void updateIncome(id, data); } });
       console.error("Error updating income:", error);
       setIncomeSources(prev => prev.map(i => i.id === id ? original : i));
     }
@@ -107,7 +109,7 @@ export function useIncome(selectedMonth: string, initialIncomeSources?: IncomeSo
       await apiDelete(id);
       return true;
     } catch (error) {
-      toast.error("Failed to delete income source");
+      showErrorToast(`Couldn't delete "${original.name}"`, { retry: () => { void deleteIncome(id); } });
       console.error("Error deleting income:", error);
       setIncomeSources(prev => [...prev, original]);
       setAllIncomeSources(prev => [...prev, original]);

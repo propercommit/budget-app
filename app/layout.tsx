@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from 'react-hot-toast';
+import { TOAST_CARD_STYLE } from "@/lib/toast";
 import { SettingsProvider } from "@/lib/settings-context";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
           {children}
         </SettingsProvider>
         <SpeedInsights />
-        <Toaster />
+        {/* Toast card styling per the validation-system spec, shared with the
+            custom Retry toast in lib/toast.tsx. */}
+        <Toaster toastOptions={{ style: TOAST_CARD_STYLE }} />
         <Analytics />
       </body>
     </html>

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from "@/lib/api";
 import { Category, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 
 type SpendingData = Record<string, SpendingItem[]>;
 
@@ -63,7 +63,9 @@ export function useSpending(initialSpendingData?: SpendingData) {
       updateMonth(month, items => items.map(s => s.id === optimistic.id ? real : s));
       return real;
     } catch (error) {
-      toast.error("Failed to create spending item");
+      // The popin is already closed, so the toast names what failed and
+      // offers to replay the exact call (which re-runs the optimistic flow).
+      showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void createSpending(month, data, category); } });
       console.error("Error creating spending:", error);
       updateMonth(month, items => items.filter(s => s.id !== optimistic.id));
       return null;
@@ -85,7 +87,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
       const real = await apiUpdateSpending(id, data);
       updateMonth(month, items => items.map(s => s.id === id ? real : s));
     } catch (error) {
-      toast.error("Failed to update spending item");
+      showErrorToast(`Couldn't save "${optimisticItem.name}"`, { retry: () => { void updateSpending(month, id, data, optimisticItem); } });
       console.error("Error updating spending:", error);
       updateMonth(month, items => items.map(s => s.id === id ? original : s));
     }
@@ -101,7 +103,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
       await apiDeleteSpending(id);
       return true;
     } catch (error) {
-      toast.error("Failed to delete spending item");
+      showErrorToast(`Couldn't delete "${original.name}"`, { retry: () => { void deleteSpending(month, id); } });
       console.error("Error deleting spending:", error);
       updateMonth(month, items => [...items, original]);
       return false;
@@ -166,7 +168,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
           : s
       ));
     } catch (error) {
-      toast.error("Failed to create entry");
+      showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void createEntry(month, spendingItemId, data); } });
       console.error("Error creating entry:", error);
       updateMonth(month, items => items.map(s =>
         s.id === spendingItemId
@@ -211,7 +213,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
     try {
       await apiUpdateEntry(entryId, data);
     } catch (error) {
-      toast.error("Failed to update entry");
+      showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void updateEntry(month, spendingItemId, entryId, data); } });
       console.error("Error updating entry:", error);
       updateMonth(month, items => items.map(s =>
         s.id === spendingItemId
@@ -250,7 +252,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
     try {
       await apiDeleteEntry(entryId);
     } catch (error) {
-      toast.error("Failed to delete entry");
+      showErrorToast(`Couldn't delete "${original.name}"`, { retry: () => { void deleteEntry(month, spendingItemId, entryId); } });
       console.error("Error deleting entry:", error);
       updateMonth(month, items => items.map(s =>
         s.id === spendingItemId

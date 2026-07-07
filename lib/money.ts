@@ -73,6 +73,20 @@ export function parseAmountToCents(raw: string): number | null {
 }
 
 /**
+ * Classify why an amount string fails {@link parseAmountToCents}: `"empty"`
+ * covers a blank or all-zero value (the user hasn't entered an amount),
+ * `"malformed"` everything else (e.g. a trailing dot). Lives here so the
+ * classification can never drift from the parse grammar it mirrors; the
+ * user-facing copy for each reason belongs to the UI layer.
+ */
+export function invalidAmountReason(raw: string): "empty" | "malformed" {
+
+  const trimmed = raw.trim();
+
+  return trimmed === "" || /^0*\.?0*$/.test(trimmed) ? "empty" : "malformed";
+}
+
+/**
  * Convert integer minor units (cents) back to a major-unit number — the "convert
  * out" edge that mirrors {@link parseAmountToCents}. A single exact-integer
  * division, so `1010` → `10.1`. Used to seed an edit form's amount input with an

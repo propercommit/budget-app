@@ -78,6 +78,14 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Validation system (field messages / form banners) — errored-input fill and
+     on-tint text colors. Accents stay the fixed HIG hexes; only these two
+     kinds of surface need a per-theme value to keep contrast. */
+  --validation-error-fill: #FFF5F5;
+  --banner-error-text: #C41E14;
+  --banner-warning-text: #A05A00;
+  --banner-success-text: #1F7A38;
+  --banner-info-text: #005BBF;
 }
 
 .dark {
@@ -114,6 +122,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --validation-error-fill: rgba(255, 59, 48, 0.12);
+  --banner-error-text: #FF6961;
+  --banner-warning-text: #FFB340;
+  --banner-success-text: #5DDE86;
+  --banner-info-text: #6EC1FF;
 }
 
 @layer base {

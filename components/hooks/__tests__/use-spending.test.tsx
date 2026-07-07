@@ -12,13 +12,13 @@ vi.mock("@/lib/api", () => ({
   deleteEntry: vi.fn(),
 }));
 
-vi.mock("react-hot-toast", () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+vi.mock("@/lib/toast", () => ({
+  showErrorToast: vi.fn(),
 }));
 
 import { useSpending } from "@/components/hooks/use-spending";
 import * as api from "@/lib/api";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
 
 const MONTH = "2026-06";
@@ -105,7 +105,7 @@ describe("useSpending — spending item create (optimistic)", () => {
 
     expect(returned).toBeNull();
     expect(result.current.spendingData[MONTH]).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to create spending item");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Eating out"', { retry: expect.any(Function) });
   });
 });
 
@@ -133,7 +133,7 @@ describe("useSpending — spending item update / delete", () => {
     });
 
     expect(result.current.spendingData[MONTH][0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("Failed to update spending item");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "X"', { retry: expect.any(Function) });
   });
 
   it("delete removes immediately and re-inserts on failure", async () => {
@@ -148,7 +148,7 @@ describe("useSpending — spending item update / delete", () => {
 
     expect(ok).toBe(false);
     expect(result.current.spendingData[MONTH]).toEqual([original]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete spending item");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t delete "Eating out"', { retry: expect.any(Function) });
   });
 });
 
@@ -208,7 +208,7 @@ describe("useSpending — entry create recomputes spent", () => {
 
     expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to create entry");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Coffee"', { retry: expect.any(Function) });
   });
 });
 
@@ -243,7 +243,7 @@ describe("useSpending — entry update recomputes spent by diff", () => {
 
     expect(result.current.spendingData[MONTH][0].spent).toBe(425);
     expect(result.current.spendingData[MONTH][0].entries?.[0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("Failed to update entry");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Changed"', { retry: expect.any(Function) });
   });
 });
 
@@ -273,7 +273,7 @@ describe("useSpending — entry delete recomputes spent", () => {
 
     expect(result.current.spendingData[MONTH][0].spent).toBe(1425);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([original]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete entry");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t delete "Coffee"', { retry: expect.any(Function) });
   });
 });
 

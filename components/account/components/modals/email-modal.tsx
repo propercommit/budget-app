@@ -2,6 +2,7 @@
 
 import { InsetDivider } from "../inset-divider";
 import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
+import { FormBanner } from "@/components/ui/form-banner";
 
 interface EmailModalProps {
     isOpen: boolean;
@@ -60,7 +61,7 @@ export function EmailModal({
                 />
             </SheetGroup>
 
-            {error !== null && <SheetFootnote tone="destructive">{error}</SheetFootnote>}
+            {error !== null && <FormBanner variant="error">{error}</FormBanner>}
 
             <SheetFootnote>
                 We&apos;ll send verification links to both addresses. Confirm your current email first, then the new

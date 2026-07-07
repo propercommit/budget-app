@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getCategories, createCategory as apiCreate, updateCategory as apiUpdate, deleteCategory as apiDelete } from "@/lib/api";
 import { Category } from "@/lib/types";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 
 /**
  * Prefers the rejection's user-facing message (e.g. the friendly
@@ -54,7 +54,9 @@ export function useCategories(initialCategories?: Category[]) {
       setCategories(prev => prev.map(c => c.id === optimistic.id ? real : c));
       return real;
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to create category"));
+      // The popin is already closed, so the toast names what failed and
+      // offers to replay the exact call (which re-runs the optimistic flow).
+      showErrorToast(errorMessage(error, `Couldn't save "${name}"`), { retry: () => { void createCategory(name, icon, color); } });
       console.error("Error creating category:", error);
       setCategories(prev => prev.filter(c => c.id !== optimistic.id));
       return null;
@@ -75,7 +77,7 @@ export function useCategories(initialCategories?: Category[]) {
       await apiUpdate(id, { label: name, icon, color });
       return true;
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to update category"));
+      showErrorToast(errorMessage(error, `Couldn't save "${name}"`), { retry: () => { void updateCategory(id, name, icon, color); } });
       console.error("Error updating category:", error);
       setCategories(prev => prev.map(c => c.id === id ? original : c));
       return false;
@@ -92,7 +94,7 @@ export function useCategories(initialCategories?: Category[]) {
       await apiDelete(id);
       return true;
     } catch (error) {
-      toast.error(errorMessage(error, "Failed to delete category"));
+      showErrorToast(errorMessage(error, `Couldn't delete "${original.label}"`), { retry: () => { void deleteCategory(id); } });
       console.error("Error deleting category:", error);
       setCategories(prev => [...prev, original]);
       return false;
