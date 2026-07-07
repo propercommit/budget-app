@@ -8,6 +8,7 @@ import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
+import { monthLabel } from "@/lib/spending/month";
 import type { BudgetSeriesSummary } from "@/lib/types";
 import type { CreateSpendingConflict } from "@/components/hooks/use-spending";
 
@@ -17,7 +18,7 @@ interface Category {
     color: string;
 }
 
-interface SpendingItemSavePayload {
+export interface SpendingItemSavePayload {
     name: string;
     icon: string;
     category: string;
@@ -37,7 +38,7 @@ interface SpendingItemEditPopinProps {
      * net behind the typeahead) — the popin then stays open, shows the
      * conflict inline and refocuses the name field instead of closing.
      */
-    onSave: (data: SpendingItemSavePayload) => void | CreateSpendingConflict | null | Promise<void | CreateSpendingConflict | null | SpendingItemSavePayload>;
+    onSave: (data: SpendingItemSavePayload) => void | CreateSpendingConflict | null | Promise<void | CreateSpendingConflict | null>;
     onDelete?: () => void;
     onCreateCategory?: () => void;
     mode: "create" | "edit";
@@ -54,11 +55,6 @@ interface SpendingItemEditPopinProps {
     initialBudget?: number;
     initialNote?: string;
     autoSelectCategory?: string | null;
-}
-
-/** "July 2026" — matches MonthPicker's hardcoded en-US month labels. */
-function monthLabel(month: string): string {
-    return new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 /** "Jan – May 2025" (same year), "Nov 2024 – Feb 2025", or a single month. */

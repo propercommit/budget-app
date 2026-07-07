@@ -11,6 +11,7 @@ const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
     findFirst: vi.fn(),
     findUnique: vi.fn(),
     create: vi.fn(),
+    createMany: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     deleteMany: vi.fn(),
@@ -88,26 +89,23 @@ describe("POST /api/spending/materialize", () => {
     );
   });
 
-  it("upserts one incarnation per missing series, inheriting the latest budget (D23)", async () => {
+  it("creates one incarnation per missing series, inheriting the latest budget (D23)", async () => {
     prismaMock.budgetSeries.findMany.mockResolvedValue([
       series("ser-a", { budgeted: 60_000, month: "2026-06" }),
       series("ser-b", null), // series with no incarnations left
     ]);
-    prismaMock.spendingItem.upsert.mockResolvedValue({});
+    prismaMock.spendingItem.createMany.mockResolvedValue({ count: 2 });
 
     const { status } = await readJson(await POST(jsonRequest({ month: "2026-07" })));
 
     expect(status).toBe(200);
-    expect(prismaMock.spendingItem.upsert).toHaveBeenCalledTimes(2);
-    expect(prismaMock.spendingItem.upsert).toHaveBeenCalledWith({
-      where: { seriesId_month: { seriesId: "ser-a", month: "2026-07" } },
-      update: {}, // idempotent: an existing incarnation is left untouched
-      create: { seriesId: "ser-a", month: "2026-07", budgeted: 60_000 },
-    });
-    expect(prismaMock.spendingItem.upsert).toHaveBeenCalledWith({
-      where: { seriesId_month: { seriesId: "ser-b", month: "2026-07" } },
-      update: {},
-      create: { seriesId: "ser-b", month: "2026-07", budgeted: 0 },
+    expect(prismaMock.spendingItem.createMany).toHaveBeenCalledWith({
+      data: [
+        { seriesId: "ser-a", month: "2026-07", budgeted: 60_000 },
+        { seriesId: "ser-b", month: "2026-07", budgeted: 0 },
+      ],
+      // Idempotence backstop for a concurrent double call on (seriesId, month).
+      skipDuplicates: true,
     });
   });
 
@@ -116,7 +114,7 @@ describe("POST /api/spending/materialize", () => {
 
     await POST(jsonRequest({ month: "2026-07" }));
 
-    expect(prismaMock.spendingItem.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.spendingItem.createMany).not.toHaveBeenCalled();
   });
 
   it("returns the month's full flattened bucket, pre-existing items included", async () => {

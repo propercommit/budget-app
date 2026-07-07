@@ -32,12 +32,13 @@ vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ getAuthenticatedUser }));
 
 import { GET, POST } from "@/app/api/entries/route";
+import { monthOfDate } from "@/lib/spending/month";
 
 const validBody = { spendingItemId: "s1", name: "Coffee", amount: 450 };
 
 // validBody has no date, so the route defaults to "now" — the addressed item
 // must live in the current (UTC) month for the direct-attach path to apply.
-const CURRENT_MONTH = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`;
+const CURRENT_MONTH = monthOfDate(new Date());
 
 const FAKE_ITEM = { id: "s1", seriesId: "ser-1", month: CURRENT_MONTH };
 

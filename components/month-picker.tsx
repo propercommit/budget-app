@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { monthLabel } from "@/lib/spending/month";
 import { Button } from "./ui/button";
 
 interface MonthPickerProps {
@@ -13,11 +14,6 @@ export function MonthPicker({ selectedMonth, onMonthChange }: MonthPickerProps) 
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    const formatMonthLabel = (monthString: string): string => {
-        const [year, month] = monthString.split("-");
-        const date = new Date(parseInt(year), parseInt(month) - 1);
-        return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    };
 
     const navigateMonth = (direction: "prev" | "next") => {
         const [year, month] = selectedMonth.split("-").map(Number);
@@ -46,7 +42,7 @@ export function MonthPicker({ selectedMonth, onMonthChange }: MonthPickerProps) 
                 <ChevronLeft />
             </Button>
             <p className="font-medium min-w-[140px] text-center">
-                {formatMonthLabel(selectedMonth)}
+                {monthLabel(selectedMonth)}
             </p>
             <Button variant="outline" size="icon" onClick={() => navigateMonth("next")}>
                 <ChevronRight />

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, materializeMonth as apiMaterializeMonth, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, type CreateSeriesPayload } from "@/lib/api";
 import { Category, SpendingEntry, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
+import { monthLabel } from "@/lib/spending/month";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 
@@ -33,11 +34,6 @@ type RoutedEntryResult = {
 
 function isRoutedResult(value: unknown): value is RoutedEntryResult {
   return typeof value === "object" && value !== null && "targetItem" in value;
-}
-
-// Month names deliberately match MonthPicker's hardcoded en-US labels.
-function monthLabel(month: string): string {
-  return new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 export function useSpending(initialSpendingData?: SpendingData) {

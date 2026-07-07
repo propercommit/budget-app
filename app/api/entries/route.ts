@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { monthOfDate } from "@/lib/spending/month";
-import { flattenSpendingItem, spendingItemInclude } from "@/lib/spending/flatten-item";
+import { routeEntryToMonth } from "@/lib/spending/route-entry";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
@@ -225,45 +225,18 @@ export async function POST(request: Request) {
         }
 
         // An entry belongs to the month of its date (D19): route it to that
-        // month's incarnation of the same series — creating one at budgeted 0
-        // if the series isn't incarnated there yet (D23) — atomically with the
-        // spent recompute. The addressed item never receives the entry, but is
-        // returned too so the client can roll back its optimistic patch.
-        const routed = await prisma.$transaction(async (tx) => {
-
-            const target = await tx.spendingItem.upsert({
-                where: { seriesId_month: { seriesId: spendingItem.seriesId, month: targetMonth } },
-                update: {},
-                create: { seriesId: spendingItem.seriesId, month: targetMonth, budgeted: 0 },
-            });
-
-            const entry = await tx.spendingEntry.create({
-                data: { ...entryData, spendingItemId: target.id },
-            });
-
-            await updateSpentAmount(target.id, tx);
-
-            const sourceItem = await tx.spendingItem.findUniqueOrThrow({
-                where: { id: spendingItemId },
-                include: spendingItemInclude,
-            });
-
-            const targetItem = await tx.spendingItem.findUniqueOrThrow({
-                where: { id: target.id },
-                include: spendingItemInclude,
-            });
-
-            return { entry, sourceItem, targetItem };
+        // month's incarnation of the same series. The addressed item never
+        // receives the entry, but rides along in the response so the client
+        // can roll back its optimistic patch.
+        const routed = await routeEntryToMonth({
+            sourceItem: spendingItem,
+            targetMonth,
+            recomputeSource: false,
+            writeEntry: (tx, targetItemId) =>
+                tx.spendingEntry.create({ data: { ...entryData, spendingItemId: targetItemId } }),
         });
 
-        return NextResponse.json(
-            {
-                entry: routed.entry,
-                sourceItem: flattenSpendingItem(routed.sourceItem),
-                targetItem: flattenSpendingItem(routed.targetItem),
-            },
-            { status: 201 }
-        );
+        return NextResponse.json(routed, { status: 201 });
     } catch (error) {
         console.error("[Entries POST] Failed to create:", error);
         return NextResponse.json(

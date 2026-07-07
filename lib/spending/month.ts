@@ -10,3 +10,12 @@
 export function monthOfDate(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
+
+/**
+ * "July 2026"-style label for a "YYYY-MM" month — the app's single month-name
+ * formatter (deliberately hardcoded en-US, bypassing the user's dateFormat
+ * setting, matching the original MonthPicker behavior).
+ */
+export function monthLabel(month: string): string {
+  return new Date(`${month}-01T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}

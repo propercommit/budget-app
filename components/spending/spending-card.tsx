@@ -6,7 +6,7 @@ import { sumEntries } from "@/lib/spending/math";
 import { SpendingCardCollapsed } from "./spending-card-collapsed";
 import { SpendingCardExpanded, SpendingEntry } from "./spending-card-expanded";
 import { SpendingItemDetailPopin } from "./popins/spending-item-detail-popin";
-import { SpendingItemEditPopin } from "./popins/spending-item-edit-popin";
+import { SpendingItemEditPopin, type SpendingItemSavePayload } from "./popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "./popins/spending-entry-detail-popin";
 import { EntryEditPopin, EntrySavePayload } from "./popins/spending-entry-edit-popin";
 import { CategoryPopin } from "../category/popins/category-popin";
@@ -26,15 +26,7 @@ interface SpendingCardProps {
     note?: string;
     entries: SpendingEntry[];
     categories: Category[];
-    onItemUpdate: (data: {
-        name: string;
-        icon: string;
-        category: string;
-        categoryColor: string;
-        budget: number;
-        note: string;
-        recurring: boolean;
-    }) => void;
+    onItemUpdate: (data: SpendingItemSavePayload) => void;
     onItemDelete: () => void;
     onEntryCreate: (data: EntrySavePayload) => void;
     onEntryUpdate: (entryId: string, data: EntrySavePayload) => void;

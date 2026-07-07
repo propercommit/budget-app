@@ -54,15 +54,16 @@ export async function POST(request: Request) {
             },
         });
 
-        for (const series of missingSeries) {
-            await prisma.spendingItem.upsert({
-                where: { seriesId_month: { seriesId: series.id, month } },
-                update: {},
-                create: {
+        if (missingSeries.length > 0) {
+            await prisma.spendingItem.createMany({
+                data: missingSeries.map((series) => ({
                     seriesId: series.id,
                     month,
                     budgeted: series.items[0]?.budgeted ?? 0,
-                },
+                })),
+                // The query above already excluded incarnated series; this only
+                // covers a concurrent double call racing on (seriesId, month).
+                skipDuplicates: true,
             });
         }
 

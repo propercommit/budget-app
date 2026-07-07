@@ -31,7 +31,6 @@ export function flattenSpendingItem(item: SpendingItemWithSeries) {
     name: series.name,
     icon: series.icon,
     recurring: series.recurring,
-    userId: series.userId,
     categoryId: series.categoryId,
     category: series.category,
     entries: spendingEntries,

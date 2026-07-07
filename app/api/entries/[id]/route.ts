@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { monthOfDate } from "@/lib/spending/month";
-import { flattenSpendingItem, spendingItemInclude } from "@/lib/spending/flatten-item";
+import { routeEntryToMonth } from "@/lib/spending/route-entry";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
@@ -199,45 +199,17 @@ export async function PUT(
         }
 
         // The date now lands in another month (D19): move the entry to that
-        // month's incarnation of the same series — created at budgeted 0 if
-        // missing (D23) — and recompute spent on BOTH incarnations, all in one
-        // transaction. Both updated items ride along so the client can sync
-        // its month buckets without a full reload.
-        const routed = await prisma.$transaction(async (tx) => {
-
-            const target = await tx.spendingItem.upsert({
-                where: { seriesId_month: { seriesId: sourceItem.seriesId, month: targetMonth } },
-                update: {},
-                create: { seriesId: sourceItem.seriesId, month: targetMonth, budgeted: 0 },
-            });
-
-            const entry = await tx.spendingEntry.update({
-                where: { id },
-                data: { ...updateData, spendingItemId: target.id },
-            });
-
-            await updateSpentAmount(sourceItem.id, tx);
-
-            await updateSpentAmount(target.id, tx);
-
-            const source = await tx.spendingItem.findUniqueOrThrow({
-                where: { id: sourceItem.id },
-                include: spendingItemInclude,
-            });
-
-            const targetItem = await tx.spendingItem.findUniqueOrThrow({
-                where: { id: target.id },
-                include: spendingItemInclude,
-            });
-
-            return { entry, source, targetItem };
+        // month's incarnation and recompute spent on BOTH incarnations — the
+        // entry just left the source.
+        const routed = await routeEntryToMonth({
+            sourceItem,
+            targetMonth,
+            recomputeSource: true,
+            writeEntry: (tx, targetItemId) =>
+                tx.spendingEntry.update({ where: { id }, data: { ...updateData, spendingItemId: targetItemId } }),
         });
 
-        return NextResponse.json({
-            entry: routed.entry,
-            sourceItem: flattenSpendingItem(routed.source),
-            targetItem: flattenSpendingItem(routed.targetItem),
-        });
+        return NextResponse.json(routed);
     } catch (error) {
         console.error("[Entries PUT] Failed to update:", error);
         return NextResponse.json(
