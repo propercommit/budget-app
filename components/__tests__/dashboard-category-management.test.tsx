@@ -15,6 +15,9 @@ vi.mock("@/lib/api", () => ({
   createSpending: vi.fn(),
   updateSpending: vi.fn(),
   deleteSpending: vi.fn(),
+  // Fires on Dashboard mount; rejecting keeps the initial bucket untouched
+  // (the hook swallows materialize failures by design).
+  materializeMonth: vi.fn().mockRejectedValue(new Error("offline")),
   getIncomeSources: vi.fn(),
   getAllIncomeSources: vi.fn(),
   createIncomeSource: vi.fn(),

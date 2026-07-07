@@ -146,6 +146,18 @@ export async function deleteSpending(id: string) {
   });
 }
 
+/**
+ * Ensures every active recurring series has an incarnation in `month` and
+ * returns the month's full flattened item list. Idempotent server-side —
+ * safe to call on every month open.
+ */
+export async function materializeMonth(month: string) {
+  return fetchAPI("/api/spending/materialize", {
+    method: "POST",
+    body: JSON.stringify({ month }),
+  });
+}
+
 // ============ INCOME ============
 
 export async function getIncomeSources(month: string) {

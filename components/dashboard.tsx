@@ -2,7 +2,7 @@
 
 import { Category, IncomeSource, SpendingItem } from "@/lib/types";
 import { useCategories } from "./hooks/use-categories";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIncome } from "./hooks/use-income";
 import { useSpending } from "./hooks/use-spending";
 import { SpendingCarousel, SpendingCarouselRef } from "./spending/spending-carousel";
@@ -43,7 +43,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
-    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
+    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
@@ -174,19 +174,23 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         await deleteIncome(editingIncomeSource.id);
     };
 
+    // Every month open materializes: recurring series missing an incarnation
+    // get one server-side (idempotent), so even a partially populated month
+    // receives the rest of the template.
     const handleMonthChange = async (newMonth: string) => {
         setSelectedMonth(newMonth);
 
-        if (!spendingData[newMonth]) {
-        const sortedMonths = Object.keys(spendingData).sort();
-        const previousMonths = sortedMonths.filter(m => m < newMonth);
-        if (previousMonths.length > 0) {
-            await copySpendingToMonth(previousMonths[previousMonths.length - 1], newMonth);
-        }
-        }
+        await materializeMonth(newMonth);
 
         await loadMonth(newMonth);
     };
+
+    // The ISR page render doesn't materialize, so a series toggled recurring
+    // after the last revalidation would be missing from the initial month
+    // until a navigation — this mount pass closes that gap.
+    useEffect(() => {
+        void materializeMonth(initialMonth);
+    }, [materializeMonth, initialMonth]);
 
     // Remount via key on every open so the popin's search state starts fresh.
     const handleOpenManageCategories = () => {

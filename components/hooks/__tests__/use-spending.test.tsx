@@ -7,6 +7,7 @@ vi.mock("@/lib/api", () => ({
   createSpending: vi.fn(),
   updateSpending: vi.fn(),
   deleteSpending: vi.fn(),
+  materializeMonth: vi.fn(),
   createEntry: vi.fn(),
   updateEntry: vi.fn(),
   deleteEntry: vi.fn(),
@@ -431,6 +432,53 @@ describe("useSpending — month isolation", () => {
 
     expect(result.current.spendingData[MONTH]).toEqual([]);
     expect(result.current.spendingData["2026-05"]).toEqual([other]);
+  });
+});
+
+describe("useSpending — materializeMonth", () => {
+  it("sets the returned bucket for a month with no local state yet", async () => {
+    const materialized = [item({ id: "mat-1", month: "2026-07" })];
+    vi.mocked(api.materializeMonth).mockResolvedValue(materialized);
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.materializeMonth("2026-07");
+    });
+
+    expect(api.materializeMonth).toHaveBeenCalledWith("2026-07");
+    expect(result.current.spendingData["2026-07"]).toEqual(materialized);
+    // Other months are untouched.
+    expect(result.current.spendingData[MONTH]).toHaveLength(1);
+  });
+
+  it("replaces an existing bucket with the server's authoritative list", async () => {
+    const existing = item();
+    const materialized = [existing, item({ id: "mat-2", name: "Netflix" })];
+    vi.mocked(api.materializeMonth).mockResolvedValue(materialized);
+
+    const { result } = renderHook(() => useSpending(data([existing])));
+
+    await act(async () => {
+      await result.current.materializeMonth(MONTH);
+    });
+
+    expect(result.current.spendingData[MONTH]).toEqual(materialized);
+  });
+
+  it("leaves state untouched and stays silent on failure", async () => {
+    vi.mocked(api.materializeMonth).mockRejectedValue(new Error("boom"));
+    const before = [item()];
+
+    const { result } = renderHook(() => useSpending(data(before)));
+
+    await act(async () => {
+      await result.current.materializeMonth("2026-07");
+    });
+
+    expect(result.current.spendingData["2026-07"]).toBeUndefined();
+    expect(result.current.spendingData[MONTH]).toEqual(before);
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });
 

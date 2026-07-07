@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, type CreateSeriesPayload } from "@/lib/api";
+import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, materializeMonth as apiMaterializeMonth, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, type CreateSeriesPayload } from "@/lib/api";
 import { Category, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { showErrorToast } from "@/lib/toast";
@@ -112,28 +112,23 @@ export function useSpending(initialSpendingData?: SpendingData) {
     }
   }, []);
 
-  const copySpendingToMonth = useCallback(async (
-    fromMonth: string,
-    toMonth: string
-  ): Promise<void> => {
-    const sourceItems = dataRef.current[fromMonth];
-    if (!sourceItems?.length) return;
-
+  /**
+   * Lazy materialization (D22): asks the server to give every active
+   * recurring series an incarnation in `month`, then syncs the returned
+   * bucket wholesale. Idempotent server-side, so it runs on every month
+   * open — including months that already have items (a partially populated
+   * month still receives the rest of the template).
+   *
+   * Failure is logged and leaves local state untouched: the month simply
+   * renders whatever was already loaded, and the next navigation retries.
+   */
+  const materializeMonth = useCallback(async (month: string): Promise<void> => {
     try {
-      // Attach by seriesId: the series already exists, so a name-shaped create
-      // would 409 (series_dormant). Interim only — Phase 2 replaces this whole
-      // flow with server-side lazy materialization.
-      const newItems = await Promise.all(
-        sourceItems.map(item =>
-          apiCreateSpending({
-            seriesId: item.seriesId,
-            month: toMonth,
-          })
-        )
-      );
-      setSpendingData(prev => ({ ...prev, [toMonth]: newItems }));
+      const items: SpendingItem[] = await apiMaterializeMonth(month);
+
+      if (Array.isArray(items)) setSpendingData(prev => ({ ...prev, [month]: items }));
     } catch (error) {
-      console.error("Failed to copy spending:", error);
+      console.error("Failed to materialize month:", error);
     }
   }, []);
 
@@ -293,7 +288,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
     createSpending,
     updateSpending,
     deleteSpending,
-    copySpendingToMonth,
+    materializeMonth,
     createEntry,
     updateEntry,
     deleteEntry,
