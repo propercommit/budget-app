@@ -34,7 +34,7 @@ test.describe("Login screen", () => {
     await component.getByLabel("Confirm password").fill("password2");
     await component.getByRole("button", { name: "Create account" }).click();
 
-    await expect(component).toContainText("Passwords do not match");
+    await expect(component).toContainText("Passwords don't match");
 
     await expect(component).toHaveScreenshot("login-signup-error.png");
   });
