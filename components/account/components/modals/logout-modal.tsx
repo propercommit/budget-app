@@ -23,8 +23,8 @@ export function LogoutModal({ isOpen, onClose, isSaving, onSubmit }: LogoutModal
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
             <SheetContent size="sm" className="bg-card">
                 <div className="flex flex-col items-center gap-1.5 px-6 pt-5 text-center sm:pt-7">
-                    <div className="mb-1.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 dark:bg-green-500/10">
-                        <LogOut className="h-6 w-6 text-green-600" />
+                    <div className="mb-1.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/5 dark:bg-primary/15">
+                        <LogOut className="h-6 w-6 text-primary" />
                     </div>
                     <DialogTitle className="text-[19px] font-bold tracking-tight text-foreground">
                         Log out?
@@ -37,7 +37,7 @@ export function LogoutModal({ isOpen, onClose, isSaving, onSubmit }: LogoutModal
                     <Button
                         onClick={onClose}
                         disabled={isSaving}
-                        className="h-12 w-full rounded-full bg-green-500 text-base font-semibold text-white hover:bg-green-600 active:bg-green-700 sm:text-[15px]"
+                        className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-[var(--shadow-btn-primary)] hover:bg-primary-hover active:bg-primary-active sm:text-[15px]"
                     >
                         Stay Logged In
                     </Button>
@@ -45,7 +45,7 @@ export function LogoutModal({ isOpen, onClose, isSaving, onSubmit }: LogoutModal
                         variant="ghost"
                         onClick={onSubmit}
                         disabled={isSaving}
-                        className="h-12 w-full rounded-full text-base font-semibold text-red-500 hover:bg-red-50 hover:text-red-500 active:bg-red-100 dark:hover:bg-red-500/10 dark:active:bg-red-500/20 sm:text-[15px]"
+                        className="h-12 w-full rounded-xl text-base font-semibold text-destructive hover:bg-destructive/5 hover:text-destructive active:bg-destructive/10 sm:text-[15px]"
                     >
                         {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Log Out"}
                     </Button>

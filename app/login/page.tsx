@@ -376,7 +376,7 @@ export default function LoginPage() {
                                         {mode === "login" && (
                                             <Link
                                                 href="/auth/forgot-password"
-                                                className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium transition-colors touch-manipulation"
+                                                className="text-xs sm:text-sm text-primary hover:text-primary-hover font-medium transition-colors touch-manipulation"
                                             >
                                                 Forgot password?
                                             </Link>
@@ -449,7 +449,7 @@ export default function LoginPage() {
                                             I agree to the{" "}
                                             <a 
                                                 href="/terms" 
-                                                className="text-green-600 hover:text-green-700 underline"
+                                                className="text-primary hover:text-primary-hover underline"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
@@ -458,7 +458,7 @@ export default function LoginPage() {
                                             and{" "}
                                             <a 
                                                 href="/privacy" 
-                                                className="text-green-600 hover:text-green-700 underline"
+                                                className="text-primary hover:text-primary-hover underline"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
@@ -481,7 +481,7 @@ export default function LoginPage() {
 
                                 <Button 
                                     type="submit" 
-                                    className="w-full h-12 text-base font-medium bg-green-500 hover:bg-green-600 active:bg-green-700 transition-colors touch-manipulation"
+                                    className="w-full h-12 text-base transition-colors touch-manipulation"
                                     disabled={isFormDisabled}
                                 >
                                     {isLoading ? (
@@ -502,7 +502,7 @@ export default function LoginPage() {
                                         <button
                                             type="button"
                                             onClick={() => switchMode("signup")}
-                                            className="text-green-600 hover:text-green-700 font-semibold transition-colors touch-manipulation"
+                                            className="text-primary hover:text-primary-hover font-semibold transition-colors touch-manipulation"
                                         >
                                             Sign up
                                         </button>
@@ -513,7 +513,7 @@ export default function LoginPage() {
                                         <button
                                             type="button"
                                             onClick={() => switchMode("login")}
-                                            className="text-green-600 hover:text-green-700 font-semibold transition-colors touch-manipulation"
+                                            className="text-primary hover:text-primary-hover font-semibold transition-colors touch-manipulation"
                                         >
                                             Sign in
                                         </button>

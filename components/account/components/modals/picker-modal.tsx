@@ -52,7 +52,7 @@ export function PickerModal<T extends string>({
                             {option.label}
                             <Check
                                 strokeWidth={2.6}
-                                className={`h-5 w-5 flex-none text-green-500 ${option.value === selected ? "opacity-100" : "opacity-0"}`}
+                                className={`h-5 w-5 flex-none text-primary ${option.value === selected ? "opacity-100" : "opacity-0"}`}
                             />
                         </button>
                     </Fragment>

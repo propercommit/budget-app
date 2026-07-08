@@ -67,7 +67,7 @@ export function ProfileForm({
                     disabled={!hasChanges || isSaving}
                     className={`h-11 w-full rounded-full px-6 text-[15px] font-semibold transition-colors sm:w-auto ${
                         hasChanges
-                            ? "bg-green-500 text-white hover:bg-green-600 active:bg-green-700"
+                            ? "bg-primary text-primary-foreground shadow-[var(--shadow-btn-primary)] hover:bg-primary-hover active:bg-primary-active"
                             : "bg-muted text-muted-foreground/70"
                     }`}
                 >

@@ -15,7 +15,7 @@ export function AccountHeader({ onBack }: AccountHeaderProps) {
                 <button
                     type="button"
                     onClick={onBack}
-                    className="flex items-center gap-0.5 justify-self-start rounded-lg p-1.5 text-base font-medium text-green-600 transition-colors hover:bg-green-500/10 active:bg-green-500/15 sm:text-[15px]"
+                    className="flex items-center gap-0.5 justify-self-start rounded-lg p-1.5 text-base font-medium text-primary transition-colors hover:bg-primary/10 active:bg-primary/15 sm:text-[15px]"
                     aria-label="Back to dashboard"
                 >
                     <ChevronLeft className="h-5 w-5" strokeWidth={2.2} />
