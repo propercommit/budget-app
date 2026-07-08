@@ -60,7 +60,7 @@ function AllPill({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
     return (
         <button
             onClick={onSelect}
-            className="flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95"
+            className={PILL_CLASSES}
             style={{
                 backgroundColor: isSelected ? "var(--foreground)" : "var(--card)",
                 color: isSelected ? "var(--background)" : "var(--muted-foreground)",
