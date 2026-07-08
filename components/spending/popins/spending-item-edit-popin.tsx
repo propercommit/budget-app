@@ -1,8 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Plus } from "lucide-react";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
@@ -87,7 +89,7 @@ function highlightMatch(name: string, query: string): React.ReactNode {
     return (
         <>
             {name.slice(0, index)}
-            <span style={{ backgroundColor: "rgba(0, 122, 255, 0.15)", borderRadius: "2px" }}>
+            <span className="bg-primary/15 rounded-[2px]">
                 {name.slice(index, index + query.trim().length)}
             </span>
             {name.slice(index + query.trim().length)}
@@ -226,20 +228,12 @@ export function SpendingItemEditPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                        >
+                        <Button variant="secondary" className="flex-1" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
-                        >
+                        </Button>
+                        <Button className="flex-1" onClick={handleSubmit}>
                             {isCreate ? (attachLabel ?? "Create") : "Save Changes"}
-                        </button>
+                        </Button>
                     </div>
                     {!isCreate && onDelete && (
                         <DeleteConfirmSection
@@ -360,7 +354,7 @@ export function SpendingItemEditPopin({
                                                     {subtitle}
                                                 </p>
                                             </div>
-                                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0" style={{ backgroundColor: "rgba(0, 122, 255, 0.1)", color: "#007AFF" }}>
+                                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 bg-primary/10 text-primary">
                                                 {series.recurring ? "Add" : "Resume"}
                                             </span>
                                         </button>
@@ -378,12 +372,12 @@ export function SpendingItemEditPopin({
                                         onClick={() => setIsDropdownOpen(false)}
                                         className="w-full flex items-center gap-3 px-3.5 py-3 transition-colors duration-150 hover:bg-black/[0.03] active:bg-black/[0.05]"
                                     >
-                                        <div className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "rgba(0, 122, 255, 0.1)", color: "#007AFF" }} aria-hidden="true">
+                                        <div className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary" aria-hidden="true">
                                             <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M12 4v16m8-8H4" />
                                             </svg>
                                         </div>
-                                        <p className="text-[15px] font-semibold text-left" style={{ color: "#007AFF" }}>Create &ldquo;{query}&rdquo; as a new item</p>
+                                        <p className="text-[15px] font-semibold text-left text-primary">Create &ldquo;{query}&rdquo; as a new item</p>
                                     </button>
                                 </div>
                             )}
@@ -425,13 +419,10 @@ export function SpendingItemEditPopin({
                         ))}
                         <button
                             onClick={onCreateCategory}
-                            className="flex flex-shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 active:scale-95 border-2 border-dashed"
-                            style={{ borderColor: "#007AFF", backgroundColor: "rgba(0, 122, 255, 0.05)", color: "#007AFF" }}
+                            className="flex flex-shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 bg-primary/5 text-primary border border-primary/25 hover:bg-primary/10 hover:border-primary/45"
                             aria-label="Create new category"
                         >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
+                            <Plus className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
                             <span>New Category</span>
                         </button>
                     </div>
@@ -448,7 +439,7 @@ export function SpendingItemEditPopin({
                         The errored inline style wins over the focus-within
                         utilities, keeping the red border while focused. */}
                     <div
-                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[var(--shadow-focus-ring)]"
                         style={budgetError ? fieldInputStyle(true) : undefined}
                     >
                         <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
@@ -486,7 +477,7 @@ export function SpendingItemEditPopin({
                         aria-label="Additional notes (optional)"
                         className="w-full px-4 py-3 rounded-xl text-base outline-none transition-all duration-200 resize-none"
                         style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "var(--shadow-focus-ring)"; }}
                         onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>

@@ -65,7 +65,7 @@ export function showErrorToast(message: string, options?: ErrorToastOptions): vo
                         options.retry?.();
                     }}
                     className="cursor-pointer border-none bg-transparent p-0"
-                    style={{ marginLeft: 4, fontSize: 14, fontWeight: 600, color: "#007AFF" }}
+                    style={{ marginLeft: 4, fontSize: 14, fontWeight: 600, color: "var(--primary)" }}
                 >
                     Retry
                 </button>

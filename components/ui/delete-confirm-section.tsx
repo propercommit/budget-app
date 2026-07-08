@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 interface DeleteConfirmSectionProps {
     label: string;
     confirmMessage?: string;
@@ -9,6 +11,10 @@ interface DeleteConfirmSectionProps {
     disabled?: boolean;
 }
 
+/**
+ * Two-step destructive action per the button system: an outline button arms
+ * the delete, a solid destructive button confirms it.
+ */
 export function DeleteConfirmSection({
     label,
     confirmMessage = "Are you sure? This action cannot be undone.",
@@ -19,15 +25,11 @@ export function DeleteConfirmSection({
 
     if (!showConfirm) {
         return (
-            <button
+            <Button
+                variant="destructive-outline"
+                className="w-full"
                 onClick={() => setShowConfirm(true)}
                 disabled={disabled}
-                className="w-full py-3 rounded-xl font-medium transition-all duration-200 active:scale-[0.98] hover:bg-red-50 flex items-center justify-center gap-2"
-                style={{
-                    border: "1px solid #FF3B30",
-                    color: "#FF3B30",
-                    opacity: disabled ? 0.5 : 1,
-                }}
             >
                 <svg
                     className="w-4 h-4"
@@ -43,40 +45,33 @@ export function DeleteConfirmSection({
                     />
                 </svg>
                 {label}
-            </button>
+            </Button>
         );
     }
 
     return (
-        <div
-            className="p-4 rounded-xl"
-            style={{
-                backgroundColor: "rgba(255, 59, 48, 0.05)",
-                border: "1px solid rgba(255, 59, 48, 0.1)",
-            }}
-        >
-            <p
-                className="text-sm font-medium text-center mb-3 text-foreground"
-            >
+        <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/10">
+            <p className="text-sm font-medium text-center mb-3 text-foreground">
                 {confirmMessage}
             </p>
             <div className="flex gap-3">
-                <button
+                <Button
+                    variant="secondary"
+                    className="flex-1"
                     onClick={() => setShowConfirm(false)}
-                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] bg-muted text-foreground"
                 >
                     Cancel
-                </button>
-                <button
+                </Button>
+                <Button
+                    variant="destructive"
+                    className="flex-1"
                     onClick={() => {
                         setShowConfirm(false);
                         onDelete();
                     }}
-                    className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "#FF3B30" }}
                 >
                     Delete
-                </button>
+                </Button>
             </div>
         </div>
     );

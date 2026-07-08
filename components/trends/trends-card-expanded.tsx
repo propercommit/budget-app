@@ -144,8 +144,7 @@ export function TrendsCardExpanded({
                         {selectedCategory && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setSelectedCategory(null); }}
-                                className="text-xs font-medium"
-                                style={{ color: "#007AFF" }}
+                                className="text-xs font-semibold text-primary"
                             >
                                 Clear selection
                             </button>

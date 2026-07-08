@@ -35,7 +35,7 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                     onClick={() => setIconSource("preset")}
                     className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                         iconSource === "preset"
-                            ? "text-foreground border-blue-500"
+                            ? "text-foreground border-primary"
                             : "text-muted-foreground border-transparent"
                     }`}
                 >
@@ -67,14 +67,14 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
                                 }}
                                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all flex-shrink-0 min-w-[72px] ${
                                     isSelected
-                                        ? "bg-blue-50 dark:bg-blue-500/15 border-2 border-blue-500"
+                                        ? "bg-primary/5 dark:bg-primary/15 border-2 border-primary"
                                         : "bg-muted border-2 border-transparent hover:bg-input"
                                 }`}
                             >
-                                <div className={isSelected ? "text-blue-500" : "text-muted-foreground"}>
+                                <div className={isSelected ? "text-primary" : "text-muted-foreground"}>
                                     {iconMap[icon.id]}
                                 </div>
-                                <span className={`text-xs font-medium ${isSelected ? "text-blue-500" : "text-muted-foreground"}`}>
+                                <span className={`text-xs font-medium ${isSelected ? "text-primary" : "text-muted-foreground"}`}>
                                     {icon.name}
                                 </span>
                             </button>

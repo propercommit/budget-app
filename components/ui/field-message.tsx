@@ -75,17 +75,18 @@ export function fieldAriaProps(hasError: boolean, messageId: string) {
 }
 
 /**
- * Focus handlers for an inline-styled input. The blue focus treatment applies
- * only while the field is valid — focus while errored keeps the red border,
- * per the validation spec. Pass `false` for fields that are never validated.
+ * Focus handlers for an inline-styled input. The primary focus treatment
+ * applies only while the field is valid — focus while errored keeps the red
+ * border, per the validation spec. Pass `false` for fields that are never
+ * validated.
  */
 export function fieldFocusProps(hasError: boolean) {
     return {
         onFocus: (e: FocusEvent<ValidationElement>) => {
             if (hasError) return;
 
-            e.currentTarget.style.borderColor = "#007AFF";
-            e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)";
+            e.currentTarget.style.borderColor = "var(--primary)";
+            e.currentTarget.style.boxShadow = "var(--shadow-focus-ring)";
         },
         onBlur: (e: FocusEvent<ValidationElement>) => {
             if (hasError) return;

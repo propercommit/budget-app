@@ -33,6 +33,9 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-destructive-hover: var(--destructive-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -53,18 +56,37 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #2f50c8;
+  --primary-hover: #3d5ed8;
+  --primary-active: #26429e;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: #d63a2f;
+  --destructive-hover: #e24a3d;
+  --positive: #1e9c57;
+  --attention: #dd8a22;
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: var(--primary);
+  /* Button System (Elevate): colored shadows derive from --primary/--destructive
+     via color-mix so they track theme changes (e.g. dark-mode accent swap). */
+  --shadow-focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+  --shadow-btn-primary: 0 4px 14px color-mix(in srgb, var(--primary) 35%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+  --shadow-btn-primary-hover: 0 7px 20px color-mix(in srgb, var(--primary) 42%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.2);
+  --shadow-btn-primary-active: 0 3px 10px color-mix(in srgb, var(--primary) 32%, transparent);
+  --shadow-btn-destructive: 0 4px 14px color-mix(in srgb, var(--destructive) 30%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+  --shadow-btn-destructive-hover: 0 7px 20px color-mix(in srgb, var(--destructive) 38%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+  --shadow-btn-icon: 0 4px 12px color-mix(in srgb, var(--primary) 35%, transparent);
+  --shadow-btn-secondary: 0 1px 2px rgb(0 0 0 / 0.04);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -97,18 +119,23 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: #5e7ef0;
+  --primary-hover: #7892f4;
+  --primary-active: color-mix(in srgb, var(--primary) 85%, black);
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: #ea594c;
+  --destructive-hover: color-mix(in srgb, var(--destructive) 88%, white);
+  --positive: #1e9c57;
+  --attention: #eda53e;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: var(--primary);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);

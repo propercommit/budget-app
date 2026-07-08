@@ -76,7 +76,7 @@ export function SheetModal({ isOpen, onClose, title, action, size = "md", childr
                     <button
                         type="button"
                         onClick={onClose}
-                        className="justify-self-start p-1 text-base text-green-600 transition-opacity hover:opacity-70 sm:text-[15px]"
+                        className="justify-self-start p-1 text-base text-primary transition-opacity hover:opacity-70 sm:text-[15px]"
                     >
                         Cancel
                     </button>
@@ -88,7 +88,7 @@ export function SheetModal({ isOpen, onClose, title, action, size = "md", childr
                             disabled={action.disabled === true || action.isSaving === true}
                             className={cn(
                                 "justify-self-end p-1 text-base font-bold transition-opacity sm:text-[15px]",
-                                action.destructive === true ? "text-red-500" : "text-green-600",
+                                action.destructive === true ? "text-destructive" : "text-primary",
                                 action.disabled === true
                                     ? "cursor-not-allowed text-muted-foreground/60"
                                     : "hover:opacity-70"
@@ -143,7 +143,7 @@ export function SheetFootnote({
             role={tone === "destructive" ? "alert" : undefined}
             className={cn(
                 "px-4 text-[13px] leading-normal",
-                tone === "destructive" ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+                tone === "destructive" ? "text-destructive" : "text-muted-foreground"
             )}
         >
             {children}
