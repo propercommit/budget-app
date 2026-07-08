@@ -66,10 +66,10 @@ export function CategoryPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
+                        <Button variant="secondary" className="flex-1" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button className="flex-1 h-12" onClick={handleSave}>
+                        <Button className="flex-1" onClick={handleSave}>
                             {isCreate ? "Create Category" : "Save Changes"}
                         </Button>
                     </div>

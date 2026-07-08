@@ -85,7 +85,7 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
                 <div className="flex gap-3">
                     <Button
                         variant="secondary"
-                        className="flex-1 h-12"
+                        className="flex-1"
                         onClick={handleCancel}
                         disabled={isDeleting}
                     >
@@ -93,7 +93,7 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
                     </Button>
                     <Button
                         variant="destructive"
-                        className="flex-1 h-12 disabled:opacity-70"
+                        className="flex-1 disabled:opacity-70"
                         onClick={handleConfirm}
                         disabled={isDeleting}
                     >

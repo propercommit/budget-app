@@ -85,10 +85,10 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
+                        <Button variant="secondary" className="flex-1" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button className="flex-1 h-12" onClick={handleSave}>
+                        <Button className="flex-1" onClick={handleSave}>
                             {isEdit ? 'Save Changes' : 'Add Income'}
                         </Button>
                     </div>
@@ -128,7 +128,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         The errored inline style wins over the focus-within
                         utilities, keeping the red border while focused. */}
                     <div
-                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_10%,transparent)]"
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[var(--shadow-focus-ring)]"
                         style={amountError ? fieldInputStyle(true) : undefined}
                     >
                         <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">

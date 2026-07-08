@@ -125,7 +125,7 @@ export function ResetPasswordForm() {
 
             <Button
                 type="submit"
-                className="w-full h-12 text-base transition-colors touch-manipulation"
+                className="w-full touch-manipulation"
                 disabled={isSaving}
             >
                 {isSaving ? (

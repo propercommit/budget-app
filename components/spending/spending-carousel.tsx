@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, ReactNode, forwardRef, useImperativeHandle } from "react";
+import { Plus } from "lucide-react";
 
 interface SpendingCarouselProps {
     itemCount: number;
@@ -87,11 +88,9 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
             <div className="py-8 text-center">
                 <button
                     onClick={onAdd}
-                    className="mx-auto w-14 h-14 mb-3 rounded-2xl flex items-center justify-center bg-primary hover:bg-primary-hover shadow-[var(--shadow-btn-primary)] transition-all duration-200 active:scale-95"
+                    className="mx-auto w-14 h-14 mb-3 rounded-2xl flex items-center justify-center bg-primary hover:bg-primary-hover active:bg-primary-active shadow-[var(--shadow-btn-primary)] hover:shadow-[var(--shadow-btn-primary-hover)] transition-all duration-200 active:scale-95"
                 >
-                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
                 </button>
                 <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>No spending items</p>
                 <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>Add a spending item to get started</p>

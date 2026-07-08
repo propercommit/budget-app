@@ -88,7 +88,7 @@ function highlightMatch(name: string, query: string): React.ReactNode {
     return (
         <>
             {name.slice(0, index)}
-            <span style={{ backgroundColor: "rgba(0, 122, 255, 0.15)", borderRadius: "2px" }}>
+            <span className="bg-primary/15 rounded-[2px]">
                 {name.slice(index, index + query.trim().length)}
             </span>
             {name.slice(index + query.trim().length)}
@@ -227,10 +227,10 @@ export function SpendingItemEditPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
+                        <Button variant="secondary" className="flex-1" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button className="flex-1 h-12" onClick={handleSubmit}>
+                        <Button className="flex-1" onClick={handleSubmit}>
                             {isCreate ? (attachLabel ?? "Create") : "Save Changes"}
                         </Button>
                     </div>

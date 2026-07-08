@@ -1,7 +1,7 @@
 "use client";
 
 import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, Settings2 } from "lucide-react";
+import { ChevronDown, Plus, Settings2 } from "lucide-react";
 import { iconMap } from "@/lib/icon-map";
 
 /**
@@ -86,12 +86,9 @@ function OverflowTogglePill({ count, isOpen, onToggle }: OverflowTogglePillProps
             onClick={onToggle}
             title="Show more categories"
             aria-expanded={isOpen}
-            className={PILL_CLASSES}
-            style={{
-                backgroundColor: isOpen ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--card)",
-                color: isOpen ? "var(--primary)" : "var(--foreground)",
-                border: isOpen ? "1px solid var(--primary)" : "1px solid var(--border)",
-            }}
+            className={`${PILL_CLASSES} border ${isOpen
+                ? "bg-primary/10 text-primary border-primary"
+                : "bg-card text-foreground border-border"}`}
         >
             +{count}
             <ChevronDown
@@ -109,16 +106,9 @@ function NewCategoryPill({ onClick }: { onClick: () => void }) {
         <button
             onClick={onClick}
             title="New category"
-            className={PILL_CLASSES}
-            style={{
-                backgroundColor: "color-mix(in srgb, var(--primary) 6%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-                color: "var(--primary)",
-            }}
+            className={`${PILL_CLASSES} bg-primary/5 text-primary border border-primary/25 hover:bg-primary/10 hover:border-primary/45`}
         >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
+            <Plus className="w-4 h-4" strokeWidth={2.4} />
             <span>Category</span>
         </button>
     );

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { cookies } from "next/headers"
 import { ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
 import { RECOVERY_COOKIE, verifyRecoveryToken } from "@/lib/recovery"
 import { ResetPasswordForm } from "./reset-form"
@@ -44,12 +45,9 @@ export default async function ResetPasswordPage() {
                                 <ResetPasswordForm />
                             ) : (
                                 <div className="text-center py-2">
-                                    <Link
-                                        href="/auth/forgot-password"
-                                        className="inline-flex items-center justify-center w-full h-12 text-base font-semibold bg-primary hover:bg-primary-hover active:bg-primary-active text-primary-foreground rounded-xl shadow-[var(--shadow-btn-primary)] transition-colors"
-                                    >
-                                        Request a new link
-                                    </Link>
+                                    <Button asChild className="w-full text-base">
+                                        <Link href="/auth/forgot-password">Request a new link</Link>
+                                    </Button>
                                 </div>
                             )}
                         </div>

@@ -37,15 +37,15 @@ export function LogoutModal({ isOpen, onClose, isSaving, onSubmit }: LogoutModal
                     <Button
                         onClick={onClose}
                         disabled={isSaving}
-                        className="h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground shadow-[var(--shadow-btn-primary)] hover:bg-primary-hover active:bg-primary-active sm:text-[15px]"
+                        className="w-full text-base sm:text-[15px]"
                     >
                         Stay Logged In
                     </Button>
                     <Button
-                        variant="ghost"
+                        variant="ghost-destructive"
                         onClick={onSubmit}
                         disabled={isSaving}
-                        className="h-12 w-full rounded-xl text-base font-semibold text-destructive hover:bg-destructive/5 hover:text-destructive active:bg-destructive/10 sm:text-[15px]"
+                        className="w-full text-base sm:text-[15px]"
                     >
                         {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Log Out"}
                     </Button>

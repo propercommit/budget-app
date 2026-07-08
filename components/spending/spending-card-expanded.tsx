@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
 import { SpendingCardHeader } from "./spending-card-header";
 import { ExpandToggleBar } from "./expand-toggle-bar";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
@@ -188,20 +189,8 @@ export function SpendingCardExpanded({
                 </div>
 
                 {/* Add Entry Button */}
-                <Button variant="add" onClick={onAddEntry} className="w-full mt-3 h-[52px]">
-                    <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.2}
-                            d="M12 4v16m8-8H4"
-                        />
-                    </svg>
+                <Button variant="add" onClick={onAddEntry} className="w-full mt-3">
+                    <Plus className="w-5 h-5" strokeWidth={2.2} />
                     Add Entry
                 </Button>
 

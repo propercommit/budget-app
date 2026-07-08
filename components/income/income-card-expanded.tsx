@@ -3,6 +3,7 @@ import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { INCOME_TYPE_META, IncomeType, IncomeTypeFigures } from "./income-type-meta";
 import { DonutChart } from "../ui/donut-chart";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface IncomeCardExpandedProps {
@@ -126,12 +127,10 @@ export function IncomeCardExpanded({
                     </p>
                     <button
                         onClick={onAdd}
-                        className="w-full py-4 px-6 rounded-2xl text-primary-foreground font-semibold flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover shadow-[var(--shadow-btn-primary)] hover:shadow-[var(--shadow-btn-primary-hover)] transition-all duration-200 active:scale-[0.98]"
+                        className="w-full py-4 px-6 rounded-2xl text-primary-foreground font-semibold flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover active:bg-primary-active shadow-[var(--shadow-btn-primary)] hover:shadow-[var(--shadow-btn-primary-hover)] transition-all duration-200 active:scale-[0.98]"
                     >
                         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
+                            <Plus className="w-5 h-5 text-white" strokeWidth={2.2} />
                         </div>
                         <span>Add your first income</span>
                     </button>
@@ -182,10 +181,8 @@ export function IncomeCardExpanded({
                     </div>
 
                     {/* Add button */}
-                    <Button variant="add" onClick={onAdd} className="w-full h-[52px]">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 4v16m8-8H4" />
-                        </svg>
+                    <Button variant="add" onClick={onAdd} className="w-full">
+                        <Plus className="w-5 h-5" strokeWidth={2.2} />
                         Add income source
                     </Button>
                 </>

@@ -57,7 +57,7 @@ export function SpendingItemDetailPopin({
                 </button>
             }
             footer={
-                <Button variant="secondary" className="w-full h-12" onClick={onClose}>
+                <Button variant="secondary" className="w-full" onClick={onClose}>
                     Close
                 </Button>
             }

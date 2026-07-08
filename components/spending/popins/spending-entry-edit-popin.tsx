@@ -132,10 +132,10 @@ export function EntryEditPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
+                        <Button variant="secondary" className="flex-1" onClick={onClose}>
                             Cancel
                         </Button>
-                        <Button className="flex-1 h-12" onClick={handleSave}>
+                        <Button className="flex-1" onClick={handleSave}>
                             {isCreate ? "Add Entry" : "Save Changes"}
                         </Button>
                     </div>
@@ -195,7 +195,7 @@ export function EntryEditPopin({
                         over the focus-within utilities, keeping the red border
                         while focused, per the validation spec. */}
                     <div
-                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_10%,transparent)]"
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[var(--shadow-focus-ring)]"
                         style={amountError ? fieldInputStyle(true) : undefined}
                     >
                         <span
@@ -295,7 +295,7 @@ export function EntryEditPopin({
                         placeholder="https://example.com"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
                         style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent)"; }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "var(--shadow-focus-ring)"; }}
                         onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>

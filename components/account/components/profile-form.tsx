@@ -65,10 +65,10 @@ export function ProfileForm({
                 <Button
                     onClick={onSave}
                     disabled={!hasChanges || isSaving}
-                    className={`h-11 w-full rounded-full px-6 text-[15px] font-semibold transition-colors sm:w-auto ${
+                    className={`h-11 w-full rounded-full px-6 text-[15px] sm:w-auto ${
                         hasChanges
-                            ? "bg-primary text-primary-foreground shadow-[var(--shadow-btn-primary)] hover:bg-primary-hover active:bg-primary-active"
-                            : "bg-muted text-muted-foreground/70"
+                            ? ""
+                            : "disabled:bg-muted disabled:text-muted-foreground/70 disabled:opacity-100 disabled:shadow-none"
                     }`}
                 >
                     {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save"}

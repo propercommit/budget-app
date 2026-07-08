@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils"
  * - `default` — the one confident primary action per view (Add, Save, Create)
  * - `secondary` — the calm partner (Cancel, dismiss, Close)
  * - `outline` — bordered low-emphasis actions (Manage, Account)
- * - `ghost` / `ghost-primary` — quiet in-flow taps (Today / View all)
+ * - `ghost` / `ghost-destructive` — quiet in-flow taps / quiet deletes
  * - `destructive-outline` — arms a delete; `destructive` — confirms it
  * - `add` — the unified inline "create" affordance (Add Entry, Add income
- *   source, + Category): calmer than a primary, unmistakably an action
+ *   source): calmer than a primary, unmistakably an action; always 52px
+ *   at the default size via the compound variant below
  *
  * Icon buttons are always circular: pair any variant with an `icon*` size.
  */
@@ -32,7 +33,8 @@ const buttonVariants = cva(
         outline:
           "border border-border bg-card text-foreground shadow-[var(--shadow-btn-secondary)] hover:bg-muted",
         ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
-        "ghost-primary": "text-primary hover:bg-primary/10",
+        "ghost-destructive":
+          "text-destructive hover:bg-destructive/5 active:bg-destructive/10 focus-visible:ring-destructive/30",
         destructive:
           "bg-destructive text-white shadow-[var(--shadow-btn-destructive)] hover:bg-destructive-hover hover:shadow-[var(--shadow-btn-destructive-hover)] focus-visible:ring-destructive/30",
         "destructive-outline":
@@ -42,13 +44,19 @@ const buttonVariants = cva(
       },
       size: {
         sm: "h-9 rounded-[10px] gap-1.5 px-4 text-[13px] has-[>svg]:px-3",
-        default: "h-11 rounded-xl px-5 text-[15px] has-[>svg]:px-4",
+        default: "h-12 rounded-xl px-5 text-[15px] has-[>svg]:px-4",
         lg: "h-[52px] rounded-[14px] px-7 text-base has-[>svg]:px-6",
         icon: "size-10 rounded-full active:scale-[0.92]",
         "icon-sm": "size-8 rounded-full active:scale-[0.92]",
         "icon-lg": "size-11 rounded-full active:scale-[0.92]",
       },
     },
+    compoundVariants: [
+      // Inline add affordances are always the 52px hero height, but keep the
+      // 12px radius of the default size (the lg 14px radius is for true
+      // large primaries).
+      { variant: "add", size: "default", class: "h-[52px]" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

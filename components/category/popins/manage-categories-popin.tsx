@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, SearchX, LayoutGrid } from "lucide-react";
+import { Plus, X, SearchX, LayoutGrid } from "lucide-react";
 import { Category } from "@/lib/types";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { Button } from "@/components/ui/button";
@@ -63,15 +63,13 @@ export function ManageCategoriesPopin({
             subtitle="Edit or remove your spending categories"
             footer={
                 <Button size="lg" className="w-full text-[15px]" onClick={onCreateCategory}>
-                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Plus className="w-[18px] h-[18px]" strokeWidth={2.5} />
                     New Category
                 </Button>
             }
         >
             <div
-                className="flex items-center gap-2.5 px-3 py-[11px] rounded-[13px] border border-transparent transition-all duration-150 focus-within:border-primary focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_12%,transparent)]"
+                className="flex items-center gap-2.5 px-3 py-[11px] rounded-[13px] border border-transparent transition-all duration-150 focus-within:border-primary focus-within:shadow-[var(--shadow-focus-ring)]"
                 style={{ backgroundColor: "var(--muted)" }}
             >
                 <svg
