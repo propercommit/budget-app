@@ -148,8 +148,10 @@ export async function getSeries() {
 
 /**
  * Ensures every active recurring series has an incarnation in `month` and
- * returns the month's full flattened item list. Idempotent server-side —
- * safe to call on every month open.
+ * returns the month's full flattened item list. Only the current UTC month
+ * and later materialize (D26) — a past month creates nothing and returns
+ * its existing items as-is. Idempotent server-side — safe to call on every
+ * month open.
  */
 export async function materializeMonth(month: string) {
   return fetchAPI("/api/spending/materialize", {
