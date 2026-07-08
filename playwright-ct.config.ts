@@ -55,12 +55,16 @@ export default defineConfig({
     },
   },
 
-  // Sub-pixel anti-aliasing differences are expected across runs; allow a tiny
-  // per-pixel and total-ratio tolerance so genuine visual changes still fail
-  // while noise does not.
+  // Sub-pixel anti-aliasing differences are expected across runs; `threshold`
+  // forgives per-pixel color jitter, and `maxDiffPixels` caps how many pixels
+  // may differ. The cap is ABSOLUTE, not a ratio: a ratio scales with viewport
+  // area, so on the 1280x900 desktop project a real UI change the size of one
+  // list row (~1% of the frame) fit inside the old `maxDiffPixelRatio: 0.01`
+  // and passed against a stale baseline. 1000px is far above residual
+  // anti-aliasing noise and far below any human-visible layout change.
   expect: {
     toHaveScreenshot: {
-      maxDiffPixelRatio: 0.01,
+      maxDiffPixels: 1000,
       threshold: 0.2,
       animations: "disabled",
       scale: "css",
