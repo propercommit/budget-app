@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { ColorPicker } from "@/components/color-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { FieldMessage, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
@@ -65,24 +66,12 @@ export function CategoryPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                        >
+                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{
-                                backgroundColor: "#34C759",
-                                color: "white",
-                                boxShadow: "0 4px 12px rgba(52, 199, 89, 0.3)",
-                            }}
-                        >
+                        </Button>
+                        <Button className="flex-1 h-12" onClick={handleSave}>
                             {isCreate ? "Create Category" : "Save Changes"}
-                        </button>
+                        </Button>
                     </div>
                     {!isCreate && onDelete && (
                         <DeleteConfirmSection

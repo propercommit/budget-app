@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { ReceiptViewer } from "@/components/ui/receipt-viewer";
@@ -130,13 +131,9 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                 </button>
             }
             footer={
-                <button
-                    onClick={onClose}
-                    className="w-full py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                >
+                <Button variant="secondary" className="w-full h-12" onClick={onClose}>
                     Close
-                </button>
+                </Button>
             }
         >
             <div className="space-y-5">
@@ -198,7 +195,7 @@ function LinkRow({ url }: { url: string }) {
     return (
         <div className="flex items-center justify-between py-2">
             <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Link</span>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold flex items-center gap-1 transition-opacity hover:opacity-70" style={{ color: "#007AFF" }}>
+            <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-primary flex items-center gap-1 transition-opacity hover:opacity-70">
                 <span className="truncate max-w-[200px]">{url}</span>
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

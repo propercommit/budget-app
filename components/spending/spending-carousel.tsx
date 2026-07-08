@@ -87,8 +87,7 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
             <div className="py-8 text-center">
                 <button
                     onClick={onAdd}
-                    className="mx-auto w-14 h-14 mb-3 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-95"
-                    style={{ backgroundColor: "#34C759" }}
+                    className="mx-auto w-14 h-14 mb-3 rounded-2xl flex items-center justify-center bg-primary hover:bg-primary-hover shadow-[var(--shadow-btn-primary)] transition-all duration-200 active:scale-95"
                 >
                     <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />

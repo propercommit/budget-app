@@ -270,8 +270,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 <button
                 onClick={handleOpenCreateSpending}
                 aria-label="New spending item"
-                className="w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 rounded-full flex items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all duration-200 active:scale-95"
-                style={{ backgroundColor: "#34C759" }}
+                className="w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 rounded-full flex items-center justify-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary-hover shadow-[var(--shadow-btn-icon)] transition-all duration-200 active:scale-95"
                 >
                 <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />

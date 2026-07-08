@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Category } from "@/lib/types";
 import { CATEGORY_DELETE_WARNING } from "@/lib/constants";
 
@@ -67,11 +68,8 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
                 className="relative w-full max-w-[320px] sm:max-w-[380px] bg-card rounded-3xl p-6 text-center outline-none"
                 style={{ boxShadow: "0 30px 60px rgba(0, 0, 0, 0.3)" }}
             >
-                <div
-                    className="w-[60px] h-[60px] rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ backgroundColor: "rgba(255, 59, 48, 0.08)" }}
-                >
-                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="#FF3B30" strokeWidth={1.9}>
+                <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center mx-auto mb-4 bg-destructive/5 text-destructive">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.9}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                 </div>
@@ -85,23 +83,23 @@ export function DeleteCategoryDialog({ category, onCancel, onConfirm }: DeleteCa
                 </p>
 
                 <div className="flex gap-3">
-                    <button
+                    <Button
+                        variant="secondary"
+                        className="flex-1 h-12"
                         onClick={handleCancel}
                         disabled={isDeleting}
-                        className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
-                        style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                     >
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        className="flex-1 h-12 disabled:opacity-70"
                         onClick={handleConfirm}
                         disabled={isDeleting}
-                        className="flex-1 py-3.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-70"
-                        style={{ backgroundColor: "#FF3B30" }}
                     >
                         {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
                         Delete
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

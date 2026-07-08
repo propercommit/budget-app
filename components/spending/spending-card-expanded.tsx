@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSettings } from "@/lib/settings-context";
 import { SpendingCardHeader } from "./spending-card-header";
 import { ExpandToggleBar } from "./expand-toggle-bar";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 export interface SpendingEntry {
@@ -187,14 +188,9 @@ export function SpendingCardExpanded({
                 </div>
 
                 {/* Add Entry Button */}
-                <button
-                    onClick={onAddEntry}
-                    className="w-full mt-3 p-3.5 rounded-xl border-2 border-dashed transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98] hover:border-[#007AFF] hover:bg-[rgba(0,122,255,0.05)]"
-                    style={{ borderColor: "var(--border)" }}
-                >
+                <Button variant="add" onClick={onAddEntry} className="w-full mt-3 h-[52px]">
                     <svg
                         className="w-5 h-5"
-                        style={{ color: "#007AFF" }}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -202,14 +198,12 @@ export function SpendingCardExpanded({
                         <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth={2}
+                            strokeWidth={2.2}
                             d="M12 4v16m8-8H4"
                         />
                     </svg>
-                    <span className="font-medium text-sm" style={{ color: "#007AFF" }}>
-                        Add Entry
-                    </span>
-                </button>
+                    Add Entry
+                </Button>
 
                 <ExpandToggleBar isExpanded={true} onToggle={onCollapse} />
             </div>

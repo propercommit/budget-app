@@ -1,6 +1,7 @@
 import { IncomeSource } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { useSettings } from "@/lib/settings-context";
 
 interface IncomeDetailPopinProps {
@@ -15,7 +16,7 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
 
     if (!income) return null;
 
-    const typeColor = income.type === 'active' ? '#007AFF' : '#FF9500';
+    const typeColor = income.type === 'active' ? 'var(--primary)' : 'var(--attention)';
 
     const renderIcon = (iconId: string) => {
         if (iconId.startsWith("data:")) {
@@ -43,20 +44,16 @@ export function IncomeDetailPopin({ isOpen, onClose, onEdit, income }: IncomeDet
                 </button>
             }
             footer={
-                <button
-                    onClick={onClose}
-                    className="w-full py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                >
+                <Button variant="secondary" className="w-full h-12" onClick={onClose}>
                     Close
-                </button>
+                </Button>
             }
         >
             <div className="space-y-6">
                 <div className="flex items-center gap-4">
                     <div
                         className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${typeColor}15`, color: typeColor }}
+                        style={{ backgroundColor: `color-mix(in srgb, ${typeColor} 8%, transparent)`, color: typeColor }}
                     >
                         {renderIcon(income.icon)}
                     </div>

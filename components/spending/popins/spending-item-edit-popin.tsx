@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { iconMap } from "@/lib/icon-map";
@@ -226,20 +227,12 @@ export function SpendingItemEditPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                        >
+                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
-                        >
+                        </Button>
+                        <Button className="flex-1 h-12" onClick={handleSubmit}>
                             {isCreate ? (attachLabel ?? "Create") : "Save Changes"}
-                        </button>
+                        </Button>
                     </div>
                     {!isCreate && onDelete && (
                         <DeleteConfirmSection
@@ -360,7 +353,7 @@ export function SpendingItemEditPopin({
                                                     {subtitle}
                                                 </p>
                                             </div>
-                                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0" style={{ backgroundColor: "rgba(0, 122, 255, 0.1)", color: "#007AFF" }}>
+                                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0 bg-primary/10 text-primary">
                                                 {series.recurring ? "Add" : "Resume"}
                                             </span>
                                         </button>

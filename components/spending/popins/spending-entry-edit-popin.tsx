@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
@@ -131,25 +132,12 @@ export function EntryEditPopin({
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                        >
+                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{
-                                backgroundColor: "#34C759",
-                                color: "white",
-                                cursor: "pointer",
-                                boxShadow: "0 4px 12px rgba(52, 199, 89, 0.3)",
-                            }}
-                        >
+                        </Button>
+                        <Button className="flex-1 h-12" onClick={handleSave}>
                             {isCreate ? "Add Entry" : "Save Changes"}
-                        </button>
+                        </Button>
                     </div>
                     {!isCreate && onDelete && (
                         <DeleteConfirmSection
@@ -207,7 +195,7 @@ export function EntryEditPopin({
                         over the focus-within utilities, keeping the red border
                         while focused, per the validation spec. */}
                     <div
-                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_10%,transparent)]"
                         style={amountError ? fieldInputStyle(true) : undefined}
                     >
                         <span
@@ -238,8 +226,8 @@ export function EntryEditPopin({
                     </label>
                     <SegmentedToggle
                         options={[
-                            { value: "debit", label: "Debit", dotColor: "#FF3B30" },
-                            { value: "credit", label: "Credit", dotColor: "#34C759" },
+                            { value: "debit", label: "Debit", dotColor: "var(--destructive)" },
+                            { value: "credit", label: "Credit", dotColor: "var(--positive)" },
                         ]}
                         value={direction}
                         onChange={setDirection}
@@ -273,8 +261,7 @@ export function EntryEditPopin({
                             <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
                                 <button
                                     onClick={() => setReceipt(null)}
-                                    className="px-4 py-2 rounded-xl bg-white/90 text-sm font-medium"
-                                    style={{ color: "#FF3B30" }}
+                                    className="px-4 py-2 rounded-xl bg-white/90 text-sm font-semibold text-destructive"
                                 >
                                     Remove
                                 </button>
@@ -308,7 +295,7 @@ export function EntryEditPopin({
                         placeholder="https://example.com"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
                         style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
+                        onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent)"; }}
                         onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
                     />
                 </div>

@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { IncomeSource } from "@/lib/types";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldFocusProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
@@ -84,20 +85,12 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                        >
+                        <Button variant="secondary" className="flex-1 h-12" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
-                        >
+                        </Button>
+                        <Button className="flex-1 h-12" onClick={handleSave}>
                             {isEdit ? 'Save Changes' : 'Add Income'}
-                        </button>
+                        </Button>
                     </div>
                     {isEdit && onDelete && (
                         <DeleteConfirmSection
@@ -135,7 +128,7 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         The errored inline style wins over the focus-within
                         utilities, keeping the red border while focused. */}
                     <div
-                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-primary focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_10%,transparent)]"
                         style={amountError ? fieldInputStyle(true) : undefined}
                     >
                         <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
@@ -162,8 +155,8 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                     <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Type</label>
                     <SegmentedToggle
                         options={[
-                            { value: 'active', label: 'Active', dotColor: '#007AFF' },
-                            { value: 'passive', label: 'Passive', dotColor: '#FF9500' },
+                            { value: 'active', label: 'Active', dotColor: 'var(--primary)' },
+                            { value: 'passive', label: 'Passive', dotColor: 'var(--attention)' },
                         ]}
                         value={incomeType}
                         onChange={setIncomeType}

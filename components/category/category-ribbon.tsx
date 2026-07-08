@@ -12,7 +12,7 @@ import { iconMap } from "@/lib/icon-map";
 const MAX_VISIBLE_CATEGORIES = 5;
 
 /** Shared look of every pill-shaped button in the ribbon. */
-const PILL_CLASSES = "flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95";
+const PILL_CLASSES = "flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95";
 
 interface Category {
     name: string;
@@ -60,7 +60,7 @@ function AllPill({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
     return (
         <button
             onClick={onSelect}
-            className="flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 active:scale-95"
+            className="flex-shrink-0 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95"
             style={{
                 backgroundColor: isSelected ? "var(--foreground)" : "var(--card)",
                 color: isSelected ? "var(--background)" : "var(--muted-foreground)",
@@ -88,9 +88,9 @@ function OverflowTogglePill({ count, isOpen, onToggle }: OverflowTogglePillProps
             aria-expanded={isOpen}
             className={PILL_CLASSES}
             style={{
-                backgroundColor: isOpen ? "rgba(0, 122, 255, 0.08)" : "var(--card)",
-                color: isOpen ? "#007AFF" : "var(--foreground)",
-                border: isOpen ? "1px solid #007AFF" : "1px solid var(--border)",
+                backgroundColor: isOpen ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--card)",
+                color: isOpen ? "var(--primary)" : "var(--foreground)",
+                border: isOpen ? "1px solid var(--primary)" : "1px solid var(--border)",
             }}
         >
             +{count}
@@ -111,9 +111,9 @@ function NewCategoryPill({ onClick }: { onClick: () => void }) {
             title="New category"
             className={PILL_CLASSES}
             style={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                color: "#007AFF",
+                backgroundColor: "color-mix(in srgb, var(--primary) 6%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
+                color: "var(--primary)",
             }}
         >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
