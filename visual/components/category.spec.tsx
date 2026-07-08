@@ -214,7 +214,7 @@ test.describe("Category components", () => {
     );
 
     await page.getByPlaceholder("Search categories").fill("zzz");
-    await expect(page.getByText('No categories match "zzz".')).toBeVisible();
+    await expect(page.getByText("Nothing matches “zzz”. Try a different search.")).toBeVisible();
 
     await expect(page).toHaveScreenshot("category-manage-popin-empty-search.png");
   });
