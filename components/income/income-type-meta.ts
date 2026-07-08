@@ -4,8 +4,8 @@ export type IncomeType = IncomeSource["type"];
 
 /** Static presentation attributes per income type, shared by the card views. */
 export const INCOME_TYPE_META: Record<IncomeType, { color: string; label: string }> = {
-    active: { color: "#007AFF", label: "Active" },
-    passive: { color: "#FF9500", label: "Passive" },
+    active: { color: "var(--primary)", label: "Active" },
+    passive: { color: "var(--attention)", label: "Passive" },
 };
 
 /** Display order of the types in donuts, legends and breakdown lists. */

@@ -32,7 +32,7 @@ export default function LegalLayout({
                         "[&_ul]:mt-3 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5",
                         "[&_strong]:font-semibold [&_strong]:text-[#1D1D1F]",
                         "[&_blockquote]:mt-3 [&_blockquote]:border-l-2 [&_blockquote]:border-gray-200 [&_blockquote]:pl-4",
-                        "[&_a]:font-medium [&_a]:text-green-600 [&_a]:underline [&_a:hover]:text-green-700",
+                        "[&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a:hover]:text-primary-hover",
                         "[&_hr]:my-10 [&_hr]:border-gray-200",
                         "[&_table]:mt-3 [&_table]:w-full [&_table]:text-left [&_table]:text-sm",
                         "[&_th]:border-b [&_th]:border-gray-200 [&_th]:py-2 [&_th]:pr-4 [&_th]:font-semibold [&_th]:text-[#1D1D1F]",

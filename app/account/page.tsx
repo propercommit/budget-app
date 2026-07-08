@@ -509,8 +509,8 @@ export default function AccountPage() {
                         onClick={handleExport}
                         trailing={
                             isExporting
-                                ? <Loader2 className="h-[18px] w-[18px] flex-none animate-spin text-green-600" strokeWidth={2} />
-                                : <Download className="h-[18px] w-[18px] flex-none text-green-600" strokeWidth={2} />
+                                ? <Loader2 className="h-[18px] w-[18px] flex-none animate-spin text-primary" strokeWidth={2} />
+                                : <Download className="h-[18px] w-[18px] flex-none text-primary" strokeWidth={2} />
                         }
                     />
                 </SettingsSection>
@@ -520,7 +520,7 @@ export default function AccountPage() {
                         <button
                             type="button"
                             onClick={() => setActiveModal("logout")}
-                            className="min-h-12 w-full px-4 py-3.5 text-center text-base font-medium text-red-500 transition-colors hover:bg-red-50 active:bg-red-100 dark:hover:bg-red-500/10 dark:active:bg-red-500/20 sm:text-[15px]"
+                            className="min-h-12 w-full px-4 py-3.5 text-center text-base font-semibold text-destructive transition-colors hover:bg-destructive/5 active:bg-destructive/10 sm:text-[15px]"
                         >
                             Log Out
                         </button>
@@ -528,7 +528,7 @@ export default function AccountPage() {
                     <button
                         type="button"
                         onClick={() => setActiveModal("delete")}
-                        className="self-center p-1 text-[13px] text-muted-foreground transition-colors hover:text-red-500"
+                        className="self-center p-1 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
                     >
                         Delete your account and all data…
                     </button>

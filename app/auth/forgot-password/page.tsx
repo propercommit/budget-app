@@ -112,7 +112,7 @@ export default function ForgotPasswordPage() {
                                         <button
                                             type="button"
                                             onClick={() => setSubmitted(false)}
-                                            className="text-green-600 hover:text-green-700 font-medium"
+                                            className="text-primary hover:text-primary-hover font-medium"
                                         >
                                             try a different address
                                         </button>
@@ -143,7 +143,7 @@ export default function ForgotPasswordPage() {
 
                                     <Button
                                         type="submit"
-                                        className="w-full h-12 text-base font-medium bg-green-500 hover:bg-green-600 active:bg-green-700 transition-colors touch-manipulation"
+                                        className="w-full touch-manipulation"
                                         disabled={isLoading}
                                     >
                                         {isLoading ? (
@@ -159,7 +159,7 @@ export default function ForgotPasswordPage() {
                         <div className="px-5 py-4 sm:px-8 sm:py-5 bg-muted text-center">
                             <Link
                                 href="/login"
-                                className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-semibold transition-colors"
+                                className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary-hover font-semibold transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                                 Back to sign in

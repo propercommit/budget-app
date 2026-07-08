@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { cookies } from "next/headers"
 import { ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
 import { RECOVERY_COOKIE, verifyRecoveryToken } from "@/lib/recovery"
 import { ResetPasswordForm } from "./reset-form"
@@ -44,12 +45,9 @@ export default async function ResetPasswordPage() {
                                 <ResetPasswordForm />
                             ) : (
                                 <div className="text-center py-2">
-                                    <Link
-                                        href="/auth/forgot-password"
-                                        className="inline-flex items-center justify-center w-full h-12 text-base font-medium bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-md transition-colors"
-                                    >
-                                        Request a new link
-                                    </Link>
+                                    <Button asChild className="w-full text-base">
+                                        <Link href="/auth/forgot-password">Request a new link</Link>
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -57,7 +55,7 @@ export default async function ResetPasswordPage() {
                         <div className="px-5 py-4 sm:px-8 sm:py-5 bg-muted text-center">
                             <Link
                                 href="/login"
-                                className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-semibold transition-colors"
+                                className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary-hover font-semibold transition-colors"
                             >
                                 <ArrowLeft className="w-4 h-4" aria-hidden="true" />
                                 Back to sign in

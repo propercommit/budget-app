@@ -1,6 +1,7 @@
 "use client";
 
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { spentDisplay } from "@/lib/spending/format-spent";
@@ -56,13 +57,9 @@ export function SpendingItemDetailPopin({
                 </button>
             }
             footer={
-                <button
-                    onClick={onClose}
-                    className="w-full py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
-                >
+                <Button variant="secondary" className="w-full" onClick={onClose}>
                     Close
-                </button>
+                </Button>
             }
         >
             <div className="space-y-5">

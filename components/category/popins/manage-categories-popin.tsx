@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, SearchX, LayoutGrid } from "lucide-react";
+import { Plus, X, SearchX, LayoutGrid } from "lucide-react";
 import { Category } from "@/lib/types";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { Button } from "@/components/ui/button";
 import { iconMap } from "@/lib/icon-map";
 
 interface ManageCategoriesPopinProps {
@@ -61,20 +62,14 @@ export function ManageCategoriesPopin({
             title="Manage Categories"
             subtitle="Edit or remove your spending categories"
             footer={
-                <button
-                    onClick={onCreateCategory}
-                    className="w-full flex items-center justify-center gap-2 py-[15px] rounded-[14px] text-[15px] font-semibold tracking-[-0.01em] text-white transition-all duration-200 active:scale-[0.98] hover:bg-[#0a6fe6]"
-                    style={{ backgroundColor: "#007AFF", boxShadow: "0 4px 14px rgba(0, 122, 255, 0.28)" }}
-                >
-                    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
+                <Button size="lg" className="w-full text-[15px]" onClick={onCreateCategory}>
+                    <Plus className="w-[18px] h-[18px]" strokeWidth={2.5} />
                     New Category
-                </button>
+                </Button>
             }
         >
             <div
-                className="flex items-center gap-2.5 px-3 py-[11px] rounded-[13px] border border-transparent transition-all duration-150 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.12)]"
+                className="flex items-center gap-2.5 px-3 py-[11px] rounded-[13px] border border-transparent transition-all duration-150 focus-within:border-primary focus-within:shadow-[var(--shadow-focus-ring)]"
                 style={{ backgroundColor: "var(--muted)" }}
             >
                 <svg
@@ -172,7 +167,7 @@ export function ManageCategoriesPopin({
                                     <button
                                         onClick={() => onEditCategory(category)}
                                         aria-label={`Edit ${category.label}`}
-                                        className="flex items-center justify-center w-11 h-11 sm:w-10 sm:h-10 rounded-full transition-colors duration-150 active:scale-95 text-[color:var(--muted-foreground)] hover:bg-[rgba(0,122,255,0.1)] hover:text-[#007AFF]"
+                                        className="flex items-center justify-center w-11 h-11 sm:w-10 sm:h-10 rounded-full transition-colors duration-150 active:scale-95 text-[color:var(--muted-foreground)] hover:bg-primary/10 hover:text-primary"
                                     >
                                         <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.9}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -181,7 +176,7 @@ export function ManageCategoriesPopin({
                                     <button
                                         onClick={() => onDeleteCategory(category)}
                                         aria-label={`Delete ${category.label}`}
-                                        className="flex items-center justify-center w-11 h-11 sm:w-10 sm:h-10 rounded-full transition-colors duration-150 active:scale-95 text-[color:var(--muted-foreground)] hover:bg-[rgba(255,59,48,0.1)] hover:text-[#FF3B30]"
+                                        className="flex items-center justify-center w-11 h-11 sm:w-10 sm:h-10 rounded-full transition-colors duration-150 active:scale-95 text-[color:var(--muted-foreground)] hover:bg-destructive/10 hover:text-destructive"
                                     >
                                         <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.9}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

@@ -106,7 +106,7 @@ export function ProfileAvatar({
                         type="button"
                         onClick={onRemove}
                         disabled={isUploading}
-                        className="p-1 text-[13px] text-muted-foreground transition-colors hover:text-red-500"
+                        className="p-1 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
                     >
                         Remove
                     </button>
