@@ -23,6 +23,7 @@ const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
       category: model(),
       spendingItem: model(),
       budgetSeries: model(),
+      user: model(),
       $transaction: vi.fn(),
     },
     getAuthenticatedUser: vi.fn(),
@@ -317,6 +318,29 @@ describe("POST /api/spending — new series", () => {
 
     expect((body as { name: string }).name).toBe("Rent");
     expect((body as { entries: unknown[] }).entries).toEqual([]);
+  });
+
+  // The new-series branch creates a BudgetSeries (userId FK) — self-heal the
+  // User row before the transaction, or the FK write fails on a reset account.
+  it("upserts the User before creating the series", async () => {
+    prismaMock.category.findFirst.mockResolvedValue(FAKE_CATEGORY);
+    prismaMock.budgetSeries.findUnique.mockResolvedValue(null);
+    prismaMock.user.upsert.mockResolvedValue({});
+    prismaMock.budgetSeries.create.mockResolvedValue(FAKE_SERIES);
+    prismaMock.spendingItem.create.mockResolvedValue(dbItem());
+
+    const { status } = await readJson(await POST(jsonRequest(validBody)));
+
+    expect(status).toBe(201);
+    expect(prismaMock.user.upsert).toHaveBeenCalledWith({
+      where: { id: FAKE_USER.id },
+      update: { email: FAKE_USER.email },
+      create: { id: FAKE_USER.id, email: FAKE_USER.email },
+    });
+
+    const upsertOrder = prismaMock.user.upsert.mock.invocationCallOrder[0];
+    const createOrder = prismaMock.budgetSeries.create.mock.invocationCallOrder[0];
+    expect(upsertOrder).toBeLessThan(createOrder);
   });
 
   it("passes recurring: false through to the new series", async () => {
