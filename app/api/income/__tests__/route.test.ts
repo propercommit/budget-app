@@ -13,7 +13,7 @@ const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
     upsert: vi.fn(),
   });
   return {
-    prismaMock: { incomeSource: model() },
+    prismaMock: { incomeSource: model(), user: model() },
     getAuthenticatedUser: vi.fn(),
   };
 });
@@ -140,7 +140,7 @@ describe("POST /api/income", () => {
     });
   });
 
-  it("creates income and returns 201 — note: no User upsert in this route", async () => {
+  it("creates income and returns 201", async () => {
     prismaMock.incomeSource.create.mockResolvedValue({ id: "i1" });
     const { status, body } = await readJson(await POST(jsonReq(validIncome)));
     expect(status).toBe(201);
@@ -148,6 +148,27 @@ describe("POST /api/income", () => {
     expect(prismaMock.incomeSource.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ userId: FAKE_USER.id, name: "Salary" }),
     });
+  });
+
+  // Income requires no pre-existing category, so it can be a virgin account's
+  // first write — the route must self-heal the User row before the FK write.
+  it("upserts the User before creating the income source", async () => {
+    prismaMock.user.upsert.mockResolvedValue({});
+    prismaMock.incomeSource.create.mockResolvedValue({ id: "i1" });
+
+    const { status } = await readJson(await POST(jsonReq(validIncome)));
+
+    expect(status).toBe(201);
+    expect(prismaMock.user.upsert).toHaveBeenCalledWith({
+      where: { id: FAKE_USER.id },
+      update: { email: FAKE_USER.email },
+      create: { id: FAKE_USER.id, email: FAKE_USER.email },
+    });
+
+    // upsert must precede create
+    const upsertOrder = prismaMock.user.upsert.mock.invocationCallOrder[0];
+    const createOrder = prismaMock.incomeSource.create.mock.invocationCallOrder[0];
+    expect(upsertOrder).toBeLessThan(createOrder);
   });
 });
 

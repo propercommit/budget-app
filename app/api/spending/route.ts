@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { ensureUser } from "@/lib/user";
 import {
     flattenSpendingItem,
     spendingItemInclude,
@@ -220,6 +221,10 @@ export async function POST(request: Request) {
         });
 
         if (existingSeries !== null) return seriesConflictResponse(existingSeries, month);
+
+        // BudgetSeries carries the userId FK; the attach branch above is safe
+        // (an existing series proves the User row) but a new series is not.
+        await ensureUser(user);
 
         try {
             const spendingItem = await prisma.$transaction(async (tx) => {

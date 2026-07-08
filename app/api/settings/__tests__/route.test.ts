@@ -13,7 +13,7 @@ const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
     upsert: vi.fn(),
   });
   return {
-    prismaMock: { userSettings: model() },
+    prismaMock: { userSettings: model(), user: model() },
     getAuthenticatedUser: vi.fn(),
   };
 });
@@ -66,6 +66,26 @@ describe("GET /api/settings", () => {
         darkMode: false,
       },
     });
+  });
+
+  // The lazy-create branch is the first write for a user whose settings row is
+  // missing — self-heal the User row before it, or the FK create fails.
+  it("upserts the User before creating default settings", async () => {
+    prismaMock.userSettings.findUnique.mockResolvedValue(null);
+    prismaMock.user.upsert.mockResolvedValue({});
+    prismaMock.userSettings.create.mockResolvedValue({ userId: FAKE_USER.id });
+
+    await GET();
+
+    expect(prismaMock.user.upsert).toHaveBeenCalledWith({
+      where: { id: FAKE_USER.id },
+      update: { email: FAKE_USER.email },
+      create: { id: FAKE_USER.id, email: FAKE_USER.email },
+    });
+
+    const upsertOrder = prismaMock.user.upsert.mock.invocationCallOrder[0];
+    const createOrder = prismaMock.userSettings.create.mock.invocationCallOrder[0];
+    expect(upsertOrder).toBeLessThan(createOrder);
   });
 });
 
@@ -128,6 +148,24 @@ describe("PUT /api/settings", () => {
         darkMode: false,
       },
     });
+  });
+
+  // The upsert can take its create branch, so the User row must exist first.
+  it("upserts the User before upserting settings", async () => {
+    prismaMock.user.upsert.mockResolvedValue({});
+    prismaMock.userSettings.upsert.mockResolvedValue({ userId: FAKE_USER.id });
+
+    await PUT(jsonRequest({ currency: "EUR" }));
+
+    expect(prismaMock.user.upsert).toHaveBeenCalledWith({
+      where: { id: FAKE_USER.id },
+      update: { email: FAKE_USER.email },
+      create: { id: FAKE_USER.id, email: FAKE_USER.email },
+    });
+
+    const userOrder = prismaMock.user.upsert.mock.invocationCallOrder[0];
+    const settingsOrder = prismaMock.userSettings.upsert.mock.invocationCallOrder[0];
+    expect(userOrder).toBeLessThan(settingsOrder);
   });
 
   it("accepts darkMode: false (a falsy-but-valid value)", async () => {
