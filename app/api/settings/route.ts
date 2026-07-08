@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { ensureUser } from "@/lib/user";
 import { VALID_CURRENCIES, VALID_DATE_FORMATS, DEFAULT_USER_SETTINGS, Currency, DateFormat } from "@/lib/constants";
 
 
@@ -20,6 +21,10 @@ export async function GET() {
     if (settings) {
       return NextResponse.json(settings);
     }
+
+    // Only the lazy-create path needs the guard — an existing settings row
+    // already proves the User row exists.
+    await ensureUser(user);
 
     const newSettings = await prisma.userSettings.create({
       data: {
@@ -92,6 +97,9 @@ export async function PUT(request: Request) {
     if (currency !== undefined) data.currency = currency;
     if (dateFormat !== undefined) data.dateFormat = dateFormat;
     if (darkMode !== undefined) data.darkMode = darkMode;
+
+    // The upsert below may take its create branch, so the User row must exist.
+    await ensureUser(user);
 
     // Upsert to handle edge case where settings don't exist yet
     const settings = await prisma.userSettings.upsert({

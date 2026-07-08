@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { ensureUser } from "@/lib/user";
 
 // Constants (kept in sync with PUT /api/categories/[id])
 const MAX_LABEL_LENGTH = 30;
@@ -77,15 +78,7 @@ export async function POST(request: Request) {
             );
         }
 
-        // Ensure user exists in our database
-        await prisma.user.upsert({
-            where: { id: user.id },
-            update: { email: user.email ?? undefined },
-            create: {
-                id: user.id,
-                email: user.email ?? `${user.id}@unknown.com`,
-            },
-        });
+        await ensureUser(user);
 
         // Create the category
         const category = await prisma.category.create({

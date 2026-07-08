@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { ensureUser } from "@/lib/user";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { IncomeSource } from "@/lib/types";
 
@@ -77,6 +78,10 @@ export async function POST(req: Request) {
     }
     if (amount > 100000000000000) // = 1,000,000,000,000.00 major units; amount is integer cents
       return NextResponse.json({ error: "max amount bound reached" }, { status: 400 });
+
+    // Income needs no pre-existing category, so this can be a brand-new
+    // account's first-ever write — self-heal the User row or the FK fails.
+    await ensureUser(user);
 
     const income = await prisma.incomeSource.create({
       data: {
