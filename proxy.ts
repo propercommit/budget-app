@@ -144,8 +144,11 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization)
          * - favicon.ico
+         * - robots.txt / sitemap.xml (public SEO metadata routes — must stay
+         *   reachable by unauthenticated crawlers; otherwise the auth redirect
+         *   below bounces them to /login and the files are never served)
          * - public assets (images, etc.)
          */
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ],
 }
