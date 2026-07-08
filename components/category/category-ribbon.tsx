@@ -69,6 +69,7 @@ function AllPill({ isSelected, onSelect }: { isSelected: boolean; onSelect: () =
             }}
         >
             <span>{iconMap["rows"]}</span>
+            <span className="truncate max-w-[120px]">All</span>
         </button>
     );
 }
