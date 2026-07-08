@@ -1,8 +1,9 @@
 "use client";
 
-import { Category, IncomeSource, SpendingItem } from "@/lib/types";
+import { BudgetSeriesSummary, Category, IncomeSource, SpendingItem } from "@/lib/types";
+import { getSeries } from "@/lib/api";
 import { useCategories } from "./hooks/use-categories";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIncome } from "./hooks/use-income";
 import { useSpending } from "./hooks/use-spending";
 import { SpendingCarousel, SpendingCarouselRef } from "./spending/spending-carousel";
@@ -18,26 +19,32 @@ import { TrendsCard } from "./trends/trends-card";
 import { BudgetOverviewCard } from "./budget-overview/budget-overview";
 import { SpendingItemEditPopin } from "./spending/popins/spending-item-edit-popin";
 import { CategoryPopin } from "./category/popins/category-popin";
+import { ManageCategoriesPopin } from "./category/popins/manage-categories-popin";
+import { DeleteCategoryDialog } from "./category/popins/delete-category-dialog";
+import { countCategoryEntries } from "@/lib/category-entry-counts";
 import { IncomePopin } from "./income/popins/income-edit-popin";
 import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
 import { StickyBudgetBar } from "./sticky-budget-bar";
+import { Settings2 } from "lucide-react";
 
 interface DashboardProps {
     initialIncomeSources: IncomeSource[],
     initialAllIncomeSources: IncomeSource[],
     initialCategories: Category[],
     initialSpendingData: Record<string, SpendingItem[]>,
-    initialMonth: string
+    initialMonth: string,
+    /** Entry totals per category id for months older than the loaded window (see lib/category-entry-counts). */
+    preWindowEntryCounts?: Record<string, number>
 }
 
-export function Dashboard({initialIncomeSources, initialAllIncomeSources, initialCategories, initialSpendingData, initialMonth}: DashboardProps) {
+export function Dashboard({initialIncomeSources, initialAllIncomeSources, initialCategories, initialSpendingData, initialMonth, preWindowEntryCounts = {}}: DashboardProps) {
 
     const [isSpendingExpanded, setIsSpendingExpanded] = useState(false);
     const [selectedMonth, setSelectedMonth] = useState(initialMonth);
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
-    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry } = useSpending(initialSpendingData);
+    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
@@ -45,11 +52,15 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
     const [editingSpendingItem, setEditingSpendingItem] = useState<SpendingItem | null>(null);
     const [spendingPopinKey, setSpendingPopinKey] = useState(0);
+    const [seriesOptions, setSeriesOptions] = useState<BudgetSeriesSummary[]>([]);
     const carouselRef = useRef<SpendingCarouselRef>(null);
 
     const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);
+    const [isManageCategoriesPopinOpen, setIsManageCategoriesPopinOpen] = useState(false);
+    const [manageCategoriesPopinKey, setManageCategoriesPopinKey] = useState(0);
+    const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
     const [isIncomePopinOpen, setIsIncomePopinOpen] = useState(false);
     const [editingIncomeSource, setEditingIncomeSource] = useState<IncomeSource | null>(null);
@@ -57,6 +68,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [viewingIncomeSource, setViewingIncomeSource] = useState<IncomeSource | null>(null);
 
     const [lastCreatedCategoryName, setLastCreatedCategoryName] = useState<string | null>(null);
+
+    const categoryEntryCounts = countCategoryEntries(spendingData, preWindowEntryCounts);
 
     const currentSpendingItems = spendingData[selectedMonth] || [];
     const filteredSpendingItems = selectedCategory === "all"
@@ -82,12 +95,43 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         };
     });
 
-    const handleDeleteCategory = async (id: string) => {
-        const deleted = categories.find(c => c.id === id);
-        const success = await deleteCategory(id);
-        if (success && deleted && selectedCategory === deleted.label) {
-        setSelectedCategory("all");
+    const handleSaveCategory = async (data: { name: string; icon: string; color: string }) => {
+
+        const currentEditing = editingCategory;
+        setIsCategoryPopinOpen(false);
+        setEditingCategory(null);
+
+        if (currentEditing !== null) {
+            const success = await updateCategory(currentEditing.id, data.name, data.icon, data.color);
+
+            if (success) {
+                // Items embed a category snapshot — refresh it so the cards,
+                // label filter and trends don't render stale.
+                updateCategoryOnItems({ id: currentEditing.id, label: data.name, icon: data.icon, color: data.color });
+
+                // The filter holds the label string — remap it on rename so
+                // the selection doesn't strand.
+                if (selectedCategory === currentEditing.label) setSelectedCategory(data.name);
+            }
+        } else {
+            const created = await addCategory(data.name, data.icon, data.color);
+
+            if (created !== null) setLastCreatedCategoryName(data.name);
         }
+    };
+
+    const handleDeleteCategory = async (category: Category) => {
+
+        const success = await deleteCategory(category.id);
+
+        if (!success) return;
+
+        // Mirror the DB cascade client-side: the category's items (and their
+        // entries) are gone across all months, so trends/overview/carousel
+        // must not keep rendering them.
+        removeItemsByCategory(category.id);
+
+        if (selectedCategory === category.label) setSelectedCategory("all");
     };
 
     const handleOpenAddIncome = () => {
@@ -132,24 +176,47 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         await deleteIncome(editingIncomeSource.id);
     };
 
+    // Every month open materializes: recurring series missing an incarnation
+    // get one server-side (idempotent), so even a partially populated month
+    // receives the rest of the template.
     const handleMonthChange = async (newMonth: string) => {
         setSelectedMonth(newMonth);
 
-        if (!spendingData[newMonth]) {
-        const sortedMonths = Object.keys(spendingData).sort();
-        const previousMonths = sortedMonths.filter(m => m < newMonth);
-        if (previousMonths.length > 0) {
-            await copySpendingToMonth(previousMonths[previousMonths.length - 1], newMonth);
-        }
-        }
+        await materializeMonth(newMonth);
 
         await loadMonth(newMonth);
+    };
+
+    // The ISR page render doesn't materialize, so a series toggled recurring
+    // after the last revalidation would be missing from the initial month
+    // until a navigation — this mount pass closes that gap.
+    useEffect(() => {
+        void materializeMonth(initialMonth);
+    }, [materializeMonth, initialMonth]);
+
+    // Remount via key on every open so the popin's search state starts fresh.
+    const handleOpenManageCategories = () => {
+        setManageCategoriesPopinKey(prev => prev + 1);
+        setIsManageCategoriesPopinOpen(true);
+    };
+
+    const handleOpenCreateCategory = () => {
+        setEditingCategory(null);
+        setCategoryPopinKey(prev => prev + 1);
+        setIsCategoryPopinOpen(true);
     };
 
     const handleOpenCreateSpending = () => {
         setEditingSpendingItem(null);
         setSpendingPopinKey(prev => prev + 1);
         setIsSpendingPopinOpen(true);
+
+        // One fetch per open feeds the typeahead (never per keystroke). A
+        // failure just means no suggestion rows — creating still works, with
+        // the structured 409s as the server-side safety net.
+        getSeries()
+            .then((series: BudgetSeriesSummary[]) => setSeriesOptions(series))
+            .catch((error) => console.error("Failed to load series list:", error));
     };
 
     const handleDeleteSpending = async (id: string) => {
@@ -186,19 +253,30 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
         <SectionCard className="mt-6">
             <div className="flex items-center justify-between mb-3 px-1">
-            <p className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>Spending</p>
-            <div className="flex items-center gap-2">
-                <p className="text-xs tabular-nums" style={{ color: "#6E6E73" }}>
+            <p className="text-sm font-semibold text-foreground">Spending</p>
+            {/* Mobile: both actions are 44px HIG touch targets with a wider
+                gap so adjacent taps don't land on the wrong button. */}
+            <div className="flex items-center gap-3 sm:gap-2">
+                <p className="text-xs tabular-nums text-muted-foreground">
                 {filteredSpendingItems.length} item{filteredSpendingItems.length !== 1 ? "s" : ""}
                 </p>
                 <button
+                onClick={handleOpenManageCategories}
+                aria-label="Manage categories"
+                className="sm:hidden w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted text-foreground"
+                >
+                <Settings2 className="w-5 h-5" strokeWidth={1.9} />
+                </button>
+                <button
                 onClick={handleOpenCreateSpending}
-                className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                aria-label="New spending item"
+                className="w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 rounded-full flex items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all duration-200 active:scale-95"
                 style={{ backgroundColor: "#34C759" }}
                 >
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
+                <span className="hidden sm:inline">Spending</span>
                 </button>
             </div>
             </div>
@@ -208,11 +286,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
                 selectedCategory={selectedCategory}
                 onSelect={setSelectedCategory}
-                onAddCategory={() => {
-                setEditingCategory(null);
-                setCategoryPopinKey(prev => prev + 1);
-                setIsCategoryPopinOpen(true);
-                }}
+                onAddCategory={handleOpenCreateCategory}
+                onManage={handleOpenManageCategories}
             />
             </div>
 
@@ -227,14 +302,14 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     categoryName={item.category?.label ?? "Uncategorized"}
                     spendingCategoryColor={item.category?.color ?? "#6E6E73"}
                     budgetNumber={item.budgeted}
-                    startDate={item.startDate ? new Date(item.startDate).toISOString().split("T")[0] : ""}
-                    endDate={item.endDate ? new Date(item.endDate).toISOString().split("T")[0] : undefined}
+                    recurring={item.recurring}
                     note={item.note ?? undefined}
                     entries={(item.entries || []).map((e) => ({
                     id: e.id,
                     name: e.name,
                     date: new Date(e.date).toISOString().split("T")[0],
                     amount: e.amount,
+                    direction: e.direction,
                     receipt: e.receiptUrl ?? null,
                     link: e.link ?? null,
                     }))}
@@ -250,9 +325,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         name: data.name,
                         icon: data.icon,
                         categoryId: cat.id,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     }, {
                         ...item,
@@ -260,9 +334,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         icon: data.icon,
                         categoryId: cat.id,
                         category: cat,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     });
                     }}
@@ -271,6 +344,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     await createEntry(selectedMonth, item.id, {
                         name: data.name,
                         amount: data.amount,
+                        direction: data.direction,
                         date: data.date,
                         receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
@@ -280,6 +354,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     await updateEntry(selectedMonth, item.id, entryId, {
                         name: data.name,
                         amount: data.amount,
+                        direction: data.direction,
                         date: data.date,
                         receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
@@ -331,7 +406,6 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             categories={filterActiveCategories({
                 categories,
                 spendingItems: currentSpendingItems,
-                selectedMonth
             })}
             spendingItems={currentSpendingItems}
             />
@@ -352,17 +426,17 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 if (!category) return;
 
                 const currentEditing = editingSpendingItem;
-                setIsSpendingPopinOpen(false);
-                setEditingSpendingItem(null);
 
                 if (currentEditing) {
+                    setIsSpendingPopinOpen(false);
+                    setEditingSpendingItem(null);
+
                     await updateSpending(selectedMonth, currentEditing.id, {
                         name: data.name,
                         icon: data.icon,
                         categoryId: category.id,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     }, {
                         ...currentEditing,
@@ -370,26 +444,36 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         icon: data.icon,
                         categoryId: category.id,
                         category,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     });
-                } else {
-                    const real = await createSpending(selectedMonth, {
-                        name: data.name,
-                        icon: data.icon,
-                        categoryId: category.id,
-                        month: selectedMonth,
-                        budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
-                        note: data.note || null,
-                    }, category);
-                    if (real) {
-                        const items = spendingData[selectedMonth] || [];
-                        setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
-                    }
+                    return;
+                }
+
+                // Create/resume: the popin stays open until we know the server
+                // didn't answer with a series conflict — on conflict it shows
+                // the inline state and refocuses the name field itself.
+                const real = await createSpending(selectedMonth, {
+                    seriesId: data.seriesId,
+                    name: data.name,
+                    icon: data.icon,
+                    categoryId: category.id,
+                    recurring: data.recurring,
+                    month: selectedMonth,
+                    budgeted: data.budget,
+                    note: data.note || null,
+                }, category);
+
+                if (real === "series_dormant" || real === "series_not_in_month" || real === "series_active_this_month") return real;
+
+                setIsSpendingPopinOpen(false);
+                setEditingSpendingItem(null);
+                setLastCreatedCategoryName(null);
+
+                if (real) {
+                    const items = spendingData[selectedMonth] || [];
+                    setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
                 }
             }}
 
@@ -400,48 +484,51 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 await handleDeleteSpending(id);
             } : undefined}
 
-            onCreateCategory={() => {
-            setEditingCategory(null);
-            setCategoryPopinKey(prev => prev + 1);
-            setIsCategoryPopinOpen(true);
-            }}
+            onCreateCategory={handleOpenCreateCategory}
 
             mode={editingSpendingItem ? "edit" : "create"}
             categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
+            seriesOptions={seriesOptions}
+            activeSeriesIds={currentSpendingItems.map(item => item.seriesId)}
+            selectedMonth={selectedMonth}
             initialName={editingSpendingItem?.name ?? ""}
             initialIcon={editingSpendingItem?.icon ?? ""}
             initialCategory={editingSpendingItem?.category?.label ?? ""}
             initialBudget={editingSpendingItem?.budgeted ?? 0}
-            initialStartDate={editingSpendingItem?.startDate ? new Date(editingSpendingItem.startDate).toISOString().split("T")[0] : ""}
-            initialEndDate={editingSpendingItem?.endDate ? new Date(editingSpendingItem.endDate).toISOString().split("T")[0] : undefined}
+            initialRecurring={editingSpendingItem?.recurring ?? true}
             initialNote={editingSpendingItem?.note ?? ""}
+        />
+
+        <ManageCategoriesPopin
+            key={`manage-categories-${manageCategoriesPopinKey}`}
+            isOpen={isManageCategoriesPopinOpen}
+            onClose={() => setIsManageCategoriesPopinOpen(false)}
+            categories={categories}
+            entryCounts={categoryEntryCounts}
+            onEditCategory={(category) => {
+            setEditingCategory(category);
+            setIsCategoryPopinOpen(true);
+            }}
+            onDeleteCategory={setDeletingCategory}
+            onCreateCategory={handleOpenCreateCategory}
         />
 
         <CategoryPopin
             key={editingCategory?.id ?? `create-category-${categoryPopinKey}`}
+            zIndex={60}
             isOpen={isCategoryPopinOpen}
             onClose={() => {
             setIsCategoryPopinOpen(false);
             setEditingCategory(null);
             }}
 
-            onSave={async (data) => {
-                const currentEditing = editingCategory;
-                setIsCategoryPopinOpen(false);
-                setEditingCategory(null);
-                if (currentEditing) {
-                    await updateCategory(currentEditing.id, data.name, data.icon, data.color);
-                } else {
-                    const created = await addCategory(data.name, data.icon, data.color);
-                    if (created) setLastCreatedCategoryName(data.name);
-                }
-            }}
+            onSave={handleSaveCategory}
 
             onDelete={editingCategory ? async () => {
-                const id = editingCategory.id;
+                const deleting = editingCategory;
                 setIsCategoryPopinOpen(false);
                 setEditingCategory(null);
-                await handleDeleteCategory(id);
+                await handleDeleteCategory(deleting);
             } : undefined}
 
             mode={editingCategory ? "edit" : "create"}
@@ -449,6 +536,17 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             initialIcon={editingCategory?.icon ?? "shopping-cart"}
             initialColor={editingCategory?.color ?? "#007AFF"}
         />
+
+        {deletingCategory !== null && (
+            <DeleteCategoryDialog
+                category={deletingCategory}
+                onCancel={() => setDeletingCategory(null)}
+                onConfirm={async () => {
+                    await handleDeleteCategory(deletingCategory);
+                    setDeletingCategory(null);
+                }}
+            />
+        )}
 
         <IncomePopin
             key={editingIncomeSource?.id ?? `add-${incomePopinKey}`}

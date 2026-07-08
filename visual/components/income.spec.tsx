@@ -10,7 +10,9 @@ test.describe("Income card", () => {
   test("collapsed", async ({ mount }) => {
     const component = await mount(
       <Providers>
-        <div className="max-w-md p-4">
+        {/* Wide enough for the desktop donut + figures cluster; the mobile
+            project's 390px viewport still caps the mobile layout naturally. */}
+        <div className="max-w-2xl p-4">
           <IncomeCard incomes={incomeSources} onAdd={noop} onSelect={noop} />
         </div>
       </Providers>,
@@ -58,6 +60,20 @@ test.describe("Income popins", () => {
     );
 
     await expect(page).toHaveScreenshot("income-edit-add.png");
+  });
+
+  test("edit — add mode, validation revealed", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <IncomePopin isOpen={true} onClose={noop} onSave={noop} mode="add" />
+      </Providers>,
+    );
+
+    // An empty submit reveals the field messages and errored-input styling.
+    await page.getByRole("button", { name: "Add Income" }).click();
+    await expect(page.getByText("Enter a name")).toBeVisible();
+
+    await expect(page).toHaveScreenshot("income-edit-validation.png");
   });
 
   test("edit — edit mode", async ({ mount, page }) => {

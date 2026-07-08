@@ -1,16 +1,9 @@
 "use client";
 
-import { Loader2, Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { InsetDivider } from "../inset-divider";
+import { SheetModal, SheetGroup, SheetInput, SheetFootnote } from "./sheet-modal";
+import { FieldMessage, fieldAriaProps } from "@/components/ui/field-message";
+import { FormBanner } from "@/components/ui/form-banner";
 
 interface PasswordModalProps {
     isOpen: boolean;
@@ -18,7 +11,12 @@ interface PasswordModalProps {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
+    /** Whole-form / server feedback, rendered as an error banner. */
     error: string | null;
+    /** Field message under the new-password input (e.g. too short). */
+    newPasswordError: string | null;
+    /** Field message under the confirm input (passwords don't match). */
+    confirmPasswordError: string | null;
     isSaving: boolean;
     onCurrentPasswordChange: (value: string) => void;
     onNewPasswordChange: (value: string) => void;
@@ -26,6 +24,7 @@ interface PasswordModalProps {
     onSubmit: () => void;
 }
 
+/** Change-password sheet: current password re-auth plus new password twice. */
 export function PasswordModal({
     isOpen,
     onClose,
@@ -33,101 +32,66 @@ export function PasswordModal({
     newPassword,
     confirmPassword,
     error,
+    newPasswordError,
+    confirmPasswordError,
     isSaving,
     onCurrentPasswordChange,
     onNewPasswordChange,
     onConfirmPasswordChange,
     onSubmit,
 }: PasswordModalProps) {
+
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-md lg:max-w-lg xl:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl">
-                <DialogHeader>
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 sm:w-10 sm:h-10 bg-gray-100 rounded-xl flex items-center justify-center">
-                            <Lock className="w-6 h-6 sm:w-5 sm:h-5 text-gray-600" />
-                        </div>
-                        <div>
-                            <DialogTitle className="text-lg">Change Password</DialogTitle>
-                            <DialogDescription>Keep your account secure</DialogDescription>
-                        </div>
+        <SheetModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Change Password"
+            action={{ label: "Update", onClick: onSubmit, isSaving }}
+        >
+            <SheetGroup>
+                <SheetInput
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => onCurrentPasswordChange(e.target.value)}
+                    autoComplete="current-password"
+                />
+                <InsetDivider />
+                <SheetInput
+                    type="password"
+                    placeholder="New password"
+                    value={newPassword}
+                    onChange={(e) => onNewPasswordChange(e.target.value)}
+                    autoComplete="new-password"
+                    {...fieldAriaProps(newPasswordError !== null, "newPassword-error")}
+                />
+                {newPasswordError !== null && (
+                    <div className="px-4 pb-3">
+                        <FieldMessage id="newPassword-error">{newPasswordError}</FieldMessage>
                     </div>
-                </DialogHeader>
+                )}
+                <InsetDivider />
+                <SheetInput
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => onConfirmPasswordChange(e.target.value)}
+                    autoComplete="new-password"
+                    {...fieldAriaProps(confirmPasswordError !== null, "confirmNewPassword-error")}
+                />
+                {confirmPasswordError !== null && (
+                    <div className="px-4 pb-3">
+                        <FieldMessage id="confirmNewPassword-error">{confirmPasswordError}</FieldMessage>
+                    </div>
+                )}
+            </SheetGroup>
 
-                <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
-                            Current Password
-                        </Label>
-                        <Input
-                            id="currentPassword"
-                            type="password"
-                            value={currentPassword}
-                            onChange={(e) => onCurrentPasswordChange(e.target.value)}
-                            placeholder="Enter current password"
-                            className="h-12 text-base rounded-xl"
-                            autoComplete="current-password"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
-                            New Password
-                        </Label>
-                        <Input
-                            id="newPassword"
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => onNewPasswordChange(e.target.value)}
-                            placeholder="Enter new password"
-                            className="h-12 text-base rounded-xl"
-                            autoComplete="new-password"
-                        />
-                        <p className="text-xs text-gray-500">Must be at least 8 characters</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="confirmNewPassword" className="text-sm font-medium text-gray-700">
-                            Confirm New Password
-                        </Label>
-                        <Input
-                            id="confirmNewPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => onConfirmPasswordChange(e.target.value)}
-                            placeholder="Confirm new password"
-                            className="h-12 text-base rounded-xl"
-                            autoComplete="new-password"
-                        />
-                    </div>
+            {error !== null && <FormBanner variant="error">{error}</FormBanner>}
 
-                    {error && (
-                        <div className="bg-red-50 p-4 rounded-xl text-sm text-red-700">
-                            {error}
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
-                    <Button
-                        variant="outline"
-                        onClick={onClose}
-                        className="h-12 rounded-xl touch-manipulation"
-                        disabled={isSaving}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={onSubmit}
-                        className="h-12 bg-green-500 hover:bg-green-600 active:bg-green-700 rounded-xl flex-1 touch-manipulation"
-                        disabled={isSaving}
-                    >
-                        {isSaving ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                            "Update Password"
-                        )}
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
+            {/* Replaced by the field message while the length rule is failing. */}
+            {newPasswordError === null && (
+                <SheetFootnote>Your new password must be at least 8 characters.</SheetFootnote>
+            )}
+        </SheetModal>
     );
 }

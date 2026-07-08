@@ -78,7 +78,7 @@ export function ResetPasswordForm() {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">
                     New password
                 </Label>
                 <Input
@@ -93,11 +93,11 @@ export function ResetPasswordForm() {
                     autoComplete="new-password"
                     className="h-12 text-base"
                 />
-                <p className="text-xs text-gray-500">Must be at least 8 characters</p>
+                <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
             </div>
 
             <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
                     Confirm new password
                 </Label>
                 <Input

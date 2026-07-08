@@ -7,17 +7,24 @@ vi.mock("@/lib/api", () => ({
   createSpending: vi.fn(),
   updateSpending: vi.fn(),
   deleteSpending: vi.fn(),
+  materializeMonth: vi.fn(),
   createEntry: vi.fn(),
   updateEntry: vi.fn(),
   deleteEntry: vi.fn(),
 }));
 
+vi.mock("@/lib/toast", () => ({
+  showErrorToast: vi.fn(),
+}));
+
+// The routed-entry flow announces the move with a plain success toast.
 vi.mock("react-hot-toast", () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }));
 
-import { useSpending } from "@/components/hooks/use-spending";
+import { useSpending, type CreateSpendingConflict } from "@/components/hooks/use-spending";
 import * as api from "@/lib/api";
+import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
 
@@ -28,6 +35,7 @@ const entry = (over: Partial<SpendingEntry> = {}): SpendingEntry => ({
   id: "e1",
   name: "Coffee",
   amount: 425,
+  direction: "debit",
   receiptUrl: null,
   link: null,
   date: "2026-06-02",
@@ -37,13 +45,13 @@ const entry = (over: Partial<SpendingEntry> = {}): SpendingEntry => ({
 
 const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
   id: "s1",
+  seriesId: "series-1",
   name: "Eating out",
   icon: "fork",
+  recurring: true,
   budgeted: 20000,
   spent: 0,
   month: MONTH,
-  startDate: "2026-06-01",
-  endDate: null,
   note: null,
   categoryId: "c1",
   entries: [],
@@ -66,7 +74,7 @@ describe("useSpending — spending item create (optimistic)", () => {
 
     const { result } = renderHook(() => useSpending(data([])));
 
-    let pending!: Promise<SpendingItem | null>;
+    let pending!: Promise<SpendingItem | CreateSpendingConflict | null>;
     act(() => {
       pending = result.current.createSpending(MONTH, {
         name: "Eating out",
@@ -92,7 +100,7 @@ describe("useSpending — spending item create (optimistic)", () => {
     vi.mocked(api.createSpending).mockRejectedValue(new Error("x"));
     const { result } = renderHook(() => useSpending(data([])));
 
-    let returned: SpendingItem | null = item();
+    let returned: SpendingItem | CreateSpendingConflict | null = item();
     await act(async () => {
       returned = await result.current.createSpending(MONTH, {
         name: "Eating out",
@@ -104,8 +112,32 @@ describe("useSpending — spending item create (optimistic)", () => {
 
     expect(returned).toBeNull();
     expect(result.current.spendingData[MONTH]).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to create spending item");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Eating out"', { retry: expect.any(Function) });
   });
+
+  // The three structured 409s are form states, never toasts — the hook rolls
+  // back the optimistic item and hands the code to the popin.
+  it.each(["series_dormant", "series_not_in_month", "series_active_this_month"] as const)(
+    "returns %s to the caller with a rollback and no toast",
+    async (code) => {
+      vi.mocked(api.createSpending).mockRejectedValue(new Error(code));
+      const { result } = renderHook(() => useSpending(data([])));
+
+      let returned: SpendingItem | CreateSpendingConflict | null = null;
+      await act(async () => {
+        returned = await result.current.createSpending(MONTH, {
+          name: "Eating out",
+          icon: "fork",
+          categoryId: "c1",
+          month: MONTH,
+        });
+      });
+
+      expect(returned).toBe(code);
+      expect(result.current.spendingData[MONTH]).toEqual([]);
+      expect(showErrorToast).not.toHaveBeenCalled();
+    }
+  );
 });
 
 describe("useSpending — spending item update / delete", () => {
@@ -132,7 +164,7 @@ describe("useSpending — spending item update / delete", () => {
     });
 
     expect(result.current.spendingData[MONTH][0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("Failed to update spending item");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "X"', { retry: expect.any(Function) });
   });
 
   it("delete removes immediately and re-inserts on failure", async () => {
@@ -147,7 +179,7 @@ describe("useSpending — spending item update / delete", () => {
 
     expect(ok).toBe(false);
     expect(result.current.spendingData[MONTH]).toEqual([original]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete spending item");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t delete "Eating out"', { retry: expect.any(Function) });
   });
 });
 
@@ -207,7 +239,7 @@ describe("useSpending — entry create recomputes spent", () => {
 
     expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to create entry");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Coffee"', { retry: expect.any(Function) });
   });
 });
 
@@ -242,7 +274,7 @@ describe("useSpending — entry update recomputes spent by diff", () => {
 
     expect(result.current.spendingData[MONTH][0].spent).toBe(425);
     expect(result.current.spendingData[MONTH][0].entries?.[0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("Failed to update entry");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Changed"', { retry: expect.any(Function) });
   });
 });
 
@@ -272,7 +304,145 @@ describe("useSpending — entry delete recomputes spent", () => {
 
     expect(result.current.spendingData[MONTH][0].spent).toBe(1425);
     expect(result.current.spendingData[MONTH][0].entries).toEqual([original]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete entry");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t delete "Coffee"', { retry: expect.any(Function) });
+  });
+});
+
+describe("useSpending — direction-aware entry math", () => {
+  it("a credit entry lowers spent on create and can push it negative", async () => {
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real", amount: 15_000, direction: "credit" }));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 0, entries: [] })])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Refund", amount: 15_000, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-15_000);
+  });
+
+  it("rolls back a failed credit create exactly", async () => {
+    vi.mocked(api.createEntry).mockRejectedValue(new Error("x"));
+    const { result } = renderHook(() => useSpending(data([item({ spent: 1000 })])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Refund", amount: 425, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(1000);
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
+  });
+
+  it("deleting a credit raises spent", async () => {
+    vi.mocked(api.deleteEntry).mockResolvedValue(undefined);
+    // 200.00 debit + 150.00 credit → spent 5000; removing the credit → 20000.
+    const start = item({
+      spent: 5_000,
+      entries: [
+        entry({ id: "e-debit", amount: 20_000 }),
+        entry({ id: "e-credit", amount: 15_000, direction: "credit" }),
+      ],
+    });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.deleteEntry(MONTH, "s1", "e-credit");
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(20_000);
+  });
+
+  it("restores a negative spent exactly when deleting a credit fails", async () => {
+    vi.mocked(api.deleteEntry).mockRejectedValue(new Error("x"));
+    const credit = entry({ id: "e-credit", amount: 15_000, direction: "credit" });
+    const start = item({ spent: -15_000, entries: [credit] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.deleteEntry(MONTH, "s1", "e-credit");
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-15_000);
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([credit]);
+  });
+
+  it("update flips a debit to a credit and spent follows", async () => {
+    vi.mocked(api.updateEntry).mockResolvedValue(undefined);
+    const start = item({ spent: 425, entries: [entry({ amount: 425 })] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee refund", amount: 425, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-425);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
+  });
+
+  it("flips a 10000-cent debit to credit: spent moves by −20000 and settles unchanged", async () => {
+    let resolve!: () => void;
+    vi.mocked(api.updateEntry).mockReturnValue(
+      new Promise<void>((r) => { resolve = r; }) as ReturnType<typeof api.updateEntry>
+    );
+
+    const start = item({ spent: 10_000, entries: [entry({ amount: 10_000 })] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee", amount: 10_000, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    // Optimistic: unapply the +10000 debit, apply the −10000 credit → net −20000.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-10_000);
+
+    await act(async () => {
+      resolve();
+      await pending;
+    });
+
+    // Settled: the optimistic value already equals the server recompute — no flicker.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-10_000);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
+  });
+
+  it("update keeps the stored direction when the form sends none", async () => {
+    vi.mocked(api.updateEntry).mockResolvedValue(undefined);
+    const start = item({ spent: -425, entries: [entry({ amount: 425, direction: "credit" })] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee", amount: 1000, date: "2026-06-02",
+      });
+    });
+
+    // Still a credit: unapply −425 → 0, then apply credit 1000 → −1000.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(-1000);
+    expect(result.current.spendingData[MONTH][0].entries?.[0].direction).toBe("credit");
+  });
+
+  it("rolls back a direction flip exactly on failure", async () => {
+    vi.mocked(api.updateEntry).mockRejectedValue(new Error("x"));
+    const original = entry({ amount: 425 });
+    const start = item({ spent: 425, entries: [original] });
+    const { result } = renderHook(() => useSpending(data([start])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "X", amount: 425, date: "2026-06-02", direction: "credit",
+      });
+    });
+
+    expect(result.current.spendingData[MONTH][0].spent).toBe(425);
+    expect(result.current.spendingData[MONTH][0].entries?.[0]).toEqual(original);
   });
 });
 
@@ -290,5 +460,153 @@ describe("useSpending — month isolation", () => {
 
     expect(result.current.spendingData[MONTH]).toEqual([]);
     expect(result.current.spendingData["2026-05"]).toEqual([other]);
+  });
+});
+
+describe("useSpending — cross-month entry routing (D19)", () => {
+  const routedResult = (targetExists: { targetId: string }) => ({
+    entry: entry({ id: "e-moved", date: "2026-07-15", spendingItemId: targetExists.targetId }),
+    sourceItem: item({ spent: 0, entries: [] }),
+    targetItem: item({
+      id: targetExists.targetId,
+      month: "2026-07",
+      spent: 425,
+      entries: [entry({ id: "e-moved", date: "2026-07-15", spendingItemId: targetExists.targetId })],
+    }),
+  });
+
+  it("createEntry with a cross-month date inserts the target bucket and undoes the optimistic patch", async () => {
+    vi.mocked(api.createEntry).mockResolvedValue(routedResult({ targetId: "s-jul" }));
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", { name: "Coffee", amount: 425, date: "2026-07-15" });
+    });
+
+    // Source item restored to the server copy — the optimistic spent bump is gone.
+    expect(result.current.spendingData[MONTH][0].spent).toBe(0);
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
+
+    // Target month bucket did not exist locally; it is created with the item.
+    expect(result.current.spendingData["2026-07"]).toHaveLength(1);
+    expect(result.current.spendingData["2026-07"][0].spent).toBe(425);
+
+    expect(toast.success).toHaveBeenCalledWith("Moved to July 2026");
+  });
+
+  it("updateEntry with a cross-month date updates an existing target bucket in place", async () => {
+    const preexistingTarget = item({ id: "s-jul", month: "2026-07", spent: 0, entries: [] });
+    vi.mocked(api.updateEntry).mockResolvedValue(routedResult({ targetId: "s-jul" }));
+
+    const { result } = renderHook(() =>
+      useSpending({ [MONTH]: [item({ entries: [entry()], spent: 425 })], "2026-07": [preexistingTarget] })
+    );
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", { name: "Coffee", amount: 425, date: "2026-07-15" });
+    });
+
+    // The entry left the source item...
+    expect(result.current.spendingData[MONTH][0].entries).toEqual([]);
+    expect(result.current.spendingData[MONTH][0].spent).toBe(0);
+
+    // ...and landed on the existing July incarnation (updated, not duplicated).
+    expect(result.current.spendingData["2026-07"]).toHaveLength(1);
+    expect(result.current.spendingData["2026-07"][0].spent).toBe(425);
+    expect(result.current.spendingData["2026-07"][0].entries).toHaveLength(1);
+
+    expect(toast.success).toHaveBeenCalledWith("Moved to July 2026");
+  });
+});
+
+describe("useSpending — materializeMonth", () => {
+  it("sets the returned bucket for a month with no local state yet", async () => {
+    const materialized = [item({ id: "mat-1", month: "2026-07" })];
+    vi.mocked(api.materializeMonth).mockResolvedValue(materialized);
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.materializeMonth("2026-07");
+    });
+
+    expect(api.materializeMonth).toHaveBeenCalledWith("2026-07");
+    expect(result.current.spendingData["2026-07"]).toEqual(materialized);
+    // Other months are untouched.
+    expect(result.current.spendingData[MONTH]).toHaveLength(1);
+  });
+
+  it("replaces an existing bucket with the server's authoritative list", async () => {
+    const existing = item();
+    const materialized = [existing, item({ id: "mat-2", name: "Netflix" })];
+    vi.mocked(api.materializeMonth).mockResolvedValue(materialized);
+
+    const { result } = renderHook(() => useSpending(data([existing])));
+
+    await act(async () => {
+      await result.current.materializeMonth(MONTH);
+    });
+
+    expect(result.current.spendingData[MONTH]).toEqual(materialized);
+  });
+
+  it("leaves state untouched and stays silent on failure", async () => {
+    vi.mocked(api.materializeMonth).mockRejectedValue(new Error("boom"));
+    const before = [item()];
+
+    const { result } = renderHook(() => useSpending(data(before)));
+
+    await act(async () => {
+      await result.current.materializeMonth("2026-07");
+    });
+
+    expect(result.current.spendingData["2026-07"]).toBeUndefined();
+    expect(result.current.spendingData[MONTH]).toEqual(before);
+    expect(showErrorToast).not.toHaveBeenCalled();
+  });
+});
+
+describe("useSpending — category cascade mirrors (local state only)", () => {
+  it("removeItemsByCategory drops the category's items across every loaded month", () => {
+    const { result } = renderHook(() =>
+      useSpending({
+        "2026-05": [item({ id: "s1", month: "2026-05", categoryId: "c1" }), item({ id: "s2", month: "2026-05", categoryId: "c2" })],
+        [MONTH]: [item({ id: "s3", categoryId: "c1" })],
+      })
+    );
+
+    act(() => {
+      result.current.removeItemsByCategory("c1");
+    });
+
+    expect(result.current.spendingData["2026-05"].map((i) => i.id)).toEqual(["s2"]);
+    expect(result.current.spendingData[MONTH]).toEqual([]);
+    expect(api.deleteSpending).not.toHaveBeenCalled();
+    expect(api.getSpending).not.toHaveBeenCalled();
+  });
+
+  it("updateCategoryOnItems refreshes the embedded category snapshot everywhere", () => {
+    const oldCat = { id: "c1", label: "Groceries", icon: "cart", color: "#34C759" };
+    const { result } = renderHook(() =>
+      useSpending({
+        "2026-05": [item({ id: "s1", month: "2026-05", categoryId: "c1", category: oldCat })],
+        [MONTH]: [
+          item({ id: "s2", categoryId: "c1", category: oldCat }),
+          item({ id: "s3", categoryId: "c2", category: { id: "c2", label: "Transport", icon: "car", color: "#007AFF" } }),
+        ],
+      })
+    );
+
+    const renamed = { id: "c1", label: "Food", icon: "fork", color: "#FF3B30" };
+
+    act(() => {
+      result.current.updateCategoryOnItems(renamed);
+    });
+
+    expect(result.current.spendingData["2026-05"][0].category).toEqual(renamed);
+    expect(result.current.spendingData[MONTH][0].category).toEqual(renamed);
+    // Other categories' items are untouched.
+    expect(result.current.spendingData[MONTH][1].category?.label).toBe("Transport");
   });
 });

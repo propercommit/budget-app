@@ -1,20 +1,46 @@
 const USER_ID = "temp-user";
 
-// Helper to make API requests
-async function fetchAPI(url: string, options?: RequestInit) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-id": USER_ID,
-      ...options?.headers,
-    },
-  });
+/**
+ * Shared transport + error surfacing for every API call — the single place
+ * where a failed request becomes a user-facing Error. Returns the ok
+ * `Response`; callers own the success-body parsing (JSON via `fetchAPI`,
+ * binary via `exportAccountData`).
+ */
+async function requestAPI(url: string, options?: RequestInit): Promise<Response> {
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        "x-user-id": USER_ID,
+        ...options?.headers,
+      },
+    });
+  } catch (error) {
+    // fetch() rejects with a transport-level TypeError ("Failed to fetch");
+    // normalize it so callers can surface error messages to users verbatim.
+    console.error("Network error calling", url, error);
+    throw new Error("Network error. Please try again.");
+  }
 
   if (response.ok === false) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error || body.message || "API request failed");
   }
+
+  return response;
+}
+
+// Helper to make JSON API requests
+async function fetchAPI(url: string, options?: RequestInit) {
+  const response = await requestAPI(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+  });
 
   if (response.status === 204) {
     return null;
@@ -65,17 +91,27 @@ export async function getSpending(month?: string) {
   return fetchAPI(url);
 }
 
-export async function createSpending(data: {
+/** Creates a new series and its first monthly incarnation in one call. */
+export type CreateSeriesPayload = {
   name: string;
   icon: string;
   categoryId: string;
+  recurring?: boolean;
   budgeted?: number;
-  spent?: number;
   month: string;
-  startDate?: string;
-  endDate?: string | null;
   note?: string | null;
-}) {
+};
+
+/** Resumes/attaches an existing series: creates its incarnation for `month`. */
+export type AttachSeriesPayload = {
+  seriesId: string;
+  month: string;
+  recurring?: boolean;
+  budgeted?: number;
+  note?: string | null;
+};
+
+export async function createSpending(data: CreateSeriesPayload | AttachSeriesPayload) {
   return fetchAPI("/api/spending", {
     method: "POST",
     body: JSON.stringify(data),
@@ -88,10 +124,8 @@ export async function updateSpending(
     name?: string;
     icon?: string;
     categoryId?: string;
+    recurring?: boolean;
     budgeted?: number;
-    spent?: number;
-    startDate?: string;
-    endDate?: string | null;
     note?: string | null;
   }
 ) {
@@ -104,6 +138,25 @@ export async function updateSpending(
 export async function deleteSpending(id: string) {
   return fetchAPI(`/api/spending/${id}`, {
     method: "DELETE",
+  });
+}
+
+/** The user's series list for the create popin's typeahead. */
+export async function getSeries() {
+  return fetchAPI("/api/spending/series");
+}
+
+/**
+ * Ensures every active recurring series has an incarnation in `month` and
+ * returns the month's full flattened item list. Only the current UTC month
+ * and later materialize (D26) — a past month creates nothing and returns
+ * its existing items as-is. Idempotent server-side — safe to call on every
+ * month open.
+ */
+export async function materializeMonth(month: string) {
+  return fetchAPI("/api/spending/materialize", {
+    method: "POST",
+    body: JSON.stringify({ month }),
   });
 }
 
@@ -168,6 +221,7 @@ export async function createEntry(data: {
   spendingItemId: string;
   name: string;
   amount: number;
+  direction?: "debit" | "credit"; // server defaults absent to "debit"
   receiptUrl?: string;
   link?: string;
   date?: string;
@@ -183,6 +237,7 @@ export async function updateEntry(
   data: {
     name?: string;
     amount?: number;
+    direction?: "debit" | "credit"; // absent keeps the stored direction
     receiptUrl?: string;
     link?: string;
     date?: string;
@@ -211,4 +266,21 @@ export async function updateSettings(data: { currency?: string; dateFormat?: str
     method: "PUT",
     body: JSON.stringify(data),
   });
+}
+
+// ============ ACCOUNT ============
+
+/**
+ * Download the full account data export. Returns the CSV as a Blob plus the
+ * server-chosen filename (from `Content-Disposition` — the one source of
+ * truth for it); the caller turns them into a file download.
+ */
+export async function exportAccountData(): Promise<{ blob: Blob; filename: string }> {
+  const response = await requestAPI("/api/account/export");
+
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match !== null ? match[1] : "budget-export.csv";
+
+  return { blob: await response.blob(), filename };
 }

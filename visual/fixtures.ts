@@ -13,11 +13,13 @@
  * no-spend items to exercise every card state.
  */
 import type {
+  BudgetSeriesSummary,
   Category,
   IncomeSource,
   SpendingEntry,
   SpendingItem,
 } from "@/lib/types";
+import { applyEntry } from "@/lib/spending/math";
 
 /** The month the Dashboard opens on in tests. */
 export const SELECTED_MONTH = "2026-06";
@@ -41,9 +43,9 @@ export const categories: Category[] = [
   { id: "cat-fun", icon: "film", label: "Entertainment", color: "#AF52DE" },
 ];
 
-/** Sums entry amounts exactly so `spent` never drifts from the entry list. */
+/** Derives `spent` from the entries via the shared signed-sum rule so it never drifts from the entry list. */
 function sumEntries(entries: SpendingEntry[]): number {
-  return entries.reduce((total, entry) => total + entry.amount, 0);
+  return entries.reduce((total, entry) => applyEntry(total, entry), 0);
 }
 
 function entry(
@@ -52,12 +54,13 @@ function entry(
   name: string,
   amount: number,
   date: string,
-  extras: Partial<Pick<SpendingEntry, "link">> = {},
+  extras: Partial<Pick<SpendingEntry, "link" | "direction">> = {},
 ): SpendingEntry {
   return {
     id: `${itemId}-e${index}`,
     name,
     amount,
+    direction: extras.direction ?? "debit",
     date,
     receiptUrl: null,
     link: extras.link ?? null,
@@ -66,7 +69,7 @@ function entry(
 }
 
 function item(
-  partial: Omit<SpendingItem, "spent" | "category" | "entries"> & {
+  partial: Omit<SpendingItem, "spent" | "category" | "entries" | "recurring"> & {
     categoryId: string;
     entries: SpendingEntry[];
   },
@@ -75,6 +78,7 @@ function item(
 
   return {
     ...partial,
+    recurring: true,
     category,
     spent: sumEntries(partial.entries),
   };
@@ -90,12 +94,11 @@ function monthItems(month: string, scale: number): SpendingItem[] {
   return [
     item({
       id: groceries,
+      seriesId: "series-groceries",
       name: "Groceries",
       icon: "shopping-cart",
       budgeted: cents(600),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: "Weekly supermarket runs",
       categoryId: "cat-groceries",
       entries: [
@@ -108,12 +111,11 @@ function monthItems(month: string, scale: number): SpendingItem[] {
     }),
     item({
       id: transport,
+      seriesId: "series-transport",
       name: "Transport",
       icon: "car",
       budgeted: cents(200),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: null,
       categoryId: "cat-transport",
       entries: [
@@ -124,12 +126,11 @@ function monthItems(month: string, scale: number): SpendingItem[] {
     // Deliberately over budget to exercise the over-budget card state.
     item({
       id: dining,
+      seriesId: "series-dining",
       name: "Dining out",
       icon: "coffee",
       budgeted: cents(150),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: "Restaurants & cafés",
       categoryId: "cat-dining",
       entries: [
@@ -141,12 +142,11 @@ function monthItems(month: string, scale: number): SpendingItem[] {
     // No entries → no spend yet, full budget remaining.
     item({
       id: housing,
+      seriesId: "series-housing",
       name: "Home supplies",
       icon: "home",
       budgeted: cents(120),
       month,
-      startDate: `${month}-01`,
-      endDate: null,
       note: null,
       categoryId: "cat-housing",
       entries: [],
@@ -198,12 +198,75 @@ export const allIncomeSources: IncomeSource[] = [
 /** A single income source for feature-component tests. */
 export const incomeSource: IncomeSource = incomeSources[0];
 
+/**
+ * Series list for the create popin's typeahead specs: one dormant series
+ * (Resume row), one active series missing from {@link SELECTED_MONTH} (Add
+ * row) and one active in it (disabled row); all match a "net" query so a
+ * single screenshot exercises every row state alongside create-as-new.
+ */
+export const seriesOptions: BudgetSeriesSummary[] = [
+  {
+    id: "ser-netflix",
+    name: "Netflix",
+    icon: "film",
+    categoryId: "cat-fun",
+    categoryLabel: "Entertainment",
+    categoryColor: "#AF52DE",
+    recurring: false,
+    firstActiveMonth: "2025-01",
+    lastActiveMonth: "2025-05",
+    lastBudgeted: cents(18.9),
+  },
+  {
+    id: "ser-gym",
+    name: "Planet Fitness",
+    icon: "dumbbell",
+    categoryId: "cat-fun",
+    categoryLabel: "Entertainment",
+    categoryColor: "#AF52DE",
+    recurring: true,
+    firstActiveMonth: "2026-01",
+    lastActiveMonth: "2026-05",
+    lastBudgeted: cents(45),
+  },
+  {
+    id: "ser-internet",
+    name: "Internet",
+    icon: "home",
+    categoryId: "cat-housing",
+    categoryLabel: "Housing",
+    categoryColor: "#FF3B30",
+    recurring: true,
+    firstActiveMonth: "2026-01",
+    lastActiveMonth: SELECTED_MONTH,
+    lastBudgeted: cents(49),
+  },
+];
+
 /** Category shape (`{ name, icon, color }`) that card components expect. */
 export const cardCategories = categories.map((c) => ({
   name: c.label,
   icon: c.icon,
   color: c.color,
 }));
+
+/** Baseline SpendingCard props shared by the card specs — spread and override per test (entries stay per-spec). */
+export const baseCardProps = {
+  spendingName: "Groceries",
+  spendingItemIcon: "shopping-cart",
+  categoryName: "Groceries",
+  spendingCategoryColor: "#34C759",
+  budgetNumber: cents(600),
+  recurring: true,
+  categories: cardCategories,
+  onItemUpdate: noop,
+  onItemDelete: noop,
+  onEntryCreate: noop,
+  onEntryUpdate: noop,
+  onEntryDelete: noop,
+  onCreateCategory: noop,
+  onToggleExpand: noop,
+};
 
 /** A three-month `{ label, value }` series shared by chart/trend tests. */
 export const trendSeries = [

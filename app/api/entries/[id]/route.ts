@@ -1,34 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { updateSpentAmount } from "@/lib/spending/update-spent";
+import { monthOfDate } from "@/lib/spending/month";
+import { routeEntryToMonth } from "@/lib/spending/route-entry";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
-const MIN_AMOUNT_CENTS = 0;
+const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
 const MAX_RECEIPT_SIZE = 5_000_000; // ~5MB base64
 
 // URL validation regex
 const URL_REGEX = /^https?:\/\/.+/i;
-
-/**
- * Recalculates and updates the spent amount for a spending item
- * based on the sum of all its entries.
- */
-async function updateSpentAmount(spendingItemId: string): Promise<void> {
-    const allEntries = await prisma.spendingEntry.findMany({
-        where: { spendingItemId },
-        select: { amount: true },
-    });
-
-    const newSpent = allEntries.reduce((sum, entry) => sum + entry.amount, 0);
-
-    await prisma.spendingItem.update({
-        where: { id: spendingItemId },
-        data: { spent: newSpent },
-    });
-}
 
 // PUT /api/entries/[id] - Update an entry
 export async function PUT(
@@ -47,12 +32,13 @@ export async function PUT(
 
         const { id } = await params;
         const body = await request.json();
-        const { name, amount, receiptUrl, link, date } = body;
+        const { name, amount, direction, receiptUrl, link, date } = body;
 
         // Validate at least one field is being updated
         if (
             name === undefined &&
             amount === undefined &&
+            direction === undefined &&
             receiptUrl === undefined &&
             link === undefined &&
             date === undefined
@@ -93,6 +79,14 @@ export async function PUT(
                     { status: 400 }
                 );
             }
+        }
+
+        // Validate direction if provided
+        if (direction !== undefined && direction !== "debit" && direction !== "credit") {
+            return NextResponse.json(
+                { error: 'Direction must be "debit" or "credit"' },
+                { status: 400 }
+            );
         }
 
         // Validate link if provided
@@ -153,7 +147,7 @@ export async function PUT(
         // Find the entry and verify ownership through spending item
         const existingEntry = await prisma.spendingEntry.findUnique({
             where: { id },
-            include: { spendingItem: true },
+            include: { spendingItem: { include: { series: true } } },
         });
 
         if (!existingEntry) {
@@ -163,7 +157,7 @@ export async function PUT(
             );
         }
 
-        if (existingEntry.spendingItem.userId !== user.id) {
+        if (existingEntry.spendingItem.series.userId !== user.id) {
             return NextResponse.json(
                 { error: "Entry not found" },
                 { status: 404 }
@@ -174,6 +168,7 @@ export async function PUT(
         const updateData: {
             name?: string;
             amount?: number;
+            direction?: "debit" | "credit";
             receiptUrl?: string | null;
             link?: string | null;
             date?: Date;
@@ -181,22 +176,40 @@ export async function PUT(
 
         if (name !== undefined) updateData.name = name.trim();
         if (amount !== undefined) updateData.amount = amount;
+        if (direction !== undefined) updateData.direction = direction;
         if (receiptUrl !== undefined) updateData.receiptUrl = receiptUrl || null;
         if (link !== undefined) updateData.link = link || null;
         if (date !== undefined) updateData.date = new Date(date);
 
-        // Update the entry
-        const updatedEntry = await prisma.spendingEntry.update({
-            where: { id },
-            data: updateData,
-        });
+        const sourceItem = existingEntry.spendingItem;
+        const effectiveDate = updateData.date ?? existingEntry.date;
+        const targetMonth = monthOfDate(effectiveDate);
 
-        // Recalculate spent amount if amount changed
-        if (amount !== undefined) {
-            await updateSpentAmount(existingEntry.spendingItemId);
+        // Same month: plain field update, as always.
+        if (targetMonth === sourceItem.month) {
+            const updatedEntry = await prisma.spendingEntry.update({
+                where: { id },
+                data: updateData,
+            });
+
+            // Recalculate spent when the entry's effect on it may have changed
+            if (amount !== undefined || direction !== undefined) await updateSpentAmount(existingEntry.spendingItemId);
+
+            return NextResponse.json(updatedEntry);
         }
 
-        return NextResponse.json(updatedEntry);
+        // The date now lands in another month (D19): move the entry to that
+        // month's incarnation and recompute spent on BOTH incarnations — the
+        // entry just left the source.
+        const routed = await routeEntryToMonth({
+            sourceItem,
+            targetMonth,
+            recomputeSource: true,
+            writeEntry: (tx, targetItemId) =>
+                tx.spendingEntry.update({ where: { id }, data: { ...updateData, spendingItemId: targetItemId } }),
+        });
+
+        return NextResponse.json(routed);
     } catch (error) {
         console.error("[Entries PUT] Failed to update:", error);
         return NextResponse.json(
@@ -234,7 +247,7 @@ export async function DELETE(
         // Find the entry and verify ownership through spending item
         const existingEntry = await prisma.spendingEntry.findUnique({
             where: { id },
-            include: { spendingItem: true },
+            include: { spendingItem: { include: { series: true } } },
         });
 
         if (!existingEntry) {
@@ -244,7 +257,7 @@ export async function DELETE(
             );
         }
 
-        if (existingEntry.spendingItem.userId !== user.id) {
+        if (existingEntry.spendingItem.series.userId !== user.id) {
             return NextResponse.json(
                 { error: "Entry not found" },
                 { status: 404 }

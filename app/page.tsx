@@ -2,6 +2,7 @@ import { Dashboard } from "@/components/dashboard";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { SpendingItem } from "@/lib/types";
+import { sumEntries } from "@/lib/spending/math";
 import { redirect } from "next/navigation";
 
 export const revalidate = 30;
@@ -23,26 +24,30 @@ export default async function Home() {
   const cutoffMonth = `${twelveMonthsAgo.getFullYear()}-${String(twelveMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
 
   const spendingItems = await prisma.spendingItem.findMany({
-      where: { userId: user.id,
+      where: { series: { userId: user.id },
         month: { gte: cutoffMonth }
        },
       select: {
           id: true,
-          name: true,
-          icon: true,
           budgeted: true,
           spent: true,
           month: true,
-          startDate: true,
-          endDate: true,
           note: true,
-          categoryId: true,
-          category: {
+          seriesId: true,
+          series: {
               select: {
-                  id: true,
-                  label: true,
+                  name: true,
                   icon: true,
-                  color: true,
+                  recurring: true,
+                  categoryId: true,
+                  category: {
+                      select: {
+                          id: true,
+                          label: true,
+                          icon: true,
+                          color: true,
+                      }
+                  },
               }
           },
           spendingEntries: {
@@ -50,6 +55,7 @@ export default async function Home() {
                   id: true,
                   name: true,
                   amount: true,
+                  direction: true,
                   date: true,
                   receiptUrl: true,
                   link: true,
@@ -64,7 +70,7 @@ export default async function Home() {
   const spendingMonths = [...new Set(spendingItems.map(i => i.month))];
 
   
-  const [categories, incomeSources, allIncomeSources] = await Promise.all([
+  const [categories, incomeSources, allIncomeSources, preWindowItems] = await Promise.all([
     prisma.category.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "asc" },
@@ -77,7 +83,21 @@ export default async function Home() {
       where: { userId: user.id, month: { in: spendingMonths } },
       orderBy: { createdAt: "asc" },
     }),
+    // Entry counts for months older than the loaded window, so the Manage
+    // Categories popin can report what a cascade delete would really destroy
+    // (the items payload above is cut off at `cutoffMonth`).
+    prisma.spendingItem.findMany({
+      where: { series: { userId: user.id }, month: { lt: cutoffMonth } },
+      select: {
+        series: { select: { categoryId: true } },
+        _count: { select: { spendingEntries: true } },
+      },
+    }),
   ]);
+
+  const preWindowEntryCounts: Record<string, number> = {};
+
+  for (const item of preWindowItems) preWindowEntryCounts[item.series.categoryId] = (preWindowEntryCounts[item.series.categoryId] ?? 0) + item._count.spendingEntries;
   
 
   const mappedCategories = categories.map(c => ({
@@ -92,25 +112,26 @@ export default async function Home() {
     if (!spendingData[item.month]) spendingData[item.month] = [];
     spendingData[item.month].push({
       id: item.id,
-      name: item.name,
-      icon: item.icon,
+      name: item.series.name,
+      icon: item.series.icon,
+      seriesId: item.seriesId,
+      recurring: item.series.recurring,
       budgeted: item.budgeted,
-      spent: item.spendingEntries.reduce((sum, e) => sum + e.amount, 0),
+      spent: sumEntries(item.spendingEntries),
       month: item.month,
-      startDate: item.startDate?.toISOString().split("T")[0] ?? `${item.month}-01`,
-      endDate: item.endDate?.toISOString().split("T")[0] ?? null,
       note: item.note ?? null,
-      categoryId: item.categoryId,
-      category: item.category ? {
-        id: item.category.id,
-        label: item.category.label,
-        icon: item.category.icon,
-        color: item.category.color,
-      } : undefined,
+      categoryId: item.series.categoryId,
+      category: {
+        id: item.series.category.id,
+        label: item.series.category.label,
+        icon: item.series.category.icon,
+        color: item.series.category.color,
+      },
       entries: item.spendingEntries.map(e => ({
         id: e.id,
         name: e.name,
         amount: e.amount,
+        direction: e.direction,
         date: e.date?.toISOString().split("T")[0] ?? "",
         receiptUrl: e.receiptUrl ?? null,
         link: e.link ?? null,
@@ -138,6 +159,7 @@ export default async function Home() {
       initialIncomeSources={mapIncome(incomeSources)}
       initialAllIncomeSources={mapIncome(allIncomeSources)}
       initialMonth={currentMonth}
+      preWindowEntryCounts={preWindowEntryCounts}
     />
   );
 }

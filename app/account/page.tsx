@@ -3,19 +3,25 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
-import { Loader2 } from "lucide-react"
+import { AVATARS_BUCKET, avatarFilePath } from "@/lib/avatar-storage"
+import { Download, Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
+import { useSettings } from "@/lib/settings-context"
+import { exportAccountData } from "@/lib/api"
+import { CURRENCY_OPTIONS, DATE_FORMAT_OPTIONS } from "@/lib/constants"
+import { FormBanner } from "@/components/ui/form-banner"
 import { AccountHeader } from "@/components/account/components/account-header"
-import { AccountTabs, type ActiveTab } from "@/components/account/components/account-tabs"
+import { InsetDivider } from "@/components/account/components/inset-divider"
 import { ProfileAvatar } from "@/components/account/components/profile-avatar"
 import { ProfileForm } from "@/components/account/components/profile-form"
-import { EmailCard, PasswordCard, DangerZone } from "@/components/account/components/action-cards"
-import { SettingsTab } from "@/components/account/components/settings-tab"
+import { SettingsSection, SettingsRow } from "@/components/account/components/settings-section"
+import { AppearanceToggle } from "@/components/account/components/appearance-toggle"
 import { EmailModal } from "@/components/account/components/modals/email-modal"
 import { PasswordModal } from "@/components/account/components/modals/password-modal"
-import { DeleteModal } from "@/components/account/components/modals/delete-modal"
+import { DeleteModal, DELETE_CONFIRMATION } from "@/components/account/components/modals/delete-modal"
 import { LogoutModal } from "@/components/account/components/modals/logout-modal"
+import { PickerModal } from "@/components/account/components/modals/picker-modal"
 
 // Types
 interface UserMetadata {
@@ -24,22 +30,25 @@ interface UserMetadata {
     avatar_url?: string
 }
 
-type ModalType = "email" | "password" | "delete" | "logout" | null
+type ModalType = "email" | "password" | "delete" | "logout" | "currency" | "dateFormat" | null
+
+const CURRENCY_PICKER_OPTIONS = CURRENCY_OPTIONS.map((option) => ({ value: option.code, label: option.label }))
 
 export default function AccountPage() {
     const router = useRouter()
     const supabase = createClient()
+    const { settings, updateCurrency, updateDateFormat, updateDarkMode } = useSettings()
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
 
     // User state
     const [user, setUser] = useState<User | null>(null)
 
-    // Tab & Modal state
-    const [activeTab, setActiveTab] = useState<ActiveTab>("profile")
+    // Modal state
     const [activeModal, setActiveModal] = useState<ModalType>(null)
 
     // Form state - Profile
@@ -57,6 +66,7 @@ export default function AccountPage() {
     const [currentPassword, setCurrentPassword] = useState("")
     const [newPassword, setNewPassword] = useState("")
     const [confirmNewPassword, setConfirmNewPassword] = useState("")
+    const [passwordSubmitted, setPasswordSubmitted] = useState(false)
 
     // Form state - Delete account
     const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -68,6 +78,18 @@ export default function AccountPage() {
 
     // Derived state
     const hasProfileChanges = firstName !== initialFirstName || lastName !== initialLastName
+
+    // Password-modal field errors — validate on submit, clear on input: they
+    // surface after a failed submit and derive from live values, so fixing a
+    // field clears its message immediately. Empty fields stay a banner.
+    const newPasswordError =
+        passwordSubmitted && newPassword.length > 0 && newPassword.length < 8
+            ? "Use at least 8 characters"
+            : null
+    const confirmPasswordError =
+        passwordSubmitted && confirmNewPassword.length > 0 && newPassword !== confirmNewPassword
+            ? "Passwords don't match"
+            : null
     const userEmail = user?.email ?? ""
     const initials = `${firstName?.[0] ?? ""}${lastName?.[0] ?? ""}`.toUpperCase() || "?"
     const isGoogleUser = user?.app_metadata?.provider === "google"
@@ -129,6 +151,7 @@ export default function AccountPage() {
         setConfirmNewPassword("")
         setDeleteConfirmText("")
         setDeletePassword("")
+        setPasswordSubmitted(false)
         setError(null)
     }
 
@@ -164,17 +187,43 @@ export default function AccountPage() {
         }
     }
 
+    const handleExport = async () => {
+        if (isExporting) return
+
+        setIsExporting(true)
+        setError(null)
+
+        try {
+            const { blob, filename } = await exportAccountData()
+
+            const url = URL.createObjectURL(blob)
+            const anchor = document.createElement("a")
+
+            anchor.href = url
+            anchor.download = filename
+            document.body.appendChild(anchor)
+            anchor.click()
+            anchor.remove()
+            URL.revokeObjectURL(url)
+
+            setSuccess("Your data has been exported")
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to export data")
+        } finally {
+            setIsExporting(false)
+        }
+    }
+
     const handleAvatarUpload = async (file: File) => {
         setIsUploadingAvatar(true)
         setError(null)
 
         try {
             const fileExt = file.name.split('.').pop()
-            const fileName = `${user?.id}-${Date.now()}.${fileExt}`
-            const filePath = `avatars/${fileName}`
+            const filePath = avatarFilePath(user?.id ?? "", fileExt)
 
             const { error: uploadError } = await supabase.storage
-                .from('avatars')
+                .from(AVATARS_BUCKET)
                 .upload(filePath, file, { upsert: true })
 
             if (uploadError) {
@@ -183,7 +232,7 @@ export default function AccountPage() {
             }
 
             const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
+                .from(AVATARS_BUCKET)
                 .getPublicUrl(filePath)
 
             const { error: updateError } = await supabase.auth.updateUser({
@@ -267,20 +316,16 @@ export default function AccountPage() {
     }
 
     const handleChangePassword = async () => {
-        if (!currentPassword || !newPassword || !confirmNewPassword) {
+        if (currentPassword === "" || newPassword === "" || confirmNewPassword === "") {
             setError("Please fill in all fields")
             return
         }
 
-        if (newPassword !== confirmNewPassword) {
-            setError("New passwords do not match")
-            return
-        }
+        // Field-level problems render as FieldMessages in the modal (derived
+        // from passwordSubmitted), not as a banner.
+        setPasswordSubmitted(true)
 
-        if (newPassword.length < 8) {
-            setError("Password must be at least 8 characters")
-            return
-        }
+        if (newPassword.length < 8 || newPassword !== confirmNewPassword) return
 
         setIsSaving(true)
         setError(null)
@@ -315,8 +360,7 @@ export default function AccountPage() {
         }
     }
 
-    const handleLogout = async () => {
-        setIsSaving(true)
+    const signOutAndRedirect = async () => {
         try {
             // Authoritative: clears the (possibly chunked) auth cookies via
             // Set-Cookie headers from the server.
@@ -330,8 +374,13 @@ export default function AccountPage() {
         window.location.assign("/login")
     }
 
+    const handleLogout = async () => {
+        setIsSaving(true)
+        await signOutAndRedirect()
+    }
+
     const handleDeleteAccount = async () => {
-        if (deleteConfirmText !== "DELETE") {
+        if (deleteConfirmText !== DELETE_CONFIRMATION) {
             setError("Please type DELETE to confirm")
             return
         }
@@ -369,8 +418,9 @@ export default function AccountPage() {
                 return
             }
 
-            await supabase.auth.signOut()
-            router.push("/login")
+            // The account is gone server-side and its tokens are revoked;
+            // clear the local session the same way logout does.
+            await signOutAndRedirect()
         } catch {
             setError("Failed to delete account. Please try again.")
             setIsSaving(false)
@@ -380,79 +430,109 @@ export default function AccountPage() {
     // Loading state
     if (isLoading) {
         return (
-            <div className="min-h-svh flex items-center justify-center bg-gray-50">
+            <div className="min-h-svh flex items-center justify-center bg-muted dark:bg-background">
                 <Loader2 className="w-8 h-8 animate-spin text-green-500" />
             </div>
         )
     }
 
     return (
-        <div className="min-h-svh bg-gray-50 pb-safe">
-            <AccountHeader onBack={handleBack} onLogout={() => setActiveModal("logout")} />
-            <AccountTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="min-h-svh bg-muted dark:bg-background">
+            <AccountHeader onBack={handleBack} />
 
-            {/* Feedback Messages */}
-            {(error || success) && (
-                <div className="px-4 pt-4 sm:max-w-2xl sm:mx-auto">
-                    <div
-                        role="alert"
-                        className={`p-4 rounded-xl text-sm font-medium ${
-                            success
-                                ? "bg-green-50 text-green-700 border border-green-200"
-                                : "bg-red-50 text-red-700 border border-red-200"
-                        }`}
-                    >
-                        {success || error}
-                    </div>
+            {/* Feedback Messages — page-level results outside any modal.
+                Success never wears error clothes. */}
+            {(error !== null || success !== null) && (
+                <div className="mx-auto max-w-2xl px-4 pt-4">
+                    {success !== null
+                        ? <FormBanner variant="success">{success}</FormBanner>
+                        : <FormBanner variant="error">{error}</FormBanner>}
                 </div>
             )}
 
-            <main className="py-4 sm:py-6 sm:max-w-2xl sm:mx-auto">
-                {activeTab === "profile" && (
-                    <div className="space-y-4 sm:space-y-6 sm:px-4">
-                        {/* Profile Card */}
-                        <div className="bg-white border-y sm:border sm:rounded-2xl border-gray-200">
-                            <div className="px-4 py-6 sm:p-6">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                                    Profile Information
-                                </h2>
+            <main className="mx-auto flex max-w-2xl flex-col gap-7 px-4 pt-7 pb-16">
+                <ProfileAvatar
+                    avatarUrl={avatarUrl}
+                    initials={initials}
+                    firstName={firstName}
+                    lastName={lastName}
+                    email={userEmail}
+                    isUploading={isUploadingAvatar}
+                    onUpload={handleAvatarUpload}
+                    onRemove={handleRemoveAvatar}
+                    onError={setError}
+                />
 
-                                <ProfileAvatar
-                                    avatarUrl={avatarUrl}
-                                    initials={initials}
-                                    firstName={firstName}
-                                    lastName={lastName}
-                                    email={userEmail}
-                                    isUploading={isUploadingAvatar}
-                                    onUpload={handleAvatarUpload}
-                                    onRemove={handleRemoveAvatar}
-                                    onError={setError}
-                                />
+                <SettingsSection title="Profile">
+                    <ProfileForm
+                        firstName={firstName}
+                        lastName={lastName}
+                        hasChanges={hasProfileChanges}
+                        isSaving={isSaving}
+                        onFirstNameChange={setFirstName}
+                        onLastNameChange={setLastName}
+                        onSave={handleSaveProfile}
+                    />
+                </SettingsSection>
 
-                                <ProfileForm
-                                    firstName={firstName}
-                                    lastName={lastName}
-                                    hasChanges={hasProfileChanges}
-                                    isSaving={isSaving}
-                                    onFirstNameChange={setFirstName}
-                                    onLastNameChange={setLastName}
-                                    onSave={handleSaveProfile}
-                                />
-                            </div>
-                        </div>
-
-                        {!isGoogleUser && (
-                            <>
-                                <EmailCard email={userEmail} onClick={() => setActiveModal("email")} />
-                                <PasswordCard onClick={() => setActiveModal("password")} />
-                            </>
-                        )}
-
-                        <DangerZone onDelete={() => setActiveModal("delete")} />
-                    </div>
+                {!isGoogleUser && (
+                    <SettingsSection title="Security">
+                        <SettingsRow label="Email" detail={userEmail} onClick={() => setActiveModal("email")} />
+                        <InsetDivider className="sm:ml-5" />
+                        <SettingsRow label="Password" detail="••••••••" onClick={() => setActiveModal("password")} />
+                    </SettingsSection>
                 )}
 
-                {activeTab === "settings" && <SettingsTab />}
+                <SettingsSection title="Preferences">
+                    <SettingsRow
+                        label="Currency"
+                        detail={CURRENCY_PICKER_OPTIONS.find((option) => option.value === settings.currency)?.label ?? settings.currency}
+                        onClick={() => setActiveModal("currency")}
+                    />
+                    <InsetDivider className="sm:ml-5" />
+                    <SettingsRow
+                        label="Date Format"
+                        detail={settings.dateFormat}
+                        onClick={() => setActiveModal("dateFormat")}
+                    />
+                    <InsetDivider className="sm:ml-5" />
+                    <SettingsRow
+                        label="Appearance"
+                        trailing={<AppearanceToggle darkMode={settings.darkMode} onChange={updateDarkMode} />}
+                    />
+                </SettingsSection>
+
+                <SettingsSection title="Data">
+                    <SettingsRow
+                        label="Export Your Data"
+                        description="Download all your budget data as CSV (once every 2 days)"
+                        onClick={handleExport}
+                        trailing={
+                            isExporting
+                                ? <Loader2 className="h-[18px] w-[18px] flex-none animate-spin text-green-600" strokeWidth={2} />
+                                : <Download className="h-[18px] w-[18px] flex-none text-green-600" strokeWidth={2} />
+                        }
+                    />
+                </SettingsSection>
+
+                <div className="mt-2 flex flex-col gap-4">
+                    <SettingsSection>
+                        <button
+                            type="button"
+                            onClick={() => setActiveModal("logout")}
+                            className="min-h-12 w-full px-4 py-3.5 text-center text-base font-medium text-red-500 transition-colors hover:bg-red-50 active:bg-red-100 dark:hover:bg-red-500/10 dark:active:bg-red-500/20 sm:text-[15px]"
+                        >
+                            Log Out
+                        </button>
+                    </SettingsSection>
+                    <button
+                        type="button"
+                        onClick={() => setActiveModal("delete")}
+                        className="self-center p-1 text-[13px] text-muted-foreground transition-colors hover:text-red-500"
+                    >
+                        Delete your account and all data…
+                    </button>
+                </div>
             </main>
 
             {/* Modals */}
@@ -477,6 +557,8 @@ export default function AccountPage() {
                         newPassword={newPassword}
                         confirmPassword={confirmNewPassword}
                         error={activeModal === "password" ? error : null}
+                        newPasswordError={activeModal === "password" ? newPasswordError : null}
+                        confirmPasswordError={activeModal === "password" ? confirmPasswordError : null}
                         isSaving={isSaving}
                         onCurrentPasswordChange={setCurrentPassword}
                         onNewPasswordChange={setNewPassword}
@@ -485,6 +567,24 @@ export default function AccountPage() {
                     />
                 </>
             )}
+
+            <PickerModal
+                isOpen={activeModal === "currency"}
+                onClose={closeModal}
+                title="Currency"
+                options={CURRENCY_PICKER_OPTIONS}
+                selected={settings.currency}
+                onSelect={updateCurrency}
+            />
+
+            <PickerModal
+                isOpen={activeModal === "dateFormat"}
+                onClose={closeModal}
+                title="Date Format"
+                options={DATE_FORMAT_OPTIONS}
+                selected={settings.dateFormat}
+                onSelect={updateDateFormat}
+            />
 
             <DeleteModal
                 isOpen={activeModal === "delete"}

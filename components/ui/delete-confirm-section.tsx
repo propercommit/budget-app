@@ -56,16 +56,14 @@ export function DeleteConfirmSection({
             }}
         >
             <p
-                className="text-sm font-medium text-center mb-3"
-                style={{ color: "#1D1D1F" }}
+                className="text-sm font-medium text-center mb-3 text-foreground"
             >
                 {confirmMessage}
             </p>
             <div className="flex gap-3">
                 <button
                     onClick={() => setShowConfirm(false)}
-                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-[0.98] bg-muted text-foreground"
                 >
                     Cancel
                 </button>

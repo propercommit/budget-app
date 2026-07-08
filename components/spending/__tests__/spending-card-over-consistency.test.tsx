@@ -12,19 +12,10 @@ vi.mock("@/lib/api", () => ({
 import { SettingsProvider } from "@/lib/settings-context";
 import { SpendingCardCollapsed } from "@/components/spending/spending-card-collapsed";
 import { SpendingCardExpanded } from "@/components/spending/spending-card-expanded";
+import { installRadixJsdomStubs } from "./radix-jsdom-stubs";
 
 // Radix Select (the expanded card's sort control) pokes APIs jsdom lacks.
-beforeAll(() => {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-  Element.prototype.scrollIntoView = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.setPointerCapture = vi.fn();
-});
+beforeAll(installRadixJsdomStubs);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -48,6 +39,7 @@ function renderCollapsed(money: { budgetNumber: number; totalSpent: number }) {
         spendingItemIcon="shopping-cart"
         spendingCategoryColor="#34C759"
         onExpand={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>
   ).container;
@@ -69,6 +61,7 @@ function renderExpanded(money: { budgetNumber: number; totalSpent: number }) {
         onEntryClick={() => {}}
         onAddEntry={() => {}}
         onItemDetailClick={() => {}}
+        onEditClick={() => {}}
       />
     </SettingsProvider>
   ).container;
@@ -100,5 +93,40 @@ describe("SpendingCard — over/left is consistent between collapsed and expande
     expect(await within(expanded).findByText("272.21 $ left")).toBeInTheDocument();
 
     expect(expanded.textContent).not.toContain("27,221");
+  });
+});
+
+describe("SpendingCard — net-credit month (negative spent)", () => {
+  // A card holding only credits (e.g. a refund month) has negative spent —
+  // valid data. The bar must clamp to 0%: an unclamped negative width is
+  // invalid CSS, which browsers drop, leaving the div at width:auto (a FULL
+  // bar). The displayed numbers stay truthful and unclamped.
+  const CREDIT = { budgetNumber: 40_000, totalSpent: -15_000 };
+
+  it("renders a 0-width progress bar, not a full one (collapsed)", () => {
+    const collapsed = renderCollapsed(CREDIT);
+
+    const bar = collapsed.querySelector<HTMLElement>(".h-3 > div");
+
+    expect(bar).not.toBeNull();
+
+    expect(bar?.style.width).toBe("0%");
+  });
+
+  it("renders a 0-width bar and truthful negative/raised amounts (expanded)", async () => {
+    const expanded = renderExpanded(CREDIT);
+
+    const bar = expanded.querySelector<HTMLElement>(".h-3 > div");
+
+    expect(bar?.style.width).toBe("0%");
+
+    // Header renders net-credit spent as "+X" (see lib/spending/format-spent);
+    // remaining = budget - spent stays a plain formula on the signed value, so
+    // the credit genuinely increases what's left.
+    expect(expanded.textContent).toContain("+150\u00A0$");
+
+    expect(expanded.textContent).not.toContain("-150\u00A0$");
+
+    expect(await within(expanded).findByText("550 $ left")).toBeInTheDocument();
   });
 });

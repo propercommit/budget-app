@@ -23,20 +23,20 @@ export function CategoryTrendCard({ category, data, isSelected, onClick }: Categ
             onClick={onClick}
             className="text-left p-3 rounded-2xl transition-all duration-200 active:scale-[0.98]"
             style={{
-                backgroundColor: isSelected ? `${category.color}15` : "#F5F5F7",
+                backgroundColor: isSelected ? `${category.color}15` : "var(--muted)",
                 border: isSelected ? `2px solid ${category.color}` : "2px solid transparent",
                 minWidth: "140px",
             }}
         >
             <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg [&>svg]:w-5 [&>svg]:h-5">{iconMap[category.icon] || category.icon}</span>
-                <span className="text-sm font-medium truncate" style={{ color: "#1D1D1F" }}>{category.name}</span>
+                <span className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>{category.name}</span>
             </div>
             <div className="h-10 mb-2">
                 <MiniAreaChart data={data} color={category.color} height={40} />
             </div>
             <div className="flex items-center justify-between">
-                <span className="text-sm font-bold" style={{ color: "#1D1D1F" }}>{formatAmount(current)}</span>
+                <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{formatAmount(current)}</span>
                 <span className="text-xs font-semibold" style={{ color: isDown ? "#34C759" : "#FF3B30" }}>
                     {isDown ? "↓" : "↑"}{Math.abs(change).toFixed(0)}%
                 </span>

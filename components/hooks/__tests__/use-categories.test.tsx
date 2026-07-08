@@ -11,13 +11,13 @@ vi.mock("@/lib/api", () => ({
   deleteCategory: vi.fn(),
 }));
 
-vi.mock("react-hot-toast", () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+vi.mock("@/lib/toast", () => ({
+  showErrorToast: vi.fn(),
 }));
 
 import { useCategories } from "@/components/hooks/use-categories";
 import * as api from "@/lib/api";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 import type { Category } from "@/lib/types";
 
 const cat = (over: Partial<Category> = {}): Category => ({
@@ -80,7 +80,7 @@ describe("useCategories — create (optimistic)", () => {
 
     // Temp item replaced in place by the server record.
     expect(result.current.categories).toEqual([server]);
-    expect(toast.error).not.toHaveBeenCalled();
+    expect(showErrorToast).not.toHaveBeenCalled();
   });
 
   it("rolls back the temp item and fires an error toast when the API rejects", async () => {
@@ -94,7 +94,9 @@ describe("useCategories — create (optimistic)", () => {
 
     expect(result.current.categories).toEqual([]);
     expect(returned).toBeNull();
-    expect(toast.error).toHaveBeenCalledWith("Failed to create category");
+    // The rejection's message is surfaced (e.g. the friendly duplicate 409),
+    // with a retry action that can replay the create.
+    expect(showErrorToast).toHaveBeenCalledWith("boom", { retry: expect.any(Function) });
   });
 });
 
@@ -103,10 +105,12 @@ describe("useCategories — update (optimistic)", () => {
     vi.mocked(api.updateCategory).mockResolvedValue(undefined);
     const { result } = renderHook(() => useCategories([cat()]));
 
+    let ok = false;
     await act(async () => {
-      await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
+      ok = await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
     });
 
+    expect(ok).toBe(true);
     expect(result.current.categories[0]).toMatchObject({
       id: "c1",
       label: "Food",
@@ -120,17 +124,30 @@ describe("useCategories — update (optimistic)", () => {
     });
   });
 
-  it("restores the original on failure and toasts", async () => {
-    vi.mocked(api.updateCategory).mockRejectedValue(new Error("nope"));
+  it("restores the original on failure and surfaces the server message", async () => {
+    vi.mocked(api.updateCategory).mockRejectedValue(new Error("A category with this name already exists"));
     const original = cat();
     const { result } = renderHook(() => useCategories([original]));
+
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
+    });
+
+    expect(ok).toBe(false);
+    expect(result.current.categories[0]).toEqual(original);
+    expect(showErrorToast).toHaveBeenCalledWith("A category with this name already exists", { retry: expect.any(Function) });
+  });
+
+  it("falls back to the named save message when the rejection has no message", async () => {
+    vi.mocked(api.updateCategory).mockRejectedValue("kaboom");
+    const { result } = renderHook(() => useCategories([cat()]));
 
     await act(async () => {
       await result.current.updateCategory("c1", "Food", "fork", "#FF3B30");
     });
 
-    expect(result.current.categories[0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("Failed to update category");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Food"', { retry: expect.any(Function) });
   });
 
   it("no-ops when the id is unknown", async () => {
@@ -156,8 +173,8 @@ describe("useCategories — delete (optimistic)", () => {
     expect(result.current.categories.map((c) => c.id)).toEqual(["c2"]);
   });
 
-  it("re-inserts the removed item on failure and toasts", async () => {
-    vi.mocked(api.deleteCategory).mockRejectedValue(new Error("fail"));
+  it("re-inserts the removed item on failure and surfaces the server message", async () => {
+    vi.mocked(api.deleteCategory).mockRejectedValue(new Error("Category not found"));
     const { result } = renderHook(() => useCategories([cat()]));
 
     let ok = true;
@@ -167,6 +184,6 @@ describe("useCategories — delete (optimistic)", () => {
 
     expect(ok).toBe(false);
     expect(result.current.categories.map((c) => c.id)).toEqual(["c1"]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete category");
+    expect(showErrorToast).toHaveBeenCalledWith("Category not found", { retry: expect.any(Function) });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { decimalPartsToCents, parseAmountToCents, centsToAmount } from "@/lib/money";
+import { decimalPartsToCents, parseAmountToCents, centsToAmount, centsToDecimalString } from "@/lib/money";
 
 describe("decimalPartsToCents", () => {
   it("combines whole and fractional digit groups into exact cents", () => {
@@ -91,5 +91,30 @@ describe("centsToAmount", () => {
     expect(centsToAmount(1010)).toBe(10.1);
     expect(centsToAmount(123456)).toBe(1234.56);
     expect(centsToAmount(29)).toBe(0.29);
+  });
+});
+
+describe("centsToDecimalString", () => {
+  it("renders cents as an exact two-decimal string", () => {
+    expect(centsToDecimalString(1029)).toBe("10.29");
+    expect(centsToDecimalString(123456)).toBe("1234.56");
+    expect(centsToDecimalString(100)).toBe("1.00");
+  });
+
+  it("zero-pads sub-unit amounts", () => {
+    expect(centsToDecimalString(5)).toBe("0.05");
+    expect(centsToDecimalString(50)).toBe("0.50");
+    expect(centsToDecimalString(0)).toBe("0.00");
+  });
+
+  it("carries the sign of negative amounts", () => {
+    expect(centsToDecimalString(-1029)).toBe("-10.29");
+    expect(centsToDecimalString(-5)).toBe("-0.05");
+  });
+
+  it("round-trips the classic float-trap values", () => {
+    expect(centsToDecimalString(parseAmountToCents("0.29") as number)).toBe("0.29");
+    expect(centsToDecimalString(parseAmountToCents("4.10") as number)).toBe("4.10");
+    expect(centsToDecimalString(parseAmountToCents("8.20") as number)).toBe("8.20");
   });
 });

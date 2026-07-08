@@ -4,6 +4,17 @@ export const VALID_DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"] as 
 export type Currency = typeof VALID_CURRENCIES[number];
 export type DateFormat = typeof VALID_DATE_FORMATS[number];
 
+/**
+ * Product-default settings for a user with no `UserSettings` row yet — what
+ * the settings GET materializes on first read, and what the account export
+ * reports when no row exists. Both routes must agree, so it lives here.
+ */
+export const DEFAULT_USER_SETTINGS = {
+  currency: "USD" as Currency,
+  dateFormat: "MM/DD/YYYY" as DateFormat,
+  darkMode: false,
+};
+
 export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   USD: "$",
   EUR: "€",
@@ -42,3 +53,6 @@ export const DATE_FORMAT_FULL_TOKENS: Record<DateFormat, string> = {
   "DD/MM/YYYY": "EEEE d MMMM yyyy",
   "YYYY-MM-DD": "yyyy-MM-dd, EEEE",
 };
+
+/** Shared by every category-delete affordance so the warning never drifts. */
+export const CATEGORY_DELETE_WARNING = "Are you sure? This will delete all spending items in this category. This cannot be undone.";

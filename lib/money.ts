@@ -73,6 +73,20 @@ export function parseAmountToCents(raw: string): number | null {
 }
 
 /**
+ * Classify why an amount string fails {@link parseAmountToCents}: `"empty"`
+ * covers a blank or all-zero value (the user hasn't entered an amount),
+ * `"malformed"` everything else (e.g. a trailing dot). Lives here so the
+ * classification can never drift from the parse grammar it mirrors; the
+ * user-facing copy for each reason belongs to the UI layer.
+ */
+export function invalidAmountReason(raw: string): "empty" | "malformed" {
+
+  const trimmed = raw.trim();
+
+  return trimmed === "" || /^0*\.?0*$/.test(trimmed) ? "empty" : "malformed";
+}
+
+/**
  * Convert integer minor units (cents) back to a major-unit number — the "convert
  * out" edge that mirrors {@link parseAmountToCents}. A single exact-integer
  * division, so `1010` → `10.1`. Used to seed an edit form's amount input with an
@@ -81,4 +95,21 @@ export function parseAmountToCents(raw: string): number | null {
  */
 export function centsToAmount(cents: number): number {
   return cents / 100;
+}
+
+/**
+ * Render integer minor units (cents) as an exact two-decimal string —
+ * `1029` → `"10.29"`, `-5` → `"-0.05"`. Built from integer division and
+ * padding, never through a float, so it is the safe way to write cents into
+ * text output (CSV export) without `toFixed` on a divided float. Assumes whole
+ * cents (every stored amount is); a fractional input would be truncated.
+ */
+export function centsToDecimalString(cents: number): string {
+
+  const sign = cents < 0 ? "-" : "";
+  const abs = Math.abs(cents);
+  const whole = Math.trunc(abs / 100);
+  const fraction = String(abs % 100).padStart(2, "0");
+
+  return `${sign}${whole}.${fraction}`;
 }

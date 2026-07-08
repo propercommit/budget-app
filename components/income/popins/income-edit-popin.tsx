@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { IncomeSource } from "@/lib/types";
 import { IconPicker } from "@/components/icon-picker";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
+import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldFocusProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
@@ -24,11 +26,26 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
     const [startDate, setStartDate] = useState(initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '');
     const [endDate, setEndDate] = useState(initialData?.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
     const [note, setNote] = useState(initialData?.note || '');
+    const { submitted, reveal } = useSubmitReveal();
     const { settings } = useSettings();
+
+    const nameRef = useRef<HTMLInputElement>(null);
+    const amountRef = useRef<HTMLInputElement>(null);
+    const startDateRef = useRef<HTMLInputElement>(null);
 
     const isEdit = mode === 'edit';
     const parsedAmount = parseAmountToCents(amount);
-    const isFormValid = name.trim() !== '' && parsedAmount !== null && startDate !== '';
+
+    // Validate on submit, clear on input: errors surface only after a failed
+    // save and are derived from live values, so fixing a field clears its
+    // message immediately.
+    const nameInvalid = name.trim() === '';
+    const amountInvalid = parsedAmount === null;
+    const startDateInvalid = startDate === '';
+
+    const nameError = submitted && nameInvalid;
+    const amountError = submitted && amountInvalid;
+    const startDateError = submitted && startDateInvalid;
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -38,7 +55,14 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
     };
 
     const handleSave = () => {
-        if (!isFormValid || parsedAmount === null) return;
+
+        const invalid = reveal([
+            { error: nameInvalid, ref: nameRef },
+            { error: amountInvalid, ref: amountRef },
+            { error: startDateInvalid, ref: startDateRef },
+        ]);
+
+        if (invalid || parsedAmount === null) return;
 
         onSave({
             name,
@@ -63,18 +87,14 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         <button
                             onClick={onClose}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                            style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={!isFormValid}
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                            style={isFormValid
-                                ? { backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }
-                                : { backgroundColor: "#E5E5EA", color: "#8E8E93", cursor: "not-allowed" }
-                            }
+                            style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
                         >
                             {isEdit ? 'Save Changes' : 'Add Income'}
                         </button>
@@ -91,95 +111,83 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
         >
             <div className="space-y-5">
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Name</label>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Name</label>
                     <input
+                        ref={nameRef}
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g., Monthly Salary"
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        style={fieldInputStyle(nameError)}
+                        {...fieldValidationProps(nameError, "income-name-error")}
                     />
+                    {nameError && <FieldMessage id="income-name-error">Enter a name</FieldMessage>}
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Amount <span className="font-normal text-xs" style={{ color: "#6E6E73" }}>/month</span>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Amount <span className="font-normal text-xs" style={{ color: "var(--muted-foreground)" }}>/month</span>
                     </label>
-                    <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold pointer-events-none" style={{ color: "#8E8E93" }}>
+                    {/* The prefix sits in flow (not absolutely positioned) so
+                        the gap to the amount holds for any symbol width ($ vs
+                        CHF); the focus ring moves to the wrapper accordingly.
+                        The errored inline style wins over the focus-within
+                        utilities, keeping the red border while focused. */}
+                    <div
+                        className="flex items-center gap-2 px-4 rounded-xl bg-muted border border-border transition-all duration-200 focus-within:border-[#007AFF] focus-within:shadow-[0_0_0_3px_rgba(0,122,255,0.1)]"
+                        style={amountError ? fieldInputStyle(true) : undefined}
+                    >
+                        <span className="flex-shrink-0 text-lg font-semibold" style={{ color: "var(--muted-foreground)" }} aria-hidden="true">
                             {CURRENCY_SYMBOLS[settings.currency]}
-                        </div>
+                        </span>
                         <input
+                            ref={amountRef}
                             type="text"
                             inputMode="decimal"
                             value={amount}
                             onChange={handleAmountChange}
                             placeholder="0.00"
-                            className="w-full pl-9 pr-4 py-3.5 rounded-xl text-lg font-semibold outline-none transition-all duration-200"
-                            style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
-                            onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                            onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                            className="flex-1 min-w-0 py-3.5 bg-transparent text-lg font-semibold outline-none"
+                            style={{ color: "var(--foreground)" }}
+                            {...fieldAriaProps(amountError, "income-amount-error")}
                         />
                     </div>
+                    {amountError && <FieldMessage id="income-amount-error">{amountFieldMessage(amount)}</FieldMessage>}
                 </div>
 
                 <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Type</label>
-                    <div className="relative flex rounded-xl p-1" style={{ backgroundColor: "#F5F5F7" }}>
-                        <div
-                            className="absolute top-1 bottom-1 rounded-lg bg-white shadow-sm transition-transform duration-200 ease-out"
-                            style={{
-                                width: 'calc(50% - 4px)',
-                                left: '4px',
-                                transform: incomeType === 'passive' ? 'translateX(100%)' : 'translateX(0)'
-                            }}
-                        />
-                        <button
-                            onClick={() => setIncomeType('active')}
-                            className="relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10"
-                            style={{ color: incomeType === 'active' ? '#1D1D1F' : '#6E6E73' }}
-                        >
-                            <div
-                                className="w-2.5 h-2.5 rounded-full transition-opacity duration-200"
-                                style={{ backgroundColor: '#007AFF', opacity: incomeType === 'active' ? 1 : 0.35 }}
-                            />
-                            Active
-                        </button>
-                        <button
-                            onClick={() => setIncomeType('passive')}
-                            className="relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2 z-10"
-                            style={{ color: incomeType === 'passive' ? '#1D1D1F' : '#6E6E73' }}
-                        >
-                            <div
-                                className="w-2.5 h-2.5 rounded-full transition-opacity duration-200"
-                                style={{ backgroundColor: '#FF9500', opacity: incomeType === 'passive' ? 1 : 0.35 }}
-                            />
-                            Passive
-                        </button>
-                    </div>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Type</label>
+                    <SegmentedToggle
+                        options={[
+                            { value: 'active', label: 'Active', dotColor: '#007AFF' },
+                            { value: 'passive', label: 'Passive', dotColor: '#FF9500' },
+                        ]}
+                        value={incomeType}
+                        onChange={setIncomeType}
+                    />
                 </div>
 
                 <div className="space-y-2 max-w-full overflow-hidden">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>Date Range</label>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>Date Range</label>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="w-full sm:flex-1 min-w-0">
                             <input
+                                ref={startDateRef}
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F", WebkitAppearance: 'none', minWidth: 0 }}
-                                onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                                style={{ ...fieldInputStyle(startDateError), WebkitAppearance: 'none', minWidth: 0 }}
+                                {...fieldValidationProps(startDateError, "income-start-date-error")}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>Start date</p>
+                            {startDateError
+                                ? <FieldMessage id="income-start-date-error">Choose a start date</FieldMessage>
+                                : <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>Start date</p>}
                         </div>
-                        <svg className="hidden sm:block w-5 h-5 flex-shrink-0" style={{ color: "#C7C7CC" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="hidden sm:block w-5 h-5 flex-shrink-0 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
                         <div className="w-full sm:flex-1 min-w-0">
@@ -188,18 +196,17 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                                 className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                                style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F", WebkitAppearance: 'none', minWidth: 0 }}
-                                onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                                onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                                style={{ ...fieldInputStyle(false), WebkitAppearance: 'none', minWidth: 0 }}
+                                {...fieldFocusProps(false)}
                             />
-                            <p className="text-xs mt-1 ml-1" style={{ color: "#6E6E73" }}>End date <span style={{ color: "#8E8E93" }}>(optional)</span></p>
+                            <p className="text-xs mt-1 ml-1" style={{ color: "var(--muted-foreground)" }}>End date (optional)</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-sm font-semibold" style={{ color: "#1D1D1F" }}>
-                        Note <span className="font-normal" style={{ color: "#6E6E73" }}>(optional)</span>
+                    <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                        Note <span className="font-normal" style={{ color: "var(--muted-foreground)" }}>(optional)</span>
                     </label>
                     <textarea
                         value={note}
@@ -207,9 +214,8 @@ export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialDa
                         placeholder="Add any additional details..."
                         rows={3}
                         className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200 resize-none"
-                        style={{ backgroundColor: "#F5F5F7", border: "1px solid #E5E5EA", color: "#1D1D1F" }}
-                        onFocus={(e) => { e.currentTarget.style.borderColor = "#007AFF"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0, 122, 255, 0.1)"; }}
-                        onBlur={(e) => { e.currentTarget.style.borderColor = "#E5E5EA"; e.currentTarget.style.boxShadow = "none"; }}
+                        style={fieldInputStyle(false)}
+                        {...fieldFocusProps(false)}
                     />
                 </div>
             </div>

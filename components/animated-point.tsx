@@ -44,10 +44,9 @@ export function AnimatedPoint({
                 cx={x}
                 cy={y}
                 r={isHovered ? 6 : 4}
-                fill="white"
                 stroke={color}
                 strokeWidth="2"
-                className="transition-all pointer-events-none"
+                className="fill-card transition-all pointer-events-none"
             />
             {/* Glow on last point */}
             {isLast && (

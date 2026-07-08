@@ -1,17 +1,28 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { FieldMessage, fieldAriaProps, fieldInputStyle, useSubmitReveal } from "@/components/ui/field-message"
+import { FormBanner, FormBannerVariant } from "@/components/ui/form-banner"
 import { Loader2 } from "lucide-react"
 import { Logo } from "@/components/logo"
 import toast from "react-hot-toast"
 
 type AuthMode = "login" | "signup"
+
+/**
+ * Server-driven form-level feedback (credential errors, signup confirmation).
+ * Single-field problems never land here — they render as FieldMessages.
+ */
+interface Banner {
+    variant: FormBannerVariant
+    message: string
+}
 
 // Maps the `?error=` codes produced by /auth/callback to user-facing messages.
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -36,11 +47,37 @@ export default function LoginPage() {
     // UI state
     const [isLoading, setIsLoading] = useState(false)
     const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const [banner, setBanner] = useState<Banner | null>(null)
+    const { submitted, reveal, reset: resetSubmitted } = useSubmitReveal()
     const [mode, setMode] = useState<AuthMode>("login")
+
+    const firstNameRef = useRef<HTMLInputElement>(null)
+    const lastNameRef = useRef<HTMLInputElement>(null)
+    const emailRef = useRef<HTMLInputElement>(null)
+    const passwordRef = useRef<HTMLInputElement>(null)
+    const confirmPasswordRef = useRef<HTMLInputElement>(null)
 
     const supabase = createClient()
     const isFormDisabled = isLoading || isGoogleLoading
+
+    // Validate on submit, clear on input: field errors surface only after a
+    // failed submit and are derived from live values, so fixing a field
+    // clears its message immediately.
+    const firstNameInvalid = mode === "signup" && firstName.trim() === ""
+    const lastNameInvalid = mode === "signup" && lastName.trim() === ""
+    const emailInvalid = email.trim() === ""
+    const passwordInvalid = mode === "login" ? password === "" : password.length < 8
+    const confirmPasswordInvalid = mode === "signup" && password !== confirmPassword
+    const termsInvalid = mode === "signup" && acceptedTerms === false
+
+    const firstNameError = submitted && firstNameInvalid ? "Enter your first name" : null
+    const lastNameError = submitted && lastNameInvalid ? "Enter your last name" : null
+    const emailError = submitted && emailInvalid ? "Enter your email" : null
+    const passwordError = submitted && passwordInvalid
+        ? (mode === "login" ? "Enter your password" : "Use at least 8 characters")
+        : null
+    const confirmPasswordError = submitted && confirmPasswordInvalid ? "Passwords don't match" : null
+    const termsError = submitted && termsInvalid
 
     // Surface OAuth callback failures (redirected here as ?error=...) as a toast,
     // then strip the param so a refresh doesn't re-trigger it.
@@ -67,39 +104,25 @@ export default function LoginPage() {
         )
     }, [])
 
-    const validateSignupForm = (): string | null => {
-        if (firstName.trim().length < 1) {
-            return "Please enter your first name"
-        }
-        if (lastName.trim().length < 1) {
-            return "Please enter your last name"
-        }
-        if (password !== confirmPassword) {
-            return "Passwords do not match"
-        }
-        if (password.length < 8) {
-            return "Password must be at least 8 characters"
-        }
-        if (!acceptedTerms) {
-            return "Please accept the Terms of Service and Privacy Policy"
-        }
-        return null
-    }
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        setIsLoading(true)
-        setError(null)
+        setBanner(null)
 
-        // Validate signup form
-        if (mode === "signup") {
-            const validationError = validateSignupForm()
-            if (validationError) {
-                setError(validationError)
-                setIsLoading(false)
-                return
-            }
-        }
+        // The submit button is never disabled for validation — this reveals
+        // the field messages (and terms banner) and focuses the first miss.
+        // Terms has no focusable field: its problem surfaces as a banner.
+        const invalid = reveal([
+            { error: firstNameInvalid, ref: firstNameRef },
+            { error: lastNameInvalid, ref: lastNameRef },
+            { error: emailInvalid, ref: emailRef },
+            { error: passwordInvalid, ref: passwordRef },
+            { error: confirmPasswordInvalid, ref: confirmPasswordRef },
+            { error: termsInvalid },
+        ])
+
+        if (invalid) return
+
+        setIsLoading(true)
 
         try {
             if (mode === "login") {
@@ -108,7 +131,8 @@ export default function LoginPage() {
                     password,
                 })
                 if (error) {
-                    setError(error.message)
+                    // Never surface the raw Supabase message for credentials.
+                    setBanner({ variant: "error", message: "Incorrect email or password. Check both and try again." })
                 } else {
                     window.location.href = "/"
                 }
@@ -124,13 +148,13 @@ export default function LoginPage() {
                     },
                 })
                 if (error) {
-                    setError(error.message)
+                    setBanner({ variant: "error", message: error.message })
                 } else {
-                    setError("Check your email for the confirmation link!")
+                    setBanner({ variant: "success", message: "Account created. Check your email for the confirmation link." })
                 }
             }
         } catch {
-            setError("An unexpected error occurred. Please try again.")
+            setBanner({ variant: "error", message: "An unexpected error occurred. Please try again." })
         } finally {
             setIsLoading(false)
         }
@@ -138,7 +162,7 @@ export default function LoginPage() {
 
     const handleGoogleSignIn = async () => {
         setIsGoogleLoading(true);
-        setError(null);
+        setBanner(null);
         try {
             // Preserve the original destination (set by proxy.ts as ?redirect=)
             // so Google users land where they were headed, like password users do.
@@ -169,7 +193,8 @@ export default function LoginPage() {
         setLastName("")
         setConfirmPassword("")
         setAcceptedTerms(false)
-        setError(null)
+        setBanner(null)
+        resetSubmitted()
     }
 
     const switchMode = (newMode: AuthMode) => {
@@ -178,12 +203,12 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="min-h-svh flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
+        <main className="min-h-svh flex flex-col bg-gradient-to-b from-background to-muted">
             {/* Header */}
             <header className="pt-6 pb-4 px-4 text-center sm:pt-12">
                 <div className="inline-flex items-center justify-center mb-4">
                     <Logo size="lg" animated={false} />
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                         Budget Planner
                     </h1>
                 </div>
@@ -192,13 +217,13 @@ export default function LoginPage() {
             {/* Main content */}
             <div className="flex-1 flex items-start sm:items-center justify-center px-4 pb-8 sm:pb-12">
                 <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div className="bg-card rounded-2xl shadow-xl overflow-hidden">
                         {/* Card header */}
                         <div className="px-5 pt-6 pb-2 sm:px-8 sm:pt-8 sm:pb-4 text-center">
-                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                            <h2 className="text-lg sm:text-xl font-semibold text-foreground">
                                 {mode === "login" ? "Welcome back" : "Create account"}
                             </h2>
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 {mode === "login" 
                                     ? "Sign in to continue to your account" 
                                     : "Get started with your free account"
@@ -212,7 +237,7 @@ export default function LoginPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full h-12 text-base font-medium border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                                className="w-full h-12 text-base font-medium border-border hover:bg-muted active:bg-input transition-colors touch-manipulation"
                                 onClick={handleGoogleSignIn}
                                 disabled={isFormDisabled}
                             >
@@ -250,28 +275,32 @@ export default function LoginPage() {
                             {/* Divider */}
                             <div className="relative my-6">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-gray-200" />
+                                    <div className="w-full border-t border-border" />
                                 </div>
                                 <div className="relative flex justify-center">
-                                    <span className="px-3 bg-white text-xs sm:text-sm text-gray-500">
+                                    <span className="px-3 bg-card text-xs sm:text-sm text-muted-foreground">
                                         or continue with email
                                     </span>
                                 </div>
                             </div>
 
                             {/* Email form */}
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* noValidate: the submit handler owns validation
+                                so misses render as FieldMessages, not native
+                                browser bubbles. */}
+                            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                                 {/* Name fields - signup only */}
                                 {mode === "signup" && (
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1.5">
                                             <Label 
                                                 htmlFor="firstName" 
-                                                className="text-sm font-medium text-gray-700"
+                                                className="text-sm font-medium text-foreground"
                                             >
                                                 First name
                                             </Label>
                                             <Input
+                                                ref={firstNameRef}
                                                 id="firstName"
                                                 type="text"
                                                 placeholder="John"
@@ -281,16 +310,20 @@ export default function LoginPage() {
                                                 disabled={isFormDisabled}
                                                 autoComplete="given-name"
                                                 className="h-12 text-base"
+                                                style={firstNameError !== null ? fieldInputStyle(true) : undefined}
+                                                {...fieldAriaProps(firstNameError !== null, "firstName-error")}
                                             />
+                                            {firstNameError !== null && <FieldMessage id="firstName-error">{firstNameError}</FieldMessage>}
                                         </div>
                                         <div className="space-y-1.5">
                                             <Label 
                                                 htmlFor="lastName" 
-                                                className="text-sm font-medium text-gray-700"
+                                                className="text-sm font-medium text-foreground"
                                             >
                                                 Last name
                                             </Label>
                                             <Input
+                                                ref={lastNameRef}
                                                 id="lastName"
                                                 type="text"
                                                 placeholder="Doe"
@@ -300,7 +333,10 @@ export default function LoginPage() {
                                                 disabled={isFormDisabled}
                                                 autoComplete="family-name"
                                                 className="h-12 text-base"
+                                                style={lastNameError !== null ? fieldInputStyle(true) : undefined}
+                                                {...fieldAriaProps(lastNameError !== null, "lastName-error")}
                                             />
+                                            {lastNameError !== null && <FieldMessage id="lastName-error">{lastNameError}</FieldMessage>}
                                         </div>
                                     </div>
                                 )}
@@ -308,11 +344,12 @@ export default function LoginPage() {
                                 <div className="space-y-1.5">
                                     <Label 
                                         htmlFor="email" 
-                                        className="text-sm font-medium text-gray-700"
+                                        className="text-sm font-medium text-foreground"
                                     >
                                         Email address
                                     </Label>
                                     <Input
+                                        ref={emailRef}
                                         id="email"
                                         type="email"
                                         placeholder="you@example.com"
@@ -322,14 +359,17 @@ export default function LoginPage() {
                                         disabled={isFormDisabled}
                                         autoComplete="email"
                                         className="h-12 text-base"
+                                        style={emailError !== null ? fieldInputStyle(true) : undefined}
+                                        {...fieldAriaProps(emailError !== null, "email-error")}
                                     />
+                                    {emailError !== null && <FieldMessage id="email-error">{emailError}</FieldMessage>}
                                 </div>
 
                                 <div className="space-y-1.5">
                                     <div className="flex items-center justify-between">
                                         <Label 
                                             htmlFor="password" 
-                                            className="text-sm font-medium text-gray-700"
+                                            className="text-sm font-medium text-foreground"
                                         >
                                             Password
                                         </Label>
@@ -343,6 +383,7 @@ export default function LoginPage() {
                                         )}
                                     </div>
                                     <Input
+                                        ref={passwordRef}
                                         id="password"
                                         type="password"
                                         placeholder="••••••••"
@@ -353,10 +394,14 @@ export default function LoginPage() {
                                         minLength={8}
                                         autoComplete={mode === "login" ? "current-password" : "new-password"}
                                         className="h-12 text-base"
+                                        style={passwordError !== null ? fieldInputStyle(true) : undefined}
+                                        {...fieldAriaProps(passwordError !== null, "password-error")}
                                     />
-                                    {mode === "signup" && (
-                                        <p className="text-xs text-gray-500">Must be at least 8 characters</p>
-                                    )}
+                                    {passwordError !== null
+                                        ? <FieldMessage id="password-error">{passwordError}</FieldMessage>
+                                        : mode === "signup" && (
+                                            <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+                                        )}
                                 </div>
 
                                 {/* Confirm password - signup only */}
@@ -364,11 +409,12 @@ export default function LoginPage() {
                                     <div className="space-y-1.5">
                                         <Label 
                                             htmlFor="confirmPassword" 
-                                            className="text-sm font-medium text-gray-700"
+                                            className="text-sm font-medium text-foreground"
                                         >
                                             Confirm password
                                         </Label>
                                         <Input
+                                            ref={confirmPasswordRef}
                                             id="confirmPassword"
                                             type="password"
                                             placeholder="••••••••"
@@ -379,7 +425,10 @@ export default function LoginPage() {
                                             minLength={8}
                                             autoComplete="new-password"
                                             className="h-12 text-base"
+                                            style={confirmPasswordError !== null ? fieldInputStyle(true) : undefined}
+                                            {...fieldAriaProps(confirmPasswordError !== null, "confirmPassword-error")}
                                         />
+                                        {confirmPasswordError !== null && <FieldMessage id="confirmPassword-error">{confirmPasswordError}</FieldMessage>}
                                     </div>
                                 )}
 
@@ -395,7 +444,7 @@ export default function LoginPage() {
                                         />
                                         <Label 
                                             htmlFor="terms" 
-                                            className="text-sm text-gray-600 leading-snug cursor-pointer"
+                                            className="text-sm text-muted-foreground leading-snug cursor-pointer"
                                         >
                                             I agree to the{" "}
                                             <a 
@@ -419,18 +468,15 @@ export default function LoginPage() {
                                     </div>
                                 )}
 
-                                {/* Error/Success message */}
-                                {error && (
-                                    <div 
-                                        role="alert"
-                                        className={`p-4 rounded-xl text-sm font-medium ${
-                                            error.includes("Check your email") 
-                                                ? "bg-green-50 text-green-700 border border-green-200" 
-                                                : "bg-red-50 text-red-700 border border-red-200"
-                                        }`}
-                                    >
-                                        {error}
-                                    </div>
+                                {/* Form-level feedback, directly above the
+                                    primary button: whole-form problems and
+                                    server results. Terms acceptance is derived
+                                    so checking the box clears the banner. */}
+                                {termsError && (
+                                    <FormBanner variant="error">Please accept the Terms of Service and Privacy Policy</FormBanner>
+                                )}
+                                {banner !== null && (
+                                    <FormBanner variant={banner.variant}>{banner.message}</FormBanner>
                                 )}
 
                                 <Button 
@@ -448,8 +494,8 @@ export default function LoginPage() {
                         </div>
 
                         {/* Card footer */}
-                        <div className="px-5 py-4 sm:px-8 sm:py-5 bg-gray-50 text-center">
-                            <p className="text-sm text-gray-600">
+                        <div className="px-5 py-4 sm:px-8 sm:py-5 bg-muted text-center">
+                            <p className="text-sm text-muted-foreground">
                                 {mode === "login" ? (
                                     <>
                                         Don&apos;t have an account?{" "}
@@ -479,13 +525,13 @@ export default function LoginPage() {
 
                     {/* Footer text - only show on login */}
                     {mode === "login" && (
-                        <p className="mt-6 text-center text-xs text-gray-500 px-4">
+                        <p className="mt-6 text-center text-xs text-muted-foreground px-4">
                             By continuing, you agree to our{" "}
-                            <a href="/terms" className="underline hover:text-gray-700">
+                            <a href="/terms" className="underline hover:text-foreground">
                                 Terms of Service
                             </a>{" "}
                             and{" "}
-                            <a href="/privacy" className="underline hover:text-gray-700">
+                            <a href="/privacy" className="underline hover:text-foreground">
                                 Privacy Policy
                             </a>
                         </p>

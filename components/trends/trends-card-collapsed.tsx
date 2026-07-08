@@ -48,7 +48,7 @@ export function TrendsCardCollapsed({
                 style={{ backgroundColor: isNetPositive ? "rgba(52, 199, 89, 0.08)" : "rgba(255, 59, 48, 0.08)" }}
             >
                 <div>
-                    <p className="text-xs font-medium mb-0.5" style={{ color: "#6E6E73" }}>
+                    <p className="text-xs font-medium mb-0.5" style={{ color: "var(--muted-foreground)" }}>
                         {isNetPositive ? "Net Savings" : "Net Loss"}
                     </p>
                     <p className="text-xl font-bold" style={{ color: isNetPositive ? "#34C759" : "#FF3B30" }}>

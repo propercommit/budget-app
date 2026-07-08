@@ -10,13 +10,13 @@ vi.mock("@/lib/api", () => ({
   deleteIncomeSource: vi.fn(),
 }));
 
-vi.mock("react-hot-toast", () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+vi.mock("@/lib/toast", () => ({
+  showErrorToast: vi.fn(),
 }));
 
 import { useIncome } from "@/components/hooks/use-income";
 import * as api from "@/lib/api";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/lib/toast";
 import type { IncomeSource } from "@/lib/types";
 
 const income = (over: Partial<IncomeSource> = {}): IncomeSource => ({
@@ -98,7 +98,30 @@ describe("useIncome — create (optimistic)", () => {
 
     expect(returned).toBeNull();
     expect(result.current.incomeSources).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to create income source");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Salary"', { retry: expect.any(Function) });
+  });
+
+  it("replays the failed create when the toast's retry action runs", async () => {
+    const server = income({ id: "server" });
+    vi.mocked(api.createIncomeSource)
+      .mockRejectedValueOnce(new Error("x"))
+      .mockResolvedValueOnce(server);
+    const { result } = renderHook(() => useIncome("2026-06", [], []));
+
+    const { id: _id, month: _month, ...data } = income();
+    await act(async () => {
+      await result.current.createIncome("2026-06", data);
+    });
+
+    expect(result.current.incomeSources).toEqual([]);
+
+    const [, options] = vi.mocked(showErrorToast).mock.calls[0];
+    await act(async () => {
+      options?.retry?.();
+    });
+
+    expect(api.createIncomeSource).toHaveBeenCalledTimes(2);
+    expect(result.current.incomeSources).toEqual([server]);
   });
 });
 
@@ -127,7 +150,7 @@ describe("useIncome — update (optimistic)", () => {
     });
 
     expect(result.current.incomeSources[0]).toEqual(original);
-    expect(toast.error).toHaveBeenCalledWith("Failed to update income source");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Salary"', { retry: expect.any(Function) });
   });
 });
 
@@ -160,7 +183,7 @@ describe("useIncome — delete (optimistic)", () => {
     expect(ok).toBe(false);
     expect(result.current.incomeSources).toEqual([item]);
     expect(result.current.allIncomeSources).toEqual([item]);
-    expect(toast.error).toHaveBeenCalledWith("Failed to delete income source");
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t delete "Salary"', { retry: expect.any(Function) });
   });
 });
 

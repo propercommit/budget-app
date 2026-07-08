@@ -62,7 +62,7 @@ export function CategoryChip({ icon, label, color, selected, onClick, onLongPres
             className="flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all select-none"
             style={{ 
                 backgroundColor: selected ? color : "transparent", 
-                color: selected ? "white" : "gray",
+                color: selected ? "white" : "var(--muted-foreground)",
                 borderColor: selected ? color : "transparent"
             }}
         >

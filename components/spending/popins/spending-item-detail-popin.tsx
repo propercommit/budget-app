@@ -3,6 +3,7 @@
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { spentDisplay } from "@/lib/spending/format-spent";
 
 interface SpendingItemDetailPopinProps {
     isOpen: boolean;
@@ -15,8 +16,6 @@ interface SpendingItemDetailPopinProps {
     budgetNumber: number;
     totalSpent: number;
     entriesCount: number;
-    startDate: string;
-    endDate?: string;
     note?: string;
 }
 
@@ -31,16 +30,14 @@ export function SpendingItemDetailPopin({
     budgetNumber,
     totalSpent,
     entriesCount,
-    startDate,
-    endDate,
     note,
 }: SpendingItemDetailPopinProps) {
     const { formatAmount } = useSettings();
+    const spent = spentDisplay(totalSpent, formatAmount);
 
     const remaining = budgetNumber - totalSpent;
     const isOverBudget = remaining < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
-    const { formatDate } = useSettings();
 
     return (
         <PopinWrapper
@@ -51,9 +48,9 @@ export function SpendingItemDetailPopin({
                 <button
                     onClick={onEdit}
                     className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
-                    style={{ backgroundColor: "#F5F5F7" }}
+                    style={{ backgroundColor: "var(--muted)" }}
                 >
-                    <svg className="w-5 h-5" style={{ color: "#6E6E73" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5" style={{ color: "var(--muted-foreground)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                 </button>
@@ -62,7 +59,7 @@ export function SpendingItemDetailPopin({
                 <button
                     onClick={onClose}
                     className="w-full py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
-                    style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}
+                    style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}
                 >
                     Close
                 </button>
@@ -77,7 +74,7 @@ export function SpendingItemDetailPopin({
                         {iconMap[spendingItemIcon] || spendingItemIcon}
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-xl font-semibold" style={{ color: "#1D1D1F" }}>
+                        <h3 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>
                             {spendingName}
                         </h3>
                         <div
@@ -89,19 +86,20 @@ export function SpendingItemDetailPopin({
                     </div>
                 </div>
 
-                <div className="h-px" style={{ background: "linear-gradient(to right, transparent, #E5E5EA, transparent)" }} />
+                <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
-                <div className="p-4 rounded-2xl" style={{ backgroundColor: "#F5F5F7" }}>
+                <div className="p-4 rounded-2xl" style={{ backgroundColor: "var(--muted)" }}>
                     <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Monthly Budget</span>
-                        <span className="text-lg font-bold" style={{ color: "#1D1D1F" }}>{formatAmount(budgetNumber)}</span>
+                        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Monthly Budget</span>
+                        <span className="text-lg font-bold" style={{ color: "var(--foreground)" }}>{formatAmount(budgetNumber)}</span>
                     </div>
 
-                    <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: "#E5E5EA" }}>
+                    <div className="w-full h-3 rounded-full overflow-hidden bg-input">
                         <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
-                                width: `${Math.min(spentPercent, 100)}%`,
+                                // Two-sided clamp: negative spent (net-credit month) must render 0%, not invalid CSS.
+                                width: `${Math.min(100, Math.max(0, spentPercent))}%`,
                                 backgroundColor: isOverBudget ? "#FF3B30" : spentPercent > 80 ? "#FF9500" : "#34C759",
                             }}
                         />
@@ -109,8 +107,8 @@ export function SpendingItemDetailPopin({
 
                     <div className="flex items-center justify-between mt-3">
                         <div>
-                            <span className="text-sm" style={{ color: "#6E6E73" }}>Spent: </span>
-                            <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>{formatAmount(totalSpent)}</span>
+                            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>Spent: </span>
+                            <span className="text-sm font-semibold" style={{ color: spent.color }}>{spent.label}</span>
                         </div>
                         <div
                             className="px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -129,21 +127,8 @@ export function SpendingItemDetailPopin({
 
                 <div className="space-y-3">
                     <div className="flex items-center justify-between py-2">
-                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Duration</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>{formatDate(startDate)}</span>
-                            <svg className="w-4 h-4" style={{ color: "#C7C7CC" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                            <span className="text-sm font-semibold" style={{ color: endDate ? "#1D1D1F" : "#34C759" }}>
-                                {endDate ? formatDate(endDate) : "Present"}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center justify-between py-2">
-                        <span className="text-sm font-medium" style={{ color: "#6E6E73" }}>Entries</span>
-                        <span className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>
+                        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Entries</span>
+                        <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                             {entriesCount} {entriesCount === 1 ? "entry" : "entries"}
                         </span>
                     </div>
@@ -151,8 +136,8 @@ export function SpendingItemDetailPopin({
 
                 {note && (
                     <div>
-                        <p className="text-sm font-medium mb-2" style={{ color: "#6E6E73" }}>Note</p>
-                        <p className="text-sm p-4 rounded-xl leading-relaxed" style={{ backgroundColor: "#F5F5F7", color: "#1D1D1F" }}>
+                        <p className="text-sm font-medium mb-2" style={{ color: "var(--muted-foreground)" }}>Note</p>
+                        <p className="text-sm p-4 rounded-xl leading-relaxed" style={{ backgroundColor: "var(--muted)", color: "var(--foreground)" }}>
                             {note}
                         </p>
                     </div>

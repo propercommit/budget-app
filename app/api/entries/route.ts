@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { updateSpentAmount } from "@/lib/spending/update-spent";
+import { monthOfDate } from "@/lib/spending/month";
+import { routeEntryToMonth } from "@/lib/spending/route-entry";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
-const MIN_AMOUNT_CENTS = 0;
+const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
 const MAX_RECEIPT_SIZE = 5_000_000; // ~5MB base64
 
@@ -35,9 +38,9 @@ export async function GET(request: Request) {
             );
         }
 
-        // Verify the spending item belongs to this user
+        // Verify the spending item belongs to this user (ownership lives on the series)
         const spendingItem = await prisma.spendingItem.findFirst({
-            where: { id: spendingItemId, userId: user.id },
+            where: { id: spendingItemId, series: { userId: user.id } },
         });
 
         if (!spendingItem) {
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { spendingItemId, name, amount, receiptUrl, link, date } = body;
+        const { spendingItemId, name, amount, direction, receiptUrl, link, date } = body;
 
         // Validate spendingItemId
         if (!spendingItemId || typeof spendingItemId !== "string") {
@@ -118,6 +121,14 @@ export async function POST(request: Request) {
         if (amount < MIN_AMOUNT_CENTS || amount > MAX_AMOUNT_CENTS) {
             return NextResponse.json(
                 { error: `Amount must be between ${MIN_AMOUNT_CENTS / 100} and ${(MAX_AMOUNT_CENTS / 100).toLocaleString()}` },
+                { status: 400 }
+            );
+        }
+
+        // Validate direction if provided (absent defaults to "debit")
+        if (direction !== undefined && direction !== "debit" && direction !== "credit") {
+            return NextResponse.json(
+                { error: 'Direction must be "debit" or "credit"' },
                 { status: 400 }
             );
         }
@@ -177,9 +188,9 @@ export async function POST(request: Request) {
             }
         }
 
-        // Verify the spending item belongs to this user
+        // Verify the spending item belongs to this user (ownership lives on the series)
         const spendingItem = await prisma.spendingItem.findFirst({
-            where: { id: spendingItemId, userId: user.id },
+            where: { id: spendingItemId, series: { userId: user.id } },
         });
 
         if (!spendingItem) {
@@ -189,30 +200,43 @@ export async function POST(request: Request) {
             );
         }
 
-        // Create the entry
-        const entry = await prisma.spendingEntry.create({
-            data: {
-                name: name.trim(),
-                amount,
-                receiptUrl: receiptUrl || null,
-                link: link || null,
-                spendingItemId,
-                date: date ? new Date(date) : new Date(),
-            },
+        const entryDate = date ? new Date(date) : new Date();
+        const targetMonth = monthOfDate(entryDate);
+
+        const entryData = {
+            name: name.trim(),
+            amount,
+            direction: (direction ?? "debit") as "debit" | "credit",
+            receiptUrl: receiptUrl || null,
+            link: link || null,
+            date: entryDate,
+        };
+
+        // Same month as the addressed item: attach directly, as always.
+        if (targetMonth === spendingItem.month) {
+            const entry = await prisma.spendingEntry.create({
+                data: { ...entryData, spendingItemId },
+            });
+
+            // Recompute the item's spent as the signed sum of its entries
+            await updateSpentAmount(spendingItemId);
+
+            return NextResponse.json(entry, { status: 201 });
+        }
+
+        // An entry belongs to the month of its date (D19): route it to that
+        // month's incarnation of the same series. The addressed item never
+        // receives the entry, but rides along in the response so the client
+        // can roll back its optimistic patch.
+        const routed = await routeEntryToMonth({
+            sourceItem: spendingItem,
+            targetMonth,
+            recomputeSource: false,
+            writeEntry: (tx, targetItemId) =>
+                tx.spendingEntry.create({ data: { ...entryData, spendingItemId: targetItemId } }),
         });
 
-        // Update the spent amount on the spending item
-        const allEntries = await prisma.spendingEntry.findMany({
-            where: { spendingItemId },
-        });
-        const newSpent = allEntries.reduce((sum, e) => sum + e.amount, 0);
-
-        await prisma.spendingItem.update({
-            where: { id: spendingItemId },
-            data: { spent: newSpent },
-        });
-
-        return NextResponse.json(entry, { status: 201 });
+        return NextResponse.json(routed, { status: 201 });
     } catch (error) {
         console.error("[Entries POST] Failed to create:", error);
         return NextResponse.json(

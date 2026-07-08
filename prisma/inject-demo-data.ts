@@ -440,6 +440,7 @@ type Manifest = {
   userRowCreated: boolean; // this run created the Prisma User row
   settingsId: string | null; // non-null only if this run created settings
   categoryIds: string[]; // only categories this run created (not reused)
+  budgetSeriesIds?: string[]; // only series this run created (absent in pre-series manifests)
   spendingItemIds: string[];
   spendingEntryIds: string[];
   incomeSourceIds: string[];
@@ -532,9 +533,9 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
   // --- 5.3 Detect existing data → double confirmation ---
   const [catCount, itemCount, incomeCount, entryCount] = await Promise.all([
     prisma.category.count({ where: { userId } }),
-    prisma.spendingItem.count({ where: { userId } }),
+    prisma.spendingItem.count({ where: { series: { userId } } }),
     prisma.incomeSource.count({ where: { userId } }),
-    prisma.spendingEntry.count({ where: { spendingItem: { userId } } }),
+    prisma.spendingEntry.count({ where: { spendingItem: { series: { userId } } } }),
   ]);
   const hasData = catCount + itemCount + incomeCount + entryCount > 0;
 
@@ -569,6 +570,7 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
     userRowCreated,
     settingsId: null,
     categoryIds: [],
+    budgetSeriesIds: [],
     spendingItemIds: [],
     spendingEntryIds: [],
     incomeSourceIds: [],
@@ -623,14 +625,16 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
     months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
   }
 
-  // Guard the (userId, name, month) unique constraint across re-runs.
+  // Guard the (seriesId, month) unique constraint across re-runs: a series
+  // name that already has an incarnation in a month gets a suffixed name
+  // (which becomes its own new series), mirroring the pre-series behavior.
   const takenItemKeys = new Set(
     (
       await prisma.spendingItem.findMany({
-        where: { userId },
-        select: { name: true, month: true },
+        where: { series: { userId } },
+        select: { month: true, series: { select: { name: true } } },
       })
-    ).map((r) => `${r.name}__${r.month}`),
+    ).map((r) => `${r.series.name}__${r.month}`),
   );
   const uniqueItemName = (name: string, month: string) => {
     let candidate = name;
@@ -640,6 +644,28 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
     }
     takenItemKeys.add(`${candidate}__${month}`);
     return candidate;
+  };
+
+  // Reuse the user's existing series by name; create the rest this run.
+  const seriesByName = new Map(
+    (
+      await prisma.budgetSeries.findMany({
+        where: { userId },
+        select: { id: true, name: true },
+      })
+    ).map((s) => [s.name, s.id]),
+  );
+  const seriesRows: Prisma.BudgetSeriesCreateManyInput[] = [];
+  const seriesIdFor = (name: string, icon: string, categoryId: string) => {
+    const existingId = seriesByName.get(name);
+    if (existingId !== undefined) return existingId;
+
+    const id = randomUUID();
+    seriesRows.push({ id, name, icon, userId, categoryId });
+    seriesByName.set(name, id);
+    manifest.budgetSeriesIds?.push(id);
+
+    return id;
   };
 
   // --- 5.7 Per-month generation ---
@@ -700,22 +726,19 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
         const budgeted = money(roundTo(rand(tmpl.budget[0], tmpl.budget[1]), 10));
         itemRows.push({
           id: itemId,
-          name,
-          icon: tmpl.icon,
+          seriesId: seriesIdFor(name, tmpl.icon, categoryId),
           budgeted,
           spent, // denormalized; kept in sync with the entries we just built
           month: m,
-          startDate: date(year, month, 1),
           note: tmpl.note ?? null,
-          userId,
-          categoryId,
         });
         manifest.spendingItemIds.push(itemId);
       }
     }
   }
 
-  // --- 5.8 Bulk insert (items before entries for FK) ---
+  // --- 5.8 Bulk insert (series before items before entries for FK) ---
+  await prisma.budgetSeries.createMany({ data: seriesRows });
   await prisma.spendingItem.createMany({ data: itemRows });
   await prisma.spendingEntry.createMany({ data: entryRows });
   await prisma.incomeSource.createMany({ data: incomeRows });
@@ -735,6 +758,7 @@ async function inject(opts: ReturnType<typeof parseArgs>) {
   console.log("📊 Created this run:");
   console.log(`   Months:          ${months.map(monthStr2).join(", ")}`);
   console.log(`   Categories:      ${manifest.categoryIds.length}`);
+  console.log(`   Budget Series:   ${manifest.budgetSeriesIds?.length ?? 0}`);
   console.log(`   Spending Items:  ${manifest.spendingItemIds.length}`);
   console.log(`   Spending Entries:${manifest.spendingEntryIds.length}`);
   console.log(`   Income Sources:  ${manifest.incomeSourceIds.length}`);
@@ -786,6 +810,11 @@ async function rollback(manifestPath: string, opts: ReturnType<typeof parseArgs>
   const delItems = await prisma.spendingItem.deleteMany({
     where: { id: { in: manifest.spendingItemIds } },
   });
+  // Series this run created (pre-series manifests have none). Cascades to any
+  // incarnations still under them, but those were in spendingItemIds above.
+  const delSeries = await prisma.budgetSeries.deleteMany({
+    where: { id: { in: manifest.budgetSeriesIds ?? [] } },
+  });
   const delIncome = await prisma.incomeSource.deleteMany({
     where: { id: { in: manifest.incomeSourceIds } },
   });
@@ -820,6 +849,7 @@ async function rollback(manifestPath: string, opts: ReturnType<typeof parseArgs>
   console.log("\n✅ Rollback complete.");
   console.log(`   Entries removed:   ${delEntries.count}`);
   console.log(`   Items removed:     ${delItems.count}`);
+  console.log(`   Series removed:    ${delSeries.count}`);
   console.log(`   Income removed:    ${delIncome.count}`);
   console.log(`   Categories removed:${delCats.count}`);
   console.log(`   Settings removed:  ${delSettings.count}`);

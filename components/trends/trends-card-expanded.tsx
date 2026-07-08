@@ -63,7 +63,7 @@ export function TrendsCardExpanded({
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#FF3B30" }} />
-                            <span className="text-sm font-medium" style={{ color: "#1D1D1F" }}>Spending</span>
+                            <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Spending</span>
                         </div>
                         <span
                             className="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -88,7 +88,7 @@ export function TrendsCardExpanded({
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#34C759" }} />
-                            <span className="text-sm font-medium" style={{ color: "#1D1D1F" }}>Income</span>
+                            <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Income</span>
                         </div>
                         <span
                             className="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -117,7 +117,7 @@ export function TrendsCardExpanded({
             >
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-medium mb-1" style={{ color: "#6E6E73" }}>
+                        <p className="text-sm font-medium mb-1" style={{ color: "var(--muted-foreground)" }}>
                             {isNetPositive ? "You saved this month" : "You overspent this month"}
                         </p>
                         <p className="text-3xl font-bold" style={{ color: isNetPositive ? "#34C759" : "#FF3B30" }}>
@@ -125,7 +125,7 @@ export function TrendsCardExpanded({
                         </p>
                     </div>
                     <div className="text-right">
-                        <p className="text-sm" style={{ color: "#6E6E73" }}>vs last month</p>
+                        <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>vs last month</p>
                         <p
                             className="text-lg font-semibold"
                             style={{ color: (netCurrent - netPrevious) >= 0 ? "#34C759" : "#FF3B30" }}
@@ -140,7 +140,7 @@ export function TrendsCardExpanded({
             {categories.length > 0 && (
                 <div>
                     <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold" style={{ color: "#1D1D1F" }}>Spending by Category</h3>
+                        <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Spending by Category</h3>
                         {selectedCategory && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setSelectedCategory(null); }}
@@ -180,7 +180,7 @@ export function TrendsCardExpanded({
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <span className="text-xl [&>svg]:w-5 [&>svg]:h-5">{iconMap[selectedCategoryInfo.icon] || selectedCategoryInfo.icon}</span>
-                                    <span className="text-base font-semibold" style={{ color: "#1D1D1F" }}>{selectedCategory}</span>
+                                    <span className="text-base font-semibold" style={{ color: "var(--foreground)" }}>{selectedCategory}</span>
                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedCategoryInfo.color }} />
                                 </div>
                                 <span

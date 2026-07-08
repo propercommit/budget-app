@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { sumEntries } from "@/lib/spending/math";
 import { SpendingCardCollapsed } from "./spending-card-collapsed";
 import { SpendingCardExpanded, SpendingEntry } from "./spending-card-expanded";
 import { SpendingItemDetailPopin } from "./popins/spending-item-detail-popin";
-import { SpendingItemEditPopin } from "./popins/spending-item-edit-popin";
+import { SpendingItemEditPopin, type SpendingItemSavePayload } from "./popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "./popins/spending-entry-detail-popin";
-import { EntryEditPopin } from "./popins/spending-entry-edit-popin";
+import { EntryEditPopin, EntrySavePayload } from "./popins/spending-entry-edit-popin";
 import { CategoryPopin } from "../category/popins/category-popin";
 
 interface Category {
@@ -22,24 +23,15 @@ interface SpendingCardProps {
     categoryName: string;
     spendingCategoryColor: string;
     budgetNumber: number;
-    startDate: string;
-    endDate?: string;
+    /** Series-level flag, prefills the edit popin's Recurring toggle. */
+    recurring: boolean;
     note?: string;
     entries: SpendingEntry[];
     categories: Category[];
-    onItemUpdate: (data: {
-        name: string;
-        icon: string;
-        category: string;
-        categoryColor: string;
-        budget: number;
-        startDate: string;
-        endDate: string;
-        note: string;
-    }) => void;
+    onItemUpdate: (data: SpendingItemSavePayload) => void;
     onItemDelete: () => void;
-    onEntryCreate: (data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => void;
-    onEntryUpdate: (entryId: string, data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => void;
+    onEntryCreate: (data: EntrySavePayload) => void;
+    onEntryUpdate: (entryId: string, data: EntrySavePayload) => void;
     onEntryDelete: (entryId: string) => void;
     onCreateCategory: (data: { name: string; icon: string; color: string }) => void;
     isExpanded: boolean;
@@ -52,8 +44,7 @@ export function SpendingCard({
     categoryName,
     spendingCategoryColor,
     budgetNumber,
-    startDate,
-    endDate,
+    recurring,
     note,
     entries,
     categories,
@@ -78,8 +69,12 @@ export function SpendingCard({
     const [selectedEntry, setSelectedEntry] = useState<SpendingEntry | null>(null);
     const [entryMode, setEntryMode] = useState<"create" | "edit">("create");
 
+    // Snapshot of the list as displayed when the detail popin opened — the
+    // popin pages through these siblings (swipe / arrow keys).
+    const [detailNavEntries, setDetailNavEntries] = useState<SpendingEntry[]>([]);
+
     // Calculations
-    const totalSpent = entries.reduce((sum, entry) => sum + entry.amount, 0);
+    const totalSpent = sumEntries(entries);
     const spendingEntries = entries.length;
 
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);
@@ -90,7 +85,9 @@ export function SpendingCard({
         setShowItemDetail(true);
     };
 
-    const handleItemDetailToEdit = () => {
+    // Opens the edit popin from the header pencil or the detail popin's Edit
+    // button; closing the detail popin is a no-op when it wasn't open.
+    const handleItemEditOpen = () => {
         setShowItemDetail(false);
         setShowItemEdit(true);
     };
@@ -105,8 +102,9 @@ export function SpendingCard({
         setShowItemEdit(false);
     };
 
-    const handleEntryClick = (entry: SpendingEntry) => {
+    const handleEntryClick = (entry: SpendingEntry, visibleEntries: SpendingEntry[]) => {
         setSelectedEntry(entry);
+        setDetailNavEntries(visibleEntries);
         setShowEntryDetail(true);
     };
 
@@ -122,7 +120,7 @@ export function SpendingCard({
         setShowEntryEdit(true);
     };
 
-    const handleEntrySave = (data: { name: string; amount: number; date: string; receipt: string | null; link: string | null }) => {
+    const handleEntrySave = (data: EntrySavePayload) => {
         if (entryMode === "create") {
             onEntryCreate(data);
         } else if (selectedEntry) {
@@ -155,6 +153,7 @@ export function SpendingCard({
         spendingEntries,
         spendingItemIcon,
         spendingCategoryColor,
+        onEditClick: handleItemEditOpen,
     };
 
     // Check if any popin is open
@@ -185,7 +184,7 @@ export function SpendingCard({
                     <SpendingItemDetailPopin
                         isOpen={showItemDetail}
                         onClose={() => setShowItemDetail(false)}
-                        onEdit={handleItemDetailToEdit}
+                        onEdit={handleItemEditOpen}
                         spendingName={spendingName}
                         spendingItemIcon={spendingItemIcon}
                         categoryName={categoryName}
@@ -193,8 +192,6 @@ export function SpendingCard({
                         budgetNumber={budgetNumber}
                         totalSpent={totalSpent}
                         entriesCount={spendingEntries}
-                        startDate={startDate}
-                        endDate={endDate}
                         note={note}
                     />
 
@@ -213,8 +210,7 @@ export function SpendingCard({
                         initialIcon={spendingItemIcon}
                         initialCategory={categoryName}
                         initialBudget={budgetNumber}
-                        initialStartDate={startDate}
-                        initialEndDate={endDate}
+                        initialRecurring={recurring}
                         initialNote={note}
                     />
 
@@ -223,6 +219,8 @@ export function SpendingCard({
                         onClose={() => { setShowEntryDetail(false); setSelectedEntry(null); }}
                         onEdit={handleEntryDetailToEdit}
                         entry={selectedEntry}
+                        entries={detailNavEntries}
+                        onNavigate={setSelectedEntry}
                         spendingName={spendingName}
                         spendingItemIcon={spendingItemIcon}
                         spendingCategoryColor={spendingCategoryColor}

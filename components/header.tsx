@@ -78,7 +78,7 @@ export function Header({ title, legendLabel }: HeaderProps) {
                     </div>
                     <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight truncate">{title}</h1>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 sm:line-clamp-1">{legendLabel}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-1">{legendLabel}</p>
             </div>
 
             <Button

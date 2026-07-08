@@ -94,8 +94,8 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                     </svg>
                 </button>
-                <p className="text-sm font-medium" style={{ color: "#1D1D1F" }}>No spending items</p>
-                <p className="text-xs mt-1" style={{ color: "#6E6E73" }}>Add a spending item to get started</p>
+                <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>No spending items</p>
+                <p className="text-xs mt-1" style={{ color: "var(--muted-foreground)" }}>Add a spending item to get started</p>
             </div>
         );
     }
@@ -132,7 +132,7 @@ export const SpendingCarousel = forwardRef<SpendingCarouselRef, SpendingCarousel
                             style={{
                                 width: i === safeIndex ? 20 : 6,
                                 height: 6,
-                                backgroundColor: i === safeIndex ? "#1D1D1F" : "#E5E5EA",
+                                backgroundColor: i === safeIndex ? "var(--foreground)" : "var(--border)",
                             }}
                         />
                     ))}

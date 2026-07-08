@@ -51,14 +51,14 @@ export function MonthlyIncomeCard({
             </CardHeader>
             <CardContent>
             <div className="flex flex-col items-center gap-3 py-6">
-                <p className="text-sm text-gray-500 text-center">{progressBarTitle}</p>
+                <p className="text-sm text-muted-foreground text-center">{progressBarTitle}</p>
                 <div className="relative">
                 <svg width="280" height="150" viewBox="0 0 280 150" className="overflow-visible">
                     {/* Background arc (always visible) */}
                     <path
                         d="M 30 130 A 110 110 0 0 1 250 130"
                         fill="none"
-                        stroke="#e5e7eb"
+                        className="stroke-border"
                         strokeWidth="28"
                         strokeLinecap="round"
                     />
@@ -93,7 +93,7 @@ export function MonthlyIncomeCard({
                     <text x="140" y="105" textAnchor="middle" className="text-4xl font-bold fill-foreground">
                     {activePercentage}%
                     </text>
-                    <text x="140" y="128" textAnchor="middle" className="text-sm fill-gray-500">
+                    <text x="140" y="128" textAnchor="middle" className="text-sm fill-muted-foreground">
                     Active
                     </text>
                 </svg>

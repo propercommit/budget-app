@@ -154,7 +154,7 @@ describe("LoginPage — email login (handleSubmit, login mode)", () => {
     expect(location.href).toBe("/");
   });
 
-  it("renders the auth error message and does not navigate", async () => {
+  it("renders the fixed credentials banner (not the raw Supabase message) and does not navigate", async () => {
     signInWithPassword.mockResolvedValue({
       error: { message: "Invalid login credentials" },
     });
@@ -167,10 +167,23 @@ describe("LoginPage — email login (handleSubmit, login mode)", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Invalid login credentials"
+        "Incorrect email or password. Check both and try again."
       )
     );
+    expect(screen.queryByText("Invalid login credentials")).toBeNull();
     expect(location.href).toBe(`${ORIGIN}/login`);
+  });
+
+  it("shows field messages instead of calling Supabase when email and password are empty", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(screen.getByText("Enter your email")).toBeInTheDocument();
+    expect(screen.getByText("Enter your password")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email address")).toHaveFocus();
+    expect(signInWithPassword).not.toHaveBeenCalled();
   });
 
   it("shows a generic message when the call throws", async () => {
@@ -223,8 +236,9 @@ describe("LoginPage — email signup (handleSubmit, signup mode)", () => {
       password: "password123",
       options: { data: { first_name: "John", last_name: "Doe" } },
     });
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Check your email for the confirmation link!"
+    // Success never wears error clothes — it renders as a status banner.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Account created. Check your email for the confirmation link."
     );
   });
 
@@ -250,11 +264,10 @@ describe("LoginPage — email signup (handleSubmit, signup mode)", () => {
   });
 });
 
-describe("LoginPage — signup client validation (validateSignupForm)", () => {
+describe("LoginPage — signup client validation (field messages + terms banner)", () => {
   // These exercise the validation branches directly through the submit
-  // handler. We dispatch the form's submit event rather than clicking the
-  // button so native HTML constraints (required, minLength) don't pre-empt the
-  // handler — the unit under test is validateSignupForm, not the browser.
+  // handler. The form is noValidate, so the handler owns validation; we still
+  // dispatch the form's submit event to drive it the way the browser does.
   async function fillSignup(overrides: Partial<{
     firstName: string;
     lastName: string;
@@ -296,50 +309,45 @@ describe("LoginPage — signup client validation (validateSignupForm)", () => {
     fireEvent.submit(container.querySelector("form")!);
   }
 
-  it("rejects a blank first name", async () => {
+  it("rejects a blank first name with a field message on that input", async () => {
     await fillSignup({ firstName: "   " });
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Please enter your first name"
-      )
+      expect(screen.getByText("Enter your first name")).toBeInTheDocument()
     );
+    expect(screen.getByLabelText("First name")).toHaveAttribute("aria-invalid", "true");
     expect(signUp).not.toHaveBeenCalled();
   });
 
-  it("rejects a blank last name", async () => {
+  it("rejects a blank last name with a field message on that input", async () => {
     await fillSignup({ lastName: "" });
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Please enter your last name"
-      )
+      expect(screen.getByText("Enter your last name")).toBeInTheDocument()
     );
     expect(signUp).not.toHaveBeenCalled();
   });
 
-  it("rejects mismatched passwords", async () => {
+  it("rejects mismatched passwords with a field message on the confirm field", async () => {
     await fillSignup({
       password: "password123",
       confirmPassword: "password999",
     });
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Passwords do not match"
-      )
+      expect(screen.getByText("Passwords don't match")).toBeInTheDocument()
     );
+    expect(screen.getByLabelText("Confirm password")).toHaveAttribute("aria-invalid", "true");
     expect(signUp).not.toHaveBeenCalled();
   });
 
-  it("rejects a password shorter than 8 characters", async () => {
+  it("rejects a password shorter than 8 characters, replacing the helper text", async () => {
     await fillSignup({ password: "short", confirmPassword: "short" });
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Password must be at least 8 characters"
-      )
+      expect(screen.getByText("Use at least 8 characters")).toBeInTheDocument()
     );
+    expect(screen.queryByText("Must be at least 8 characters")).toBeNull();
     expect(signUp).not.toHaveBeenCalled();
   });
 
-  it("rejects when terms are not accepted", async () => {
+  it("rejects unaccepted terms with an error banner", async () => {
     await fillSignup({ acceptTerms: false });
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -347,6 +355,19 @@ describe("LoginPage — signup client validation (validateSignupForm)", () => {
       )
     );
     expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it("clears a field message as soon as the field is fixed", async () => {
+    await fillSignup({ firstName: "" });
+    await waitFor(() =>
+      expect(screen.getByText("Enter your first name")).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByLabelText("First name"), {
+      target: { value: "John" },
+    });
+
+    expect(screen.queryByText("Enter your first name")).toBeNull();
   });
 });
 
