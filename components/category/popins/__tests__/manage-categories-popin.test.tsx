@@ -106,8 +106,20 @@ describe("ManageCategoriesPopin", () => {
 
     fireEvent.change(input, { target: { value: "zzz" } });
 
-    expect(screen.getByText('No categories match "zzz".')).toBeDefined();
+    expect(screen.getByText("No matches")).toBeDefined();
+    expect(screen.getByText('Nothing matches “zzz”. Try a different search.')).toBeDefined();
     expect(screen.queryByText("Groceries")).toBeNull();
+  });
+
+  it("shows a total-count label reflecting the visible rows", () => {
+    renderPopin();
+
+    expect(screen.getByText("3 categories")).toBeDefined();
+
+    const input = screen.getByPlaceholderText("Search categories");
+    fireEvent.change(input, { target: { value: "gro" } });
+
+    expect(screen.getByText("1 result")).toBeDefined();
   });
 
   it("fires onEditCategory with the clicked row's category", () => {
