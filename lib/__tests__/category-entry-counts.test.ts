@@ -8,11 +8,12 @@ function entry(id: string): SpendingEntry {
 
 function item(overrides: Partial<SpendingItem> & Pick<SpendingItem, "id" | "month" | "categoryId">): SpendingItem {
   return {
+    seriesId: `series-${overrides.id}`,
     name: overrides.id,
     icon: "shopping-cart",
+    recurring: true,
     budgeted: 0,
     spent: 0,
-    startDate: `${overrides.month}-01`,
     ...overrides,
   };
 }

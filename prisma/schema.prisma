@@ -16,7 +16,7 @@ model User {
   updatedAt     DateTime        @updatedAt
   
   categories    Category[]
-  spendingItems SpendingItem[]
+  budgetSeries  BudgetSeries[]
   IncomeSources IncomeSource[]
   settings      UserSettings?
 }
@@ -31,35 +31,52 @@ model Category {
   
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  spendingItems SpendingItem[]
-  
+
+  budgetSeries BudgetSeries[]
+
   @@unique([userId, label])
+  @@index([userId])
+}
+
+// The identity of a budget line across months. Name/icon/category/recurring are
+// global (editing them affects every month); each month's numbers live on the
+// SpendingItem "incarnation". Deleting the last incarnation leaves the series
+// behind as dormant — resumable, never silently recreated.
+model BudgetSeries {
+  id         String   @id @default(cuid())
+  name       String
+  icon       String
+  recurring  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  items      SpendingItem[]
+
+  @@unique([userId, name])
   @@index([userId])
 }
 
 model SpendingItem {
   id        String   @id @default(cuid())
-  name      String
-  icon      String
+  month     String   // "YYYY-MM", zero-padded — identity + partition, never edited
   budgeted  Int      @default(0) // integer minor units (cents)
-  spent     Int      @default(0) // integer minor units (cents)
-  month     String   // Format: "2025-01" — keeping for backwards compat
-  startDate DateTime @default(now())
-  endDate   DateTime?
+  spent     Int      @default(0) // integer minor units (cents); may be negative
   note      String?  @db.VarChar(500)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  seriesId  String
+  series    BudgetSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
   spendingEntries SpendingEntry[]
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, name, month])
-  @@index([userId])
-  @@index([userId, month])
+
+  @@unique([seriesId, month])
+  @@index([seriesId, month])
 }
 
 enum IncomeType {

@@ -91,17 +91,27 @@ export async function getSpending(month?: string) {
   return fetchAPI(url);
 }
 
-export async function createSpending(data: {
+/** Creates a new series and its first monthly incarnation in one call. */
+export type CreateSeriesPayload = {
   name: string;
   icon: string;
   categoryId: string;
+  recurring?: boolean;
   budgeted?: number;
-  spent?: number;
   month: string;
-  startDate?: string;
-  endDate?: string | null;
   note?: string | null;
-}) {
+};
+
+/** Resumes/attaches an existing series: creates its incarnation for `month`. */
+export type AttachSeriesPayload = {
+  seriesId: string;
+  month: string;
+  recurring?: boolean;
+  budgeted?: number;
+  note?: string | null;
+};
+
+export async function createSpending(data: CreateSeriesPayload | AttachSeriesPayload) {
   return fetchAPI("/api/spending", {
     method: "POST",
     body: JSON.stringify(data),
@@ -114,10 +124,8 @@ export async function updateSpending(
     name?: string;
     icon?: string;
     categoryId?: string;
+    recurring?: boolean;
     budgeted?: number;
-    spent?: number;
-    startDate?: string;
-    endDate?: string | null;
     note?: string | null;
   }
 ) {
@@ -130,6 +138,25 @@ export async function updateSpending(
 export async function deleteSpending(id: string) {
   return fetchAPI(`/api/spending/${id}`, {
     method: "DELETE",
+  });
+}
+
+/** The user's series list for the create popin's typeahead. */
+export async function getSeries() {
+  return fetchAPI("/api/spending/series");
+}
+
+/**
+ * Ensures every active recurring series has an incarnation in `month` and
+ * returns the month's full flattened item list. Only the current UTC month
+ * and later materialize (D26) — a past month creates nothing and returns
+ * its existing items as-is. Idempotent server-side — safe to call on every
+ * month open.
+ */
+export async function materializeMonth(month: string) {
+  return fetchAPI("/api/spending/materialize", {
+    method: "POST",
+    body: JSON.stringify({ month }),
   });
 }
 

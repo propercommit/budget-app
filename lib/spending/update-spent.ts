@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sumEntries } from "@/lib/spending/math";
 
@@ -9,17 +10,24 @@ import { sumEntries } from "@/lib/spending/math";
  * for a previous month's expense) and is persisted as-is; clamping is
  * presentation-only. Shared by every entry mutation route so the recompute
  * formula exists exactly once on the server.
+ *
+ * Pass the transaction client when the recompute must be atomic with the
+ * mutation that made it necessary (e.g. cross-month entry routing recomputes
+ * both incarnations inside one transaction).
  */
-export async function updateSpentAmount(spendingItemId: string): Promise<void> {
+export async function updateSpentAmount(
+  spendingItemId: string,
+  client: Prisma.TransactionClient = prisma
+): Promise<void> {
 
-  const allEntries = await prisma.spendingEntry.findMany({
+  const allEntries = await client.spendingEntry.findMany({
     where: { spendingItemId },
     select: { amount: true, direction: true },
   });
 
   const newSpent = sumEntries(allEntries);
 
-  await prisma.spendingItem.update({
+  await client.spendingItem.update({
     where: { id: spendingItemId },
     data: { spent: newSpent },
   });

@@ -16,8 +16,6 @@ interface SpendingItemDetailPopinProps {
     budgetNumber: number;
     totalSpent: number;
     entriesCount: number;
-    startDate: string;
-    endDate?: string;
     note?: string;
 }
 
@@ -32,8 +30,6 @@ export function SpendingItemDetailPopin({
     budgetNumber,
     totalSpent,
     entriesCount,
-    startDate,
-    endDate,
     note,
 }: SpendingItemDetailPopinProps) {
     const { formatAmount } = useSettings();
@@ -42,7 +38,6 @@ export function SpendingItemDetailPopin({
     const remaining = budgetNumber - totalSpent;
     const isOverBudget = remaining < 0;
     const spentPercent = budgetNumber > 0 ? Math.round((totalSpent / budgetNumber) * 100) : 0;
-    const { formatDate } = useSettings();
 
     return (
         <PopinWrapper
@@ -131,19 +126,6 @@ export function SpendingItemDetailPopin({
                 </div>
 
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between py-2">
-                        <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Duration</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{formatDate(startDate)}</span>
-                            <svg className="w-4 h-4 text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                            <span className="text-sm font-semibold" style={{ color: endDate ? "var(--foreground)" : "#34C759" }}>
-                                {endDate ? formatDate(endDate) : "Present"}
-                            </span>
-                        </div>
-                    </div>
-
                     <div className="flex items-center justify-between py-2">
                         <span className="text-sm font-medium" style={{ color: "var(--muted-foreground)" }}>Entries</span>
                         <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>

@@ -1,8 +1,9 @@
 "use client";
 
-import { Category, IncomeSource, SpendingItem } from "@/lib/types";
+import { BudgetSeriesSummary, Category, IncomeSource, SpendingItem } from "@/lib/types";
+import { getSeries } from "@/lib/api";
 import { useCategories } from "./hooks/use-categories";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIncome } from "./hooks/use-income";
 import { useSpending } from "./hooks/use-spending";
 import { SpendingCarousel, SpendingCarouselRef } from "./spending/spending-carousel";
@@ -43,7 +44,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
-    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, copySpendingToMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
+    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
@@ -51,6 +52,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [isSpendingPopinOpen, setIsSpendingPopinOpen] = useState(false);
     const [editingSpendingItem, setEditingSpendingItem] = useState<SpendingItem | null>(null);
     const [spendingPopinKey, setSpendingPopinKey] = useState(0);
+    const [seriesOptions, setSeriesOptions] = useState<BudgetSeriesSummary[]>([]);
     const carouselRef = useRef<SpendingCarouselRef>(null);
 
     const [isCategoryPopinOpen, setIsCategoryPopinOpen] = useState(false);
@@ -174,19 +176,23 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         await deleteIncome(editingIncomeSource.id);
     };
 
+    // Every month open materializes: recurring series missing an incarnation
+    // get one server-side (idempotent), so even a partially populated month
+    // receives the rest of the template.
     const handleMonthChange = async (newMonth: string) => {
         setSelectedMonth(newMonth);
 
-        if (!spendingData[newMonth]) {
-        const sortedMonths = Object.keys(spendingData).sort();
-        const previousMonths = sortedMonths.filter(m => m < newMonth);
-        if (previousMonths.length > 0) {
-            await copySpendingToMonth(previousMonths[previousMonths.length - 1], newMonth);
-        }
-        }
+        await materializeMonth(newMonth);
 
         await loadMonth(newMonth);
     };
+
+    // The ISR page render doesn't materialize, so a series toggled recurring
+    // after the last revalidation would be missing from the initial month
+    // until a navigation — this mount pass closes that gap.
+    useEffect(() => {
+        void materializeMonth(initialMonth);
+    }, [materializeMonth, initialMonth]);
 
     // Remount via key on every open so the popin's search state starts fresh.
     const handleOpenManageCategories = () => {
@@ -204,6 +210,13 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         setEditingSpendingItem(null);
         setSpendingPopinKey(prev => prev + 1);
         setIsSpendingPopinOpen(true);
+
+        // One fetch per open feeds the typeahead (never per keystroke). A
+        // failure just means no suggestion rows — creating still works, with
+        // the structured 409s as the server-side safety net.
+        getSeries()
+            .then((series: BudgetSeriesSummary[]) => setSeriesOptions(series))
+            .catch((error) => console.error("Failed to load series list:", error));
     };
 
     const handleDeleteSpending = async (id: string) => {
@@ -289,8 +302,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     categoryName={item.category?.label ?? "Uncategorized"}
                     spendingCategoryColor={item.category?.color ?? "#6E6E73"}
                     budgetNumber={item.budgeted}
-                    startDate={item.startDate ? new Date(item.startDate).toISOString().split("T")[0] : ""}
-                    endDate={item.endDate ? new Date(item.endDate).toISOString().split("T")[0] : undefined}
+                    recurring={item.recurring}
                     note={item.note ?? undefined}
                     entries={(item.entries || []).map((e) => ({
                     id: e.id,
@@ -313,9 +325,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         name: data.name,
                         icon: data.icon,
                         categoryId: cat.id,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     }, {
                         ...item,
@@ -323,9 +334,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         icon: data.icon,
                         categoryId: cat.id,
                         category: cat,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     });
                     }}
@@ -396,7 +406,6 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             categories={filterActiveCategories({
                 categories,
                 spendingItems: currentSpendingItems,
-                selectedMonth
             })}
             spendingItems={currentSpendingItems}
             />
@@ -417,17 +426,17 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 if (!category) return;
 
                 const currentEditing = editingSpendingItem;
-                setIsSpendingPopinOpen(false);
-                setEditingSpendingItem(null);
 
                 if (currentEditing) {
+                    setIsSpendingPopinOpen(false);
+                    setEditingSpendingItem(null);
+
                     await updateSpending(selectedMonth, currentEditing.id, {
                         name: data.name,
                         icon: data.icon,
                         categoryId: category.id,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     }, {
                         ...currentEditing,
@@ -435,26 +444,36 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         icon: data.icon,
                         categoryId: category.id,
                         category,
+                        recurring: data.recurring,
                         budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
                         note: data.note || null,
                     });
-                } else {
-                    const real = await createSpending(selectedMonth, {
-                        name: data.name,
-                        icon: data.icon,
-                        categoryId: category.id,
-                        month: selectedMonth,
-                        budgeted: data.budget,
-                        startDate: data.startDate,
-                        endDate: data.endDate || null,
-                        note: data.note || null,
-                    }, category);
-                    if (real) {
-                        const items = spendingData[selectedMonth] || [];
-                        setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
-                    }
+                    return;
+                }
+
+                // Create/resume: the popin stays open until we know the server
+                // didn't answer with a series conflict — on conflict it shows
+                // the inline state and refocuses the name field itself.
+                const real = await createSpending(selectedMonth, {
+                    seriesId: data.seriesId,
+                    name: data.name,
+                    icon: data.icon,
+                    categoryId: category.id,
+                    recurring: data.recurring,
+                    month: selectedMonth,
+                    budgeted: data.budget,
+                    note: data.note || null,
+                }, category);
+
+                if (real === "series_dormant" || real === "series_not_in_month" || real === "series_active_this_month") return real;
+
+                setIsSpendingPopinOpen(false);
+                setEditingSpendingItem(null);
+                setLastCreatedCategoryName(null);
+
+                if (real) {
+                    const items = spendingData[selectedMonth] || [];
+                    setTimeout(() => carouselRef.current?.scrollToIndex(items.length - 1), 100);
                 }
             }}
 
@@ -469,12 +488,14 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
             mode={editingSpendingItem ? "edit" : "create"}
             categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
+            seriesOptions={seriesOptions}
+            activeSeriesIds={currentSpendingItems.map(item => item.seriesId)}
+            selectedMonth={selectedMonth}
             initialName={editingSpendingItem?.name ?? ""}
             initialIcon={editingSpendingItem?.icon ?? ""}
             initialCategory={editingSpendingItem?.category?.label ?? ""}
             initialBudget={editingSpendingItem?.budgeted ?? 0}
-            initialStartDate={editingSpendingItem?.startDate ? new Date(editingSpendingItem.startDate).toISOString().split("T")[0] : ""}
-            initialEndDate={editingSpendingItem?.endDate ? new Date(editingSpendingItem.endDate).toISOString().split("T")[0] : undefined}
+            initialRecurring={editingSpendingItem?.recurring ?? true}
             initialNote={editingSpendingItem?.note ?? ""}
         />
 

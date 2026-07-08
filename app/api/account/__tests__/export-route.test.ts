@@ -148,7 +148,7 @@ describe("GET /api/account/export", () => {
       expect.objectContaining({ where: { userId: FAKE_USER.id } })
     );
     expect(prismaMock.spendingItem.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: FAKE_USER.id } })
+      expect.objectContaining({ where: { series: { userId: FAKE_USER.id } } })
     );
     expect(prismaMock.incomeSource.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: FAKE_USER.id } })
@@ -173,17 +173,17 @@ describe("GET /api/account/export", () => {
     prismaMock.spendingItem.findMany.mockResolvedValue([
       {
         id: "item-1",
-        name: "Groceries",
-        icon: "cart",
         budgeted: 50000,
         spent: 99999, // stale on purpose — export must recompute from entries
         month: "2026-06",
-        startDate: new Date("2026-06-01T00:00:00Z"),
-        endDate: null,
         note: null,
-        userId: FAKE_USER.id,
-        categoryId: "cat-1",
-        category: { label: "Food, drinks & fun" },
+        seriesId: "ser-1",
+        series: {
+          name: "Groceries",
+          icon: "cart",
+          recurring: true,
+          category: { label: "Food, drinks & fun" },
+        },
         spendingEntries: [
           {
             id: "e1",
@@ -247,7 +247,7 @@ describe("GET /api/account/export", () => {
 
     // Spent is the signed entry sum (1029 - 500 = 529 cents), not the stale stored 99999.
     expect(lines).toContain(
-      '2026-06,Groceries,"Food, drinks & fun",cart,500.00,5.29,2026-06-01,,'
+      '2026-06,Groceries,"Food, drinks & fun",cart,true,500.00,5.29,'
     );
     expect(csv).not.toContain("999.99");
 

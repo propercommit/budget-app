@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
+import { monthOfDate } from "@/lib/spending/month";
+import { routeEntryToMonth } from "@/lib/spending/route-entry";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
@@ -145,7 +147,7 @@ export async function PUT(
         // Find the entry and verify ownership through spending item
         const existingEntry = await prisma.spendingEntry.findUnique({
             where: { id },
-            include: { spendingItem: true },
+            include: { spendingItem: { include: { series: true } } },
         });
 
         if (!existingEntry) {
@@ -155,7 +157,7 @@ export async function PUT(
             );
         }
 
-        if (existingEntry.spendingItem.userId !== user.id) {
+        if (existingEntry.spendingItem.series.userId !== user.id) {
             return NextResponse.json(
                 { error: "Entry not found" },
                 { status: 404 }
@@ -179,16 +181,35 @@ export async function PUT(
         if (link !== undefined) updateData.link = link || null;
         if (date !== undefined) updateData.date = new Date(date);
 
-        // Update the entry
-        const updatedEntry = await prisma.spendingEntry.update({
-            where: { id },
-            data: updateData,
+        const sourceItem = existingEntry.spendingItem;
+        const effectiveDate = updateData.date ?? existingEntry.date;
+        const targetMonth = monthOfDate(effectiveDate);
+
+        // Same month: plain field update, as always.
+        if (targetMonth === sourceItem.month) {
+            const updatedEntry = await prisma.spendingEntry.update({
+                where: { id },
+                data: updateData,
+            });
+
+            // Recalculate spent when the entry's effect on it may have changed
+            if (amount !== undefined || direction !== undefined) await updateSpentAmount(existingEntry.spendingItemId);
+
+            return NextResponse.json(updatedEntry);
+        }
+
+        // The date now lands in another month (D19): move the entry to that
+        // month's incarnation and recompute spent on BOTH incarnations — the
+        // entry just left the source.
+        const routed = await routeEntryToMonth({
+            sourceItem,
+            targetMonth,
+            recomputeSource: true,
+            writeEntry: (tx, targetItemId) =>
+                tx.spendingEntry.update({ where: { id }, data: { ...updateData, spendingItemId: targetItemId } }),
         });
 
-        // Recalculate spent when the entry's effect on it may have changed
-        if (amount !== undefined || direction !== undefined) await updateSpentAmount(existingEntry.spendingItemId);
-
-        return NextResponse.json(updatedEntry);
+        return NextResponse.json(routed);
     } catch (error) {
         console.error("[Entries PUT] Failed to update:", error);
         return NextResponse.json(
@@ -226,7 +247,7 @@ export async function DELETE(
         // Find the entry and verify ownership through spending item
         const existingEntry = await prisma.spendingEntry.findUnique({
             where: { id },
-            include: { spendingItem: true },
+            include: { spendingItem: { include: { series: true } } },
         });
 
         if (!existingEntry) {
@@ -236,7 +257,7 @@ export async function DELETE(
             );
         }
 
-        if (existingEntry.spendingItem.userId !== user.id) {
+        if (existingEntry.spendingItem.series.userId !== user.id) {
             return NextResponse.json(
                 { error: "Entry not found" },
                 { status: 404 }

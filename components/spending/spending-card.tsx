@@ -6,7 +6,7 @@ import { sumEntries } from "@/lib/spending/math";
 import { SpendingCardCollapsed } from "./spending-card-collapsed";
 import { SpendingCardExpanded, SpendingEntry } from "./spending-card-expanded";
 import { SpendingItemDetailPopin } from "./popins/spending-item-detail-popin";
-import { SpendingItemEditPopin } from "./popins/spending-item-edit-popin";
+import { SpendingItemEditPopin, type SpendingItemSavePayload } from "./popins/spending-item-edit-popin";
 import { EntryDetailPopin } from "./popins/spending-entry-detail-popin";
 import { EntryEditPopin, EntrySavePayload } from "./popins/spending-entry-edit-popin";
 import { CategoryPopin } from "../category/popins/category-popin";
@@ -23,21 +23,12 @@ interface SpendingCardProps {
     categoryName: string;
     spendingCategoryColor: string;
     budgetNumber: number;
-    startDate: string;
-    endDate?: string;
+    /** Series-level flag, prefills the edit popin's Recurring toggle. */
+    recurring: boolean;
     note?: string;
     entries: SpendingEntry[];
     categories: Category[];
-    onItemUpdate: (data: {
-        name: string;
-        icon: string;
-        category: string;
-        categoryColor: string;
-        budget: number;
-        startDate: string;
-        endDate: string;
-        note: string;
-    }) => void;
+    onItemUpdate: (data: SpendingItemSavePayload) => void;
     onItemDelete: () => void;
     onEntryCreate: (data: EntrySavePayload) => void;
     onEntryUpdate: (entryId: string, data: EntrySavePayload) => void;
@@ -53,8 +44,7 @@ export function SpendingCard({
     categoryName,
     spendingCategoryColor,
     budgetNumber,
-    startDate,
-    endDate,
+    recurring,
     note,
     entries,
     categories,
@@ -202,8 +192,6 @@ export function SpendingCard({
                         budgetNumber={budgetNumber}
                         totalSpent={totalSpent}
                         entriesCount={spendingEntries}
-                        startDate={startDate}
-                        endDate={endDate}
                         note={note}
                     />
 
@@ -222,8 +210,7 @@ export function SpendingCard({
                         initialIcon={spendingItemIcon}
                         initialCategory={categoryName}
                         initialBudget={budgetNumber}
-                        initialStartDate={startDate}
-                        initialEndDate={endDate}
+                        initialRecurring={recurring}
                         initialNote={note}
                     />
 

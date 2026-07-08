@@ -13,10 +13,33 @@ const seedIncomeMany = (args: { data: Prisma.IncomeSourceCreateManyInput[] }) =>
     data: args.data.map((r) => ({ ...r, amount: cents(r.amount ?? 0) })),
   });
 
-const seedItem = (args: { data: Prisma.SpendingItemUncheckedCreateInput }) =>
-  prisma.spendingItem.create({
-    data: { ...args.data, budgeted: cents(args.data.budgeted ?? 0), spent: cents(args.data.spent ?? 0) },
+type SeedItemInput = {
+  name: string;
+  icon: string;
+  budgeted: number;
+  spent: number;
+  month: string;
+  userId: string;
+  categoryId: string;
+  note?: string;
+};
+
+// Upserts the BudgetSeries identity by (userId, name), then creates that
+// month's incarnation — the same item seeded across months shares one series.
+const seedItem = async (args: { data: SeedItemInput }) => {
+
+  const { name, icon, budgeted, spent, month, userId, categoryId, note } = args.data;
+
+  const series = await prisma.budgetSeries.upsert({
+    where: { userId_name: { userId, name } },
+    update: {},
+    create: { name, icon, userId, categoryId },
   });
+
+  return prisma.spendingItem.create({
+    data: { seriesId: series.id, month, budgeted: cents(budgeted), spent: cents(spent), note: note ?? null },
+  });
+};
 
 const seedEntry = (args: { data: Prisma.SpendingEntryUncheckedCreateInput }) =>
   prisma.spendingEntry.create({
@@ -98,8 +121,9 @@ async function main() {
   // -------------------------------------------
   console.log("2️⃣  Cleaning existing data...");
 
-  await prisma.spendingEntry.deleteMany({ where: { spendingItem: { userId } } });
-  await prisma.spendingItem.deleteMany({ where: { userId } });
+  await prisma.spendingEntry.deleteMany({ where: { spendingItem: { series: { userId } } } });
+  await prisma.spendingItem.deleteMany({ where: { series: { userId } } });
+  await prisma.budgetSeries.deleteMany({ where: { userId } });
   await prisma.category.deleteMany({ where: { userId } });
   await prisma.incomeSource.deleteMany({ where: { userId } });
   await prisma.userSettings.deleteMany({ where: { userId } });
@@ -218,7 +242,7 @@ async function main() {
     const rent = await seedItem({
       data: {
         name: "Rent", icon: "home", budgeted: 1850, spent: 1850,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Housing"],
+        month: m, userId, categoryId: categories["Housing"],
       },
     });
     await seedEntry({
@@ -228,7 +252,7 @@ async function main() {
     const utilities = await seedItem({
       data: {
         name: "Utilities", icon: "zap", budgeted: 200, spent: month === 12 ? 220 : month === 1 ? 195 : 180,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Housing"],
+        month: m, userId, categoryId: categories["Housing"],
       },
     });
     await seedEntries({
@@ -243,7 +267,7 @@ async function main() {
     const groceries = await seedItem({
       data: {
         name: "Groceries", icon: "shopping-cart", budgeted: 600, spent: month === 12 ? 680 : month === 1 ? 545 : 520,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Food & Dining"],
+        month: m, userId, categoryId: categories["Food & Dining"],
       },
     });
     const groceryEntries = [
@@ -261,7 +285,7 @@ async function main() {
     const restaurants = await seedItem({
       data: {
         name: "Restaurants & Takeout", icon: "utensils", budgeted: 300, spent: month === 12 ? 380 : month === 1 ? 260 : 245,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Food & Dining"],
+        month: m, userId, categoryId: categories["Food & Dining"],
       },
     });
     await seedEntries({
@@ -278,7 +302,7 @@ async function main() {
     const coffee = await seedItem({
       data: {
         name: "Coffee", icon: "coffee", budgeted: 80, spent: month === 12 ? 92 : month === 1 ? 76 : 68,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Food & Dining"],
+        month: m, userId, categoryId: categories["Food & Dining"],
       },
     });
     await seedEntries({
@@ -297,7 +321,7 @@ async function main() {
     const transport = await seedItem({
       data: {
         name: "Public Transport", icon: "train", budgeted: 120, spent: month === 1 ? 100 : 120,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Transport"],
+        month: m, userId, categoryId: categories["Transport"],
         note: "GA Travelcard monthly installment",
       },
     });
@@ -308,7 +332,7 @@ async function main() {
     const fuel = await seedItem({
       data: {
         name: "Car Expenses", icon: "fuel", budgeted: 250, spent: month === 12 ? 310 : month === 1 ? 230 : 195,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Transport"],
+        month: m, userId, categoryId: categories["Transport"],
       },
     });
     await seedEntries({
@@ -329,7 +353,7 @@ async function main() {
     const entertainment = await seedItem({
       data: {
         name: "Going Out", icon: "music", budgeted: 200, spent: month === 12 ? 280 : month === 1 ? 150 : 175,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Entertainment"],
+        month: m, userId, categoryId: categories["Entertainment"],
       },
     });
     await seedEntries({
@@ -346,7 +370,7 @@ async function main() {
     const health = await seedItem({
       data: {
         name: "Health Insurance", icon: "shield", budgeted: 380, spent: 380,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Health"],
+        month: m, userId, categoryId: categories["Health"],
         note: "CSS Grundversicherung",
       },
     });
@@ -357,7 +381,7 @@ async function main() {
     const gym = await seedItem({
       data: {
         name: "Gym & Fitness", icon: "dumbbell", budgeted: 100, spent: month === 1 ? 135 : 89,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Health"],
+        month: m, userId, categoryId: categories["Health"],
       },
     });
     await seedEntries({
@@ -372,7 +396,7 @@ async function main() {
     const shopping = await seedItem({
       data: {
         name: "Clothing & Personal", icon: "shirt", budgeted: 200, spent: month === 12 ? 350 : month === 1 ? 120 : 85,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Shopping"],
+        month: m, userId, categoryId: categories["Shopping"],
       },
     });
     await seedEntries({
@@ -399,7 +423,7 @@ async function main() {
     const subs = await seedItem({
       data: {
         name: "Digital Subscriptions", icon: "monitor", budgeted: 80, spent: 72,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Subscriptions"],
+        month: m, userId, categoryId: categories["Subscriptions"],
       },
     });
     await seedEntries({
@@ -416,7 +440,7 @@ async function main() {
     const phone = await seedItem({
       data: {
         name: "Phone Plan", icon: "smartphone", budgeted: 40, spent: 39,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Subscriptions"],
+        month: m, userId, categoryId: categories["Subscriptions"],
       },
     });
     await seedEntry({
@@ -427,7 +451,7 @@ async function main() {
     const savings = await seedItem({
       data: {
         name: "Emergency Fund", icon: "piggy-bank", budgeted: 500, spent: month === 12 ? 300 : 500,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Savings"],
+        month: m, userId, categoryId: categories["Savings"],
         note: "Target: 6 months expenses",
       },
     });
@@ -438,7 +462,7 @@ async function main() {
     const investing = await seedItem({
       data: {
         name: "ETF Investing", icon: "trending-up", budgeted: 400, spent: 400,
-        month: m, startDate: date(year, month, 1), userId, categoryId: categories["Savings"],
+        month: m, userId, categoryId: categories["Savings"],
         note: "VWRL + CHSPI monthly DCA",
       },
     });
@@ -454,13 +478,15 @@ async function main() {
   // Summary
   // -------------------------------------------
   const totalCategories = await prisma.category.count({ where: { userId } });
-  const totalItems = await prisma.spendingItem.count({ where: { userId } });
-  const totalEntries = await prisma.spendingEntry.count({ where: { spendingItem: { userId } } });
+  const totalSeries = await prisma.budgetSeries.count({ where: { userId } });
+  const totalItems = await prisma.spendingItem.count({ where: { series: { userId } } });
+  const totalEntries = await prisma.spendingEntry.count({ where: { spendingItem: { series: { userId } } } });
   const totalIncome = await prisma.incomeSource.count({ where: { userId } });
 
   console.log("\n✅ Demo account seeded successfully!\n");
   console.log("📊 Summary:");
   console.log(`   Categories:     ${totalCategories}`);
+  console.log(`   Budget Series:  ${totalSeries}`);
   console.log(`   Spending Items: ${totalItems}`);
   console.log(`   Entries:        ${totalEntries}`);
   console.log(`   Income Sources: ${totalIncome}`);

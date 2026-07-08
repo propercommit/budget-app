@@ -75,12 +75,12 @@ export async function GET() {
                 orderBy: { label: "asc" },
             }),
             prisma.spendingItem.findMany({
-                where: { userId },
+                where: { series: { userId } },
                 include: {
                     spendingEntries: { orderBy: { date: "asc" } },
-                    category: { select: { label: true } },
+                    series: { select: { name: true, icon: true, recurring: true, category: { select: { label: true } } } },
                 },
-                orderBy: [{ month: "asc" }, { name: "asc" }],
+                orderBy: [{ month: "asc" }, { series: { name: "asc" } }],
             }),
             prisma.incomeSource.findMany({
                 where: { userId },
@@ -113,18 +113,19 @@ export async function GET() {
             },
             {
                 title: "Spending Items",
-                header: ["Month", "Name", "Category", "Icon", "Budgeted", "Spent", "Start Date", "End Date", "Note"],
-                // `spent` is recomputed as the signed sum of entries — the
-                // stored column is denormalized and never trusted on read.
+                header: ["Month", "Name", "Category", "Icon", "Recurring", "Budgeted", "Spent", "Note"],
+                // Name/category/icon/recurring live on the BudgetSeries; each
+                // row is that series' incarnation in one month. `spent` is
+                // recomputed as the signed sum of entries — the stored column
+                // is denormalized and never trusted on read.
                 rows: spendingItems.map((item) => [
                     item.month,
-                    item.name,
-                    item.category.label,
-                    item.icon,
+                    item.series.name,
+                    item.series.category.label,
+                    item.series.icon,
+                    item.series.recurring,
                     centsToDecimalString(item.budgeted),
                     centsToDecimalString(sumEntries(item.spendingEntries)),
-                    isoDate(item.startDate),
-                    isoDate(item.endDate),
                     item.note,
                 ]),
             },
@@ -136,7 +137,7 @@ export async function GET() {
                 rows: spendingItems.flatMap((item) =>
                     item.spendingEntries.map((entry) => [
                         item.month,
-                        item.name,
+                        item.series.name,
                         entry.name,
                         centsToDecimalString(entry.amount),
                         entry.direction,

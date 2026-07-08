@@ -25,13 +25,13 @@ const cat = (over: Partial<Category> = {}): Category => ({
 
 const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
   id: "s1",
+  seriesId: "series-1",
   name: "Groceries",
   icon: "cart",
+  recurring: true,
   budgeted: 100,
   spent: 0,
   month: "2026-06",
-  startDate: "2026-06-01",
-  endDate: null,
   note: null,
   categoryId: "c1",
   ...over,

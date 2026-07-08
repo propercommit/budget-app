@@ -6,7 +6,7 @@ import { SpendingItemEditPopin } from "@/components/spending/popins/spending-ite
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
 import { EntryEditPopin } from "@/components/spending/popins/spending-entry-edit-popin";
 import { Providers } from "../providers";
-import { baseCardProps, cardCategories, noop, cents } from "../fixtures";
+import { baseCardProps, cardCategories, noop, cents, seriesOptions, SELECTED_MONTH } from "../fixtures";
 
 /**
  * Spending feature: the carousel card (collapsed + expanded) and every popin
@@ -141,7 +141,6 @@ test.describe("Spending popins", () => {
           budgetNumber={cents(600)}
           totalSpent={cents(168.45)}
           entriesCount={3}
-          startDate="2026-06-01"
           note="Weekly supermarket runs"
         />
       </Providers>,
@@ -161,12 +160,36 @@ test.describe("Spending popins", () => {
           onSave={noop}
           mode="create"
           categories={cardCategories}
-          initialStartDate="2026-06-01"
         />
       </Providers>,
     );
 
     await expect(page).toHaveScreenshot("spending-item-edit-create.png");
+  });
+
+  // Typing "net" matches the dormant Netflix (Resume row), the active-but-
+  // not-this-month Planet Fitness (Add row) and the this-month-active
+  // Internet (disabled row), plus the create-as-new row — all four typeahead
+  // row states in one shot.
+  test("item edit — create typeahead", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <SpendingItemEditPopin
+          isOpen={true}
+          onClose={noop}
+          onSave={noop}
+          mode="create"
+          categories={cardCategories}
+          seriesOptions={seriesOptions}
+          activeSeriesIds={["ser-internet"]}
+          selectedMonth={SELECTED_MONTH}
+        />
+      </Providers>,
+    );
+
+    await page.getByLabel("Name").fill("net");
+
+    await expect(page).toHaveScreenshot("spending-item-edit-typeahead.png");
   });
 
   test("item edit — edit mode", async ({ mount, page }) => {
@@ -183,7 +206,6 @@ test.describe("Spending popins", () => {
           initialIcon="shopping-cart"
           initialCategory="Groceries"
           initialBudget={600}
-          initialStartDate="2026-06-01"
           initialNote="Weekly supermarket runs"
         />
       </Providers>,
