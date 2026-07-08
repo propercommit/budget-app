@@ -17,6 +17,8 @@ const categories = [
   { name: "Utilities", icon: "zap", color: "#007AFF" },
 ];
 
+// Genuinely dormant: recurring off is what makes a series "Paused" (the
+// Resume row) — an active series missing from the month is an Add row instead.
 const netflix: BudgetSeriesSummary = {
   id: "ser-netflix",
   name: "Netflix",
@@ -24,10 +26,26 @@ const netflix: BudgetSeriesSummary = {
   categoryId: "c-fun",
   categoryLabel: "Entertainment",
   categoryColor: "#AF52DE",
-  recurring: true,
+  recurring: false,
   firstActiveMonth: "2025-01",
   lastActiveMonth: "2025-05",
   lastBudgeted: 1890,
+};
+
+// Active (recurring) series with no incarnation in the open month — the
+// typeahead's third row state (Add). Named to miss the "net" queries so the
+// dormant/disabled tests keep their exact row sets.
+const spotify: BudgetSeriesSummary = {
+  id: "ser-spotify",
+  name: "Spotify",
+  icon: "film",
+  categoryId: "c-fun",
+  categoryLabel: "Entertainment",
+  categoryColor: "#AF52DE",
+  recurring: true,
+  firstActiveMonth: "2026-01",
+  lastActiveMonth: "2026-06",
+  lastBudgeted: 1290,
 };
 
 const internet: BudgetSeriesSummary = {
@@ -52,7 +70,7 @@ function renderCreatePopin(over: Partial<Parameters<typeof SpendingItemEditPopin
         onSave={vi.fn()}
         mode="create"
         categories={categories}
-        seriesOptions={[netflix, internet]}
+        seriesOptions={[netflix, internet, spotify]}
         activeSeriesIds={["ser-internet"]}
         selectedMonth="2026-07"
         {...over}
@@ -113,7 +131,7 @@ describe("SpendingItemEditPopin — series typeahead", () => {
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
-  it("submits a resume with the seriesId and the recurring flag", async () => {
+  it("submits a resume with the seriesId and the series' recurring flag", async () => {
     const onSave = vi.fn();
     renderCreatePopin({ onSave });
 
@@ -127,8 +145,59 @@ describe("SpendingItemEditPopin — series typeahead", () => {
       icon: "film",
       category: "Entertainment",
       budget: 1890,
-      recurring: true,
+      recurring: false,
       seriesId: "ser-netflix",
+    });
+  });
+
+  it("lists an active series missing from the month with an Add pill and active summary", () => {
+    renderCreatePopin();
+
+    typeName("Spo");
+
+    expect(screen.getByText("Add")).toBeInTheDocument();
+    expect(screen.getByText("Active · Budget: $ 12.90")).toBeInTheDocument();
+    expect(screen.queryByText(/Paused/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to a plain Active subtitle when the active series has no incarnations", () => {
+    renderCreatePopin({
+      seriesOptions: [{ ...spotify, firstActiveMonth: null, lastActiveMonth: null, lastBudgeted: null }],
+    });
+
+    typeName("Spo");
+
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("add selection prefills the form and flips the submit label to Add", () => {
+    renderCreatePopin();
+
+    typeName("Spo");
+    fireEvent.click(screen.getByText("Add").closest("button") as HTMLButtonElement);
+
+    expect(screen.getByLabelText("Name")).toHaveValue("Spotify");
+    expect(screen.getByLabelText("Monthly budget amount")).toHaveValue(12.9);
+    expect(screen.getByRole("radio", { name: /Entertainment/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "Add" })).toBeInTheDocument();
+  });
+
+  it("submits an add with the seriesId and recurring left on", async () => {
+    const onSave = vi.fn();
+    renderCreatePopin({ onSave });
+
+    typeName("Spo");
+    fireEvent.click(screen.getByText("Add").closest("button") as HTMLButtonElement);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      name: "Spotify",
+      icon: "film",
+      category: "Entertainment",
+      budget: 1290,
+      recurring: true,
+      seriesId: "ser-spotify",
     });
   });
 
@@ -189,6 +258,20 @@ describe("SpendingItemEditPopin — conflict safety net", () => {
 
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
     expect(screen.getByRole("alert").textContent).toContain("pick it in the list below to resume it");
+    expect(screen.getByLabelText("Name")).toHaveFocus();
+  });
+
+  it("shows the inline not-in-month conflict state pointing at the list", async () => {
+    const onSave = vi.fn().mockResolvedValue("series_not_in_month");
+    renderCreatePopin({ onSave });
+
+    typeName("Spotify");
+    fireEvent.change(screen.getByLabelText("Monthly budget amount"), { target: { value: "13" } });
+    fireEvent.click(screen.getByRole("radio", { name: /Entertainment/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(screen.getByRole("alert").textContent).toContain("pick it in the list below to add it to July 2026");
     expect(screen.getByLabelText("Name")).toHaveFocus();
   });
 

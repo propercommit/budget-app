@@ -200,8 +200,9 @@ export const incomeSource: IncomeSource = incomeSources[0];
 
 /**
  * Series list for the create popin's typeahead specs: one dormant series
- * (Resume row) and one active in {@link SELECTED_MONTH} (disabled row); both
- * match a "net" query so a single screenshot exercises every row state.
+ * (Resume row), one active series missing from {@link SELECTED_MONTH} (Add
+ * row) and one active in it (disabled row); all match a "net" query so a
+ * single screenshot exercises every row state alongside create-as-new.
  */
 export const seriesOptions: BudgetSeriesSummary[] = [
   {
@@ -211,10 +212,22 @@ export const seriesOptions: BudgetSeriesSummary[] = [
     categoryId: "cat-fun",
     categoryLabel: "Entertainment",
     categoryColor: "#AF52DE",
-    recurring: true,
+    recurring: false,
     firstActiveMonth: "2025-01",
     lastActiveMonth: "2025-05",
     lastBudgeted: cents(18.9),
+  },
+  {
+    id: "ser-gym",
+    name: "Planet Fitness",
+    icon: "dumbbell",
+    categoryId: "cat-fun",
+    categoryLabel: "Entertainment",
+    categoryColor: "#AF52DE",
+    recurring: true,
+    firstActiveMonth: "2026-01",
+    lastActiveMonth: "2026-05",
+    lastBudgeted: cents(45),
   },
   {
     id: "ser-internet",

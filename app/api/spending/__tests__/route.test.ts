@@ -45,6 +45,10 @@ const FAKE_SERIES = {
   categoryId: FAKE_CATEGORY.id,
 };
 
+// Paused twin of FAKE_SERIES: the split in seriesConflictResponse keys the
+// 409 code on `recurring` (dormant = paused; not-in-month = active).
+const DORMANT_SERIES = { ...FAKE_SERIES, recurring: false };
+
 /** A Prisma-shaped incarnation as loaded with the series include. */
 const dbItem = (over: Record<string, unknown> = {}) => ({
   id: "s1",
@@ -221,9 +225,32 @@ describe("POST /api/spending — new series", () => {
     expect(prismaMock.spendingItem.create).not.toHaveBeenCalled();
   });
 
-  it("409 series_dormant with resume data when the name's series has no incarnation this month", async () => {
+  it("409 series_not_in_month with attach data when the name's recurring series has no incarnation this month", async () => {
     prismaMock.category.findFirst.mockResolvedValue(FAKE_CATEGORY);
     prismaMock.budgetSeries.findUnique.mockResolvedValue(FAKE_SERIES);
+    prismaMock.spendingItem.findUnique.mockResolvedValue(null);
+    prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "old", month: "2026-03", budgeted: 189_000 });
+
+    const { status, body } = await readJson(await POST(jsonRequest(validBody)));
+
+    expect(status).toBe(409);
+    expect(body).toEqual({
+      error: "series_not_in_month",
+      series: {
+        id: "ser-1",
+        name: "Rent",
+        icon: "home",
+        categoryId: "cat-1",
+        lastActiveMonth: "2026-03",
+        lastBudgeted: 189_000,
+        recurring: true,
+      },
+    });
+  });
+
+  it("409 series_dormant with resume data when the name's paused series has no incarnation this month", async () => {
+    prismaMock.category.findFirst.mockResolvedValue(FAKE_CATEGORY);
+    prismaMock.budgetSeries.findUnique.mockResolvedValue(DORMANT_SERIES);
     prismaMock.spendingItem.findUnique.mockResolvedValue(null);
     prismaMock.spendingItem.findFirst.mockResolvedValue({ id: "old", month: "2026-03", budgeted: 189_000 });
 
@@ -239,12 +266,12 @@ describe("POST /api/spending — new series", () => {
         categoryId: "cat-1",
         lastActiveMonth: "2026-03",
         lastBudgeted: 189_000,
-        recurring: true,
+        recurring: false,
       },
     });
   });
 
-  it("409 series_dormant with null history for a series with no incarnations left", async () => {
+  it("409 series_not_in_month with null history for a recurring series with no incarnations left", async () => {
     prismaMock.category.findFirst.mockResolvedValue(FAKE_CATEGORY);
     prismaMock.budgetSeries.findUnique.mockResolvedValue(FAKE_SERIES);
     prismaMock.spendingItem.findUnique.mockResolvedValue(null);
@@ -252,7 +279,8 @@ describe("POST /api/spending — new series", () => {
 
     const { body } = await readJson(await POST(jsonRequest(validBody)));
 
-    const conflict = body as { series: { lastActiveMonth: string | null; lastBudgeted: number | null } };
+    const conflict = body as { error: string; series: { lastActiveMonth: string | null; lastBudgeted: number | null } };
+    expect(conflict.error).toBe("series_not_in_month");
     expect(conflict.series.lastActiveMonth).toBeNull();
     expect(conflict.series.lastBudgeted).toBeNull();
   });
@@ -320,6 +348,27 @@ describe("POST /api/spending — new series", () => {
 
     expect(status).toBe(409);
     expect(body).toEqual({ error: "series_active_this_month" });
+  });
+
+  it("answers a lost create race against a paused series with series_dormant", async () => {
+    prismaMock.category.findFirst.mockResolvedValue(FAKE_CATEGORY);
+    // Pre-check sees no series; the transaction then loses the race to a
+    // paused series with no incarnation this month.
+    prismaMock.budgetSeries.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(DORMANT_SERIES);
+    const p2002 = new PrismaClientKnownRequestError("Unique constraint failed", {
+      code: "P2002",
+      clientVersion: "6",
+    });
+    prismaMock.budgetSeries.create.mockRejectedValue(p2002);
+    prismaMock.spendingItem.findUnique.mockResolvedValue(null);
+    prismaMock.spendingItem.findFirst.mockResolvedValue(null);
+
+    const { status, body } = await readJson(await POST(jsonRequest(validBody)));
+
+    expect(status).toBe(409);
+    expect((body as { error: string }).error).toBe("series_dormant");
   });
 });
 

@@ -167,9 +167,10 @@ test.describe("Spending popins", () => {
     await expect(page).toHaveScreenshot("spending-item-edit-create.png");
   });
 
-  // Typing "net" matches the dormant Netflix (Resume row) and the
-  // this-month-active Internet (disabled row), plus the create-as-new row —
-  // all three typeahead row states in one shot.
+  // Typing "net" matches the dormant Netflix (Resume row), the active-but-
+  // not-this-month Planet Fitness (Add row) and the this-month-active
+  // Internet (disabled row), plus the create-as-new row — all four typeahead
+  // row states in one shot.
   test("item edit — create typeahead", async ({ mount, page }) => {
     await mount(
       <Providers>

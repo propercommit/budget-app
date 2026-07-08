@@ -62,8 +62,11 @@ export async function GET(request: Request) {
 /**
  * The structured 409 the create flow returns when the requested name already
  * belongs to a series: `series_active_this_month` when that series already has
- * an incarnation in the requested month, else `series_dormant` with the data
- * the client needs to offer an explicit Resume (D24 — no silent resume, no
+ * an incarnation in the requested month; otherwise `series_dormant` for a
+ * paused series or `series_not_in_month` for a recurring one that simply has
+ * no incarnation here (reachable in past months, which D26 never
+ * materializes). Both carry the same series payload, so the client can offer
+ * the matching explicit action — Resume or Add (D24 — no silent resume, no
  * duplicate names).
  */
 async function seriesConflictResponse(
@@ -86,7 +89,7 @@ async function seriesConflictResponse(
 
     return NextResponse.json(
         {
-            error: "series_dormant",
+            error: series.recurring ? "series_not_in_month" : "series_dormant",
             series: {
                 id: series.id,
                 name: series.name,

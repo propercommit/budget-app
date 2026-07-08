@@ -114,6 +114,30 @@ describe("useSpending — spending item create (optimistic)", () => {
     expect(result.current.spendingData[MONTH]).toEqual([]);
     expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t save "Eating out"', { retry: expect.any(Function) });
   });
+
+  // The three structured 409s are form states, never toasts — the hook rolls
+  // back the optimistic item and hands the code to the popin.
+  it.each(["series_dormant", "series_not_in_month", "series_active_this_month"] as const)(
+    "returns %s to the caller with a rollback and no toast",
+    async (code) => {
+      vi.mocked(api.createSpending).mockRejectedValue(new Error(code));
+      const { result } = renderHook(() => useSpending(data([])));
+
+      let returned: SpendingItem | CreateSpendingConflict | null = null;
+      await act(async () => {
+        returned = await result.current.createSpending(MONTH, {
+          name: "Eating out",
+          icon: "fork",
+          categoryId: "c1",
+          month: MONTH,
+        });
+      });
+
+      expect(returned).toBe(code);
+      expect(result.current.spendingData[MONTH]).toEqual([]);
+      expect(showErrorToast).not.toHaveBeenCalled();
+    }
+  );
 });
 
 describe("useSpending — spending item update / delete", () => {

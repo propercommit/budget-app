@@ -15,10 +15,10 @@ type SpendingData = Record<string, SpendingItem[]>;
  * already belongs to a series (D24). The popin maps these to inline form
  * states; they are never surfaced as raw error toasts.
  */
-export type CreateSpendingConflict = "series_dormant" | "series_active_this_month";
+export type CreateSpendingConflict = "series_dormant" | "series_not_in_month" | "series_active_this_month";
 
 function isCreateSpendingConflict(message: string): message is CreateSpendingConflict {
-  return message === "series_dormant" || message === "series_active_this_month";
+  return message === "series_dormant" || message === "series_not_in_month" || message === "series_active_this_month";
 }
 
 /**

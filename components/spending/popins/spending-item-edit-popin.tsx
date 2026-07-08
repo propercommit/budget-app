@@ -27,7 +27,11 @@ export interface SpendingItemSavePayload {
     budget: number;
     note: string;
     recurring: boolean;
-    /** Present when the user picked a dormant series from the typeahead — submit resumes it. */
+    /**
+     * Present when the user picked an existing series from the typeahead —
+     * submit attaches this month's incarnation (Resume for paused, Add for
+     * active-but-not-in-month).
+     */
     seriesId?: string;
 }
 
@@ -132,7 +136,9 @@ export function SpendingItemEditPopin({
     }
 
     const isCreate = mode === "create";
-    const isResume = selectedSeries !== null;
+    // An attach submit is labeled by the series' state: Add for an active
+    // series missing from this month, Resume for a paused one.
+    const attachLabel = selectedSeries === null ? null : selectedSeries.recurring ? "Add" : "Resume";
     const parsedBudget = parseAmountToCents(budget);
 
     // Validate on submit, clear on input: errors surface only after a failed
@@ -165,7 +171,7 @@ export function SpendingItemEditPopin({
         setIsDropdownOpen(value.trim() !== "");
     };
 
-    /** Resume prefill: series values flow into the form; submit becomes Resume. */
+    /** Attach prefill: series values flow into the form; submit becomes Resume/Add. */
     const handleSelectSeries = (series: BudgetSeriesSummary) => {
         setSelectedSeries(series);
         setName(series.name);
@@ -200,8 +206,8 @@ export function SpendingItemEditPopin({
         });
 
         // The server-side safety net fired: back to the form, name focused,
-        // dropdown reopened so the resumable row is visible.
-        if (result === "series_dormant" || result === "series_active_this_month") {
+        // dropdown reopened so the resumable/addable row is visible.
+        if (result === "series_dormant" || result === "series_not_in_month" || result === "series_active_this_month") {
             setConflict(result);
             setSelectedSeries(null);
             setIsDropdownOpen(true);
@@ -232,7 +238,7 @@ export function SpendingItemEditPopin({
                             className="flex-1 py-3.5 rounded-xl font-semibold transition-all duration-200 active:scale-[0.98]"
                             style={{ backgroundColor: "#007AFF", color: "white", boxShadow: "0 4px 12px rgba(0, 122, 255, 0.3)" }}
                         >
-                            {isCreate ? (isResume ? "Resume" : "Create") : "Save Changes"}
+                            {isCreate ? (attachLabel ?? "Create") : "Save Changes"}
                         </button>
                     </div>
                     {!isCreate && onDelete && (
@@ -279,7 +285,9 @@ export function SpendingItemEditPopin({
                             <FieldMessage id="spending-name-error">
                                 {conflict === "series_dormant"
                                     ? "You already have an item with this name — pick it in the list below to resume it."
-                                    : `"${name.trim()}" is already in ${selectedMonth !== "" ? monthLabel(selectedMonth) : "this month"}.`}
+                                    : conflict === "series_not_in_month"
+                                        ? `You already have this item — pick it in the list below to add it to ${selectedMonth !== "" ? monthLabel(selectedMonth) : "this month"}.`
+                                        : `"${name.trim()}" is already in ${selectedMonth !== "" ? monthLabel(selectedMonth) : "this month"}.`}
                             </FieldMessage>
                         </div>
                     )}
@@ -324,6 +332,17 @@ export function SpendingItemEditPopin({
                                     );
                                 }
 
+                                // An active series with no incarnation here is offered as
+                                // "Add", never mislabeled "Paused" — the paused wording is
+                                // reserved for genuinely dormant (recurring: false) series.
+                                const budgetSuffix = series.lastBudgeted !== null ? ` · Budget: ${currencySymbol} ${centsToAmount(series.lastBudgeted).toFixed(2)}` : "";
+
+                                const subtitle = series.recurring
+                                    ? `Active${budgetSuffix}`
+                                    : series.lastActiveMonth !== null && series.firstActiveMonth !== null
+                                        ? `Paused · ${activeRangeLabel(series.firstActiveMonth, series.lastActiveMonth)}${budgetSuffix}`
+                                        : "Paused · never used this year";
+
                                 return (
                                     <div key={series.id}>
                                         {divider}
@@ -338,13 +357,11 @@ export function SpendingItemEditPopin({
                                             <div className="flex-1 min-w-0 text-left">
                                                 <p className="text-[15px] font-semibold truncate" style={{ color: "var(--foreground)" }}>{highlightMatch(series.name, query)}</p>
                                                 <p className="text-xs mt-px truncate" style={{ color: "var(--muted-foreground)" }}>
-                                                    {series.lastActiveMonth !== null && series.firstActiveMonth !== null
-                                                        ? `Paused · ${activeRangeLabel(series.firstActiveMonth, series.lastActiveMonth)}${series.lastBudgeted !== null ? ` · Budget: ${currencySymbol} ${centsToAmount(series.lastBudgeted).toFixed(2)}` : ""}`
-                                                        : "Paused · never used this year"}
+                                                    {subtitle}
                                                 </p>
                                             </div>
                                             <span className="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0" style={{ backgroundColor: "rgba(0, 122, 255, 0.1)", color: "#007AFF" }}>
-                                                Resume
+                                                {series.recurring ? "Add" : "Resume"}
                                             </span>
                                         </button>
                                     </div>

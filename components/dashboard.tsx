@@ -465,7 +465,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     note: data.note || null,
                 }, category);
 
-                if (real === "series_dormant" || real === "series_active_this_month") return real;
+                if (real === "series_dormant" || real === "series_not_in_month" || real === "series_active_this_month") return real;
 
                 setIsSpendingPopinOpen(false);
                 setEditingSpendingItem(null);
