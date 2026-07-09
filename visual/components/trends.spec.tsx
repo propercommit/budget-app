@@ -63,4 +63,18 @@ test.describe("Trends card", () => {
 
     await expect(component).toHaveScreenshot("trends-card-expanded.png");
   });
+
+  test("empty — first run", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <TrendsCard spendingData={[]} incomeData={[]} categoryData={{}} categories={[]} isEmpty />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Unlocks after month 1");
+
+    await expect(component).toHaveScreenshot("trends-card-empty.png");
+  });
 });

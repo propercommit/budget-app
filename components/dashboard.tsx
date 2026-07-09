@@ -439,6 +439,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 .filter(([, data]) => (data as { label: string; value: number }[]).some(d => d.value > 0))
             )}
             categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
+            isEmpty={isFirstRun}
             />
 
             <BudgetOverviewCard

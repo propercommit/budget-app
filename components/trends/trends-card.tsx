@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TrendsCardCollapsed } from "./trends-card-collapsed";
 import { TrendsCardExpanded } from "./trends-card-expanded";
+import { TrendsEmptyState } from "./trends-empty-state";
 import { CardHeader } from "../ui/card-header";
 
 interface TrendDataPoint {
@@ -21,6 +22,8 @@ interface TrendsCardProps {
     incomeData: TrendDataPoint[];
     categoryData: Record<string, TrendDataPoint[]>;
     categories: CategoryInfo[];
+    /** First-run: render the "Unlocks after month 1" body instead of the stat boxes. */
+    isEmpty?: boolean;
 }
 
 function getStats(data: TrendDataPoint[]) {
@@ -31,7 +34,7 @@ function getStats(data: TrendDataPoint[]) {
     return { current, previous, change };
 }
 
-export function TrendsCard({ spendingData, incomeData, categoryData, categories }: TrendsCardProps) {
+export function TrendsCard({ spendingData, incomeData, categoryData, categories, isEmpty = false }: TrendsCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const spendingStats = getStats(spendingData);
@@ -56,7 +59,9 @@ export function TrendsCard({ spendingData, incomeData, categoryData, categories 
                         onToggle={() => setIsExpanded(!isExpanded)}
                         title="Trends"
                     />
-                    {!isExpanded && (
+                    {!isExpanded && (isEmpty ? (
+                        <TrendsEmptyState />
+                    ) : (
                         <TrendsCardCollapsed
                             spendingStats={{ current: spendingStats.current, change: spendingStats.change }}
                             incomeStats={{ current: incomeStats.current, change: incomeStats.change }}
@@ -65,7 +70,7 @@ export function TrendsCard({ spendingData, incomeData, categoryData, categories 
                             spendingData={spendingData}
                             incomeData={incomeData}
                         />
-                    )}
+                    ))}
                 </div>
 
                 {isExpanded && (
