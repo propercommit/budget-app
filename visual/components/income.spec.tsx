@@ -37,6 +37,20 @@ test.describe("Income card", () => {
 
     await expect(component).toHaveScreenshot("income-card-expanded.png");
   });
+
+  test("empty — guided step 1", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-2xl p-4">
+          <IncomeCard incomes={[]} onAdd={noop} onSelect={noop} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("STEP 1 OF 2");
+
+    await expect(component).toHaveScreenshot("income-card-empty.png");
+  });
 });
 
 test.describe("Income popins", () => {

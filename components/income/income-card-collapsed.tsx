@@ -1,10 +1,13 @@
 import { useSettings } from "@/lib/settings-context";
 import { IncomeType, IncomeTypeFigures } from "./income-type-meta";
 import { DonutChart, DonutSegment } from "../ui/donut-chart";
+import { IncomeEmptyState } from "./income-empty-state";
 
 interface IncomeCardCollapsedProps {
     totalIncome: number;
     incomeTypes: IncomeTypeFigures[];
+    /** Opens the IncomePopin in add mode — the empty state's CTA. */
+    onAdd: () => void;
     focusedType: IncomeType | null;
     setHoveredType: (type: IncomeType | null) => void;
     onSelectType: (type: IncomeType) => void;
@@ -53,6 +56,7 @@ function BreakdownRow({ color, label, amount, percentage, isDimmed, onClick, onM
 export function IncomeCardCollapsed({
     totalIncome,
     incomeTypes,
+    onAdd,
     focusedType,
     setHoveredType,
     onSelectType,
@@ -80,35 +84,9 @@ export function IncomeCardCollapsed({
 
     const segments = incomeTypes.map(segmentFor);
 
-    // The empty state has no breakdown to show — a single dashed ring reads
+    // Step 1 of the guided first-run flow — a single centered layout reads
     // the same on both viewports.
-    if (isEmpty) return (
-        <div className="flex flex-col items-center gap-4">
-            <DonutChart
-                segments={segments}
-                size={160}
-                strokeWidth={14}
-                radius={65}
-                emptyContent={
-                    <circle
-                        cx="80"
-                        cy="80"
-                        r="65"
-                        fill="none"
-                        className="stroke-border"
-                        strokeWidth="14"
-                        strokeDasharray="8 4"
-                    />
-                }
-                centerContent={
-                    <div className="flex flex-col items-center justify-center">
-                        <span className="text-xl font-semibold text-foreground">{formatAmount(0)}</span>
-                        <span className="text-xs text-muted-foreground">No income yet</span>
-                    </div>
-                }
-            />
-        </div>
-    );
+    if (isEmpty) return <IncomeEmptyState onAdd={onAdd} />;
 
     // Desktop adds hover previews on top of the shared click wiring.
     const hoverSegments = incomeTypes.map(t => ({
