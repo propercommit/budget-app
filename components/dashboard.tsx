@@ -25,6 +25,8 @@ import { countCategoryEntries } from "@/lib/category-entry-counts";
 import { IncomePopin } from "./income/popins/income-edit-popin";
 import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
 import { StickyBudgetBar } from "./sticky-budget-bar";
+import { WelcomeBanner } from "./welcome-banner";
+import { hasAccountData } from "@/lib/first-run";
 import { Plus, Settings2 } from "lucide-react";
 
 interface DashboardProps {
@@ -77,6 +79,10 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         : currentSpendingItems.filter(item => item.category?.label === selectedCategory);
     const totalIncome = incomeSources.reduce((sum, i) => sum + i.amount, 0);
     const [incomePopinKey, setIncomePopinKey] = useState(0);
+
+    // First-run = no data anywhere in the loaded window. Drives the welcome
+    // banner now and the trends/budget-overview empty states with it.
+    const isFirstRun = hasAccountData(spendingData, incomeSources, allIncomeSources) === false;
 
     const historicalData = Object.entries(spendingData)
         .filter(([month]) => month <= selectedMonth)
@@ -244,6 +250,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             onMonthChange={handleMonthChange}
             />
         </div>
+
+        {isFirstRun && <WelcomeBanner />}
 
         <IncomeCard
             incomes={incomeSources}

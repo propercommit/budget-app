@@ -52,4 +52,25 @@ test.describe("Dashboard screen", () => {
 
     await expect(component).toHaveScreenshot("dashboard-empty.png");
   });
+
+  // Pins the transition the guided first-run flow promises: the first income
+  // source removes the welcome banner and populates the income donut while
+  // spending is still empty.
+  test("first-run after the first income source", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <Dashboard
+          initialCategories={[]}
+          initialSpendingData={{}}
+          initialIncomeSources={[incomeSources[0]]}
+          initialAllIncomeSources={[incomeSources[0]]}
+          initialMonth={SELECTED_MONTH}
+        />
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Budget Planner");
+
+    await expect(component).toHaveScreenshot("dashboard-first-income.png");
+  });
 });
