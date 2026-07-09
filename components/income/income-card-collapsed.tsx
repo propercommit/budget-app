@@ -65,6 +65,10 @@ export function IncomeCardCollapsed({
     const isEmpty = totalIncome === 0;
     const { formatAmount } = useSettings();
 
+    // Step 1 of the guided first-run flow — a single centered layout reads
+    // the same on both viewports, and nothing below is needed for it.
+    if (isEmpty) return <IncomeEmptyState onAdd={onAdd} />;
+
     const focused = incomeTypes.find(t => t.type === focusedType);
     const focusLabel = focused === undefined ? null : `${focused.label} Income`;
     const headlineAmount = focused === undefined ? totalIncome : focused.total;
@@ -83,10 +87,6 @@ export function IncomeCardCollapsed({
     });
 
     const segments = incomeTypes.map(segmentFor);
-
-    // Step 1 of the guided first-run flow — a single centered layout reads
-    // the same on both viewports.
-    if (isEmpty) return <IncomeEmptyState onAdd={onAdd} />;
 
     // Desktop adds hover previews on top of the shared click wiring.
     const hoverSegments = incomeTypes.map(t => ({
