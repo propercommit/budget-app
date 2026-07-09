@@ -449,6 +449,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 spendingItems: currentSpendingItems,
             })}
             spendingItems={currentSpendingItems}
+            isEmpty={isFirstRun}
             />
         </div>
 

@@ -8,9 +8,11 @@ interface BudgetOverviewProps {
     totalIncome: number;
     categories: Category[];
     spendingItems: SpendingItem[];
+    /** First-run: dashed placeholder tiles + caption instead of the zero figures. */
+    isEmpty?: boolean;
 }
 
-export function BudgetOverviewCard({ totalIncome, categories, spendingItems }: BudgetOverviewProps) {
+export function BudgetOverviewCard({ totalIncome, categories, spendingItems, isEmpty = false }: BudgetOverviewProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     // Calculate totals
@@ -48,6 +50,7 @@ export function BudgetOverviewCard({ totalIncome, categories, spendingItems }: B
             totalIncome={totalIncome}
             totalSpent={totalSpent}
             onExpand={() => setIsExpanded(true)}
+            isEmpty={isEmpty}
         />
     );
 }
