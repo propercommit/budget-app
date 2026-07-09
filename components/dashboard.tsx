@@ -27,6 +27,8 @@ import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
 import { StickyBudgetBar } from "./sticky-budget-bar";
 import { WelcomeBanner } from "./welcome-banner";
 import { hasAccountData } from "@/lib/first-run";
+import { SpendingEmptyState } from "./spending/spending-empty-state";
+import { findStarterCategory, StarterCategory } from "@/lib/starter-categories";
 import { Plus, Settings2 } from "lucide-react";
 
 interface DashboardProps {
@@ -229,6 +231,27 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
         await deleteSpending(selectedMonth, id);
     };
 
+    // Starter chip (guided step 2): create the category only when no
+    // trimmed/case-insensitive match exists — an existing one is reused
+    // untouched — then open the create popin preselected via the existing
+    // autoSelectCategory mechanism. The create is awaited so a failed save
+    // (already toasted + retryable by the hook) never opens a popin whose
+    // selected category just rolled back.
+    const handleStarterChipTap = async (starter: StarterCategory) => {
+
+        const existing = findStarterCategory(categories, starter.name);
+
+        if (existing === undefined) {
+            const created = await addCategory(starter.name, starter.icon, starter.color);
+
+            if (created === null) return;
+        }
+
+        // Reuse keeps the user's exact label — the popin matches by label.
+        setLastCreatedCategoryName(existing?.label ?? starter.name);
+        handleOpenCreateSpending();
+    };
+
     if (isLoading) {
         return (
         <div className="p-4 sm:p-6 max-w-5xl mx-auto flex items-center justify-center min-h-screen">
@@ -286,16 +309,27 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
             </div>
             </div>
 
-            <div className="mb-4">
-            <CategoryRibbon
-                categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
-                selectedCategory={selectedCategory}
-                onSelect={setSelectedCategory}
-                onAddCategory={handleOpenCreateCategory}
-                onManage={handleOpenManageCategories}
-            />
-            </div>
+            {/* No categories -> no ribbon: the guided empty state's quick-start
+                panel carries the create affordances instead (spec `hasCats`).
+                Items require a category, so zero categories implies an empty month. */}
+            {categories.length > 0 && (
+                <div className="mb-4">
+                <CategoryRibbon
+                    categories={categories.map(c => ({ name: c.label, icon: c.icon, color: c.color }))}
+                    selectedCategory={selectedCategory}
+                    onSelect={setSelectedCategory}
+                    onAddCategory={handleOpenCreateCategory}
+                    onManage={handleOpenManageCategories}
+                />
+                </div>
+            )}
 
+            {/* A month with no items at all gets the guided step-2 state; the
+                carousel (and its own small empty branch) keeps serving the
+                filter-empty case, where items exist but the filter shows none. */}
+            {currentSpendingItems.length === 0 ? (
+                <SpendingEmptyState onStarterTap={handleStarterChipTap} onAdd={handleOpenCreateSpending} />
+            ) : (
             <SpendingCarousel ref={carouselRef} key={selectedCategory} itemCount={filteredSpendingItems.length} onAdd={handleOpenCreateSpending}>
             {filteredSpendingItems.map((item) => (
                 <div key={item.id} className="w-full flex-shrink-0 snap-center snap-always overflow-hidden px-2">
@@ -375,6 +409,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                 </div>
             ))}
             </SpendingCarousel>
+            )}
         </SectionCard>
 
         <div className="mt-6 space-y-4">
