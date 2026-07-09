@@ -160,7 +160,7 @@ function LegendRow({
             onMouseLeave={onHoverEnd}
         >
             <CategoryIconChip icon={category.icon} color={category.color} className="w-7 h-7 rounded-lg" />
-            <span className="text-sm text-foreground whitespace-nowrap">{category.name}</span>
+            <span className="text-sm text-foreground truncate min-w-0">{category.name}</span>
             {/* Dotted leader tying the label to its right-aligned amount. */}
             <span
                 aria-hidden
