@@ -112,22 +112,22 @@ function CategoryRow({
         <div className="flex items-center gap-3">
             <CategoryIconChip icon={category.icon} color={color} className="w-9 h-9 rounded-xl text-base" />
             <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium truncate text-foreground">
-                        {category.name}
-                    </span>
-                    <span className="flex items-center flex-shrink-0 ml-2">
-                        {isOver && (
-                            <span
-                                className="text-xs font-semibold px-1.5 py-0.5 rounded mr-2"
-                                style={{ backgroundColor: 'rgba(255, 59, 48, 0.1)', color: '#FF3B30' }}
-                            >
-                                +{formatAmount(spent - budget)}
-                            </span>
-                        )}
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                            {formatAmount(spent)} / {formatAmount(budget)}
+                <div className="text-sm font-medium truncate text-foreground mb-1">
+                    {category.name}
+                </div>
+                {/* Amounts on their own line below the label — a wide value (e.g. a
+                    long CHF amount) must not push the category name off the row. */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                    {isOver && (
+                        <span
+                            className="text-xs font-semibold px-1.5 py-0.5 rounded"
+                            style={{ backgroundColor: 'rgba(255, 59, 48, 0.1)', color: '#FF3B30' }}
+                        >
+                            +{formatAmount(spent - budget)}
                         </span>
+                    )}
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">
+                        {formatAmount(spent)} / {formatAmount(budget)}
                     </span>
                 </div>
                 <ProgressBar value={spent} max={budget} color={color} height={6} />
@@ -160,7 +160,7 @@ function LegendRow({
             onMouseLeave={onHoverEnd}
         >
             <CategoryIconChip icon={category.icon} color={category.color} className="w-7 h-7 rounded-lg" />
-            <span className="text-sm text-foreground whitespace-nowrap">{category.name}</span>
+            <span className="text-sm text-foreground truncate min-w-0">{category.name}</span>
             {/* Dotted leader tying the label to its right-aligned amount. */}
             <span
                 aria-hidden
@@ -172,7 +172,7 @@ function LegendRow({
                     backgroundPosition: 'center left'
                 }}
             />
-            <span className="w-[72px] text-right text-sm font-semibold text-foreground tabular-nums">
+            <span className="min-w-[72px] flex-shrink-0 text-right text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
                 {formatAmount(category.spent)}
             </span>
         </div>

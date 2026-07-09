@@ -67,6 +67,7 @@ export function IncomeCard({ incomes, onAdd, onSelect }: IncomeCardProps) {
                 <IncomeCardCollapsed
                     totalIncome={totalIncome}
                     incomeTypes={incomeTypes}
+                    onAdd={onAdd}
                     focusedType={focusedType}
                     setHoveredType={setHoveredType}
                     onSelectType={toggleSelectedType}

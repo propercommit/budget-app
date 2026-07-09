@@ -56,3 +56,21 @@ describe("BudgetOverviewCollapsed — income-used percentage", () => {
     expect(screen.getByText("Over by")).toBeInTheDocument();
   });
 });
+
+describe("BudgetOverviewCollapsed — first-run empty state", () => {
+  it("renders dashed placeholders and the caption instead of figures when isEmpty", () => {
+    render(
+      <SettingsProvider>
+        <BudgetOverviewCollapsed totalIncome={0} totalSpent={0} onExpand={() => {}} isEmpty />
+      </SettingsProvider>
+    );
+
+    expect(screen.getAllByText("—")).toHaveLength(3);
+
+    expect(screen.getByText("Left")).toBeInTheDocument();
+
+    expect(screen.getByText("Your monthly snapshot appears once you add income and spending.")).toBeInTheDocument();
+
+    expect(screen.queryByText("Income Used")).toBeNull();
+  });
+});
