@@ -6,17 +6,48 @@ import { CardHeader } from "../ui/card-header";
 // to its own full-width line instead of overflowing the viewport.
 const STAT_TILE_CLASS = "flex-1 min-w-fit p-3 rounded-2xl";
 
+/** Labels for the dashed first-run tiles — "Left" is the spec's empty-state wording for the Remaining slot. */
+const EMPTY_TILE_LABELS = ["Income", "Spent", "Left"];
+
 interface BudgetOverviewCollapsedProps {
     totalIncome: number;
     totalSpent: number;
     onExpand: () => void;
+    /** First-run: dashed placeholder tiles + caption instead of the zero figures. */
+    isEmpty?: boolean;
 }
 
-export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand }: BudgetOverviewCollapsedProps) {
+export function BudgetOverviewCollapsed({ totalIncome, totalSpent, onExpand, isEmpty = false }: BudgetOverviewCollapsedProps) {
+    const { formatAmount } = useSettings();
+
+    // First-run: nothing to summarize yet — dashed tiles instead of zeros,
+    // no Income Used bar (0% of no income is noise, not information).
+    if (isEmpty) return (
+        <div className="bg-card rounded-3xl overflow-hidden transition-all duration-300 border border-(--card-border) shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+            <div className="p-4 sm:p-5 cursor-pointer" onClick={onExpand}>
+                <CardHeader isExpanded={false} onToggle={onExpand} title="Budget Overview" />
+
+                <div className="mt-4 space-y-3">
+                    <div className="flex gap-2.5">
+                        {EMPTY_TILE_LABELS.map((label) => (
+                            <div key={label} className="flex-1 rounded-2xl border border-dashed border-[#E4E4E7] bg-[#FAFAFB] p-3">
+                                <p className="mb-[3px] text-xs font-medium text-muted-foreground">{label}</p>
+                                <p className="text-lg font-bold tabular-nums text-[#C7C7CC]">—</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <p className="px-3 py-0.5 text-center text-xs leading-[1.45] text-muted-foreground">
+                        Your monthly snapshot appears once you add income and spending.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+
     const remaining = totalIncome - totalSpent;
     const isOverspent = totalSpent > totalIncome;
     const incomeUsedPercent = totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0;
-    const { formatAmount } = useSettings();
 
     return (
         <div 

@@ -99,4 +99,18 @@ test.describe("Budget overview", () => {
 
     await expect(component).toHaveScreenshot("budget-overview-expanded-wide-amounts.png");
   });
+
+  test("empty — first run", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-md p-4">
+          <BudgetOverviewCard totalIncome={0} categories={[]} spendingItems={[]} isEmpty />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("Your monthly snapshot appears once you add income and spending.");
+
+    await expect(component).toHaveScreenshot("budget-overview-empty.png");
+  });
 });

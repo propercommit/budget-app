@@ -1,5 +1,6 @@
 import { test, expect } from "../test";
 import { SpendingCard } from "@/components/spending/spending-card";
+import { SpendingEmptyState } from "@/components/spending/spending-empty-state";
 import type { SpendingEntry } from "@/components/spending/spending-card-expanded";
 import { SpendingItemDetailPopin } from "@/components/spending/popins/spending-item-detail-popin";
 import { SpendingItemEditPopin } from "@/components/spending/popins/spending-item-edit-popin";
@@ -319,5 +320,21 @@ test.describe("Spending popins", () => {
     );
 
     await expect(page).toHaveScreenshot("spending-entry-edit-credit.png");
+  });
+});
+
+test.describe("Spending empty state", () => {
+  test("guided step 2 with starter chips", async ({ mount }) => {
+    const component = await mount(
+      <Providers>
+        <div className="max-w-2xl p-4">
+          <SpendingEmptyState onStarterTap={noop} onAdd={noop} />
+        </div>
+      </Providers>,
+    );
+
+    await expect(component).toContainText("STEP 2 OF 2");
+
+    await expect(component).toHaveScreenshot("spending-empty-state.png");
   });
 });
