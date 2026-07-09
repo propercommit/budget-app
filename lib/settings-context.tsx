@@ -36,8 +36,20 @@ const DEFAULT_SETTINGS: Settings = {
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 // Provider
-export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+/**
+ * Wraps the app in settings context. `initialSettings` seeds the state before
+ * the on-mount fetch resolves — the fetch still overwrites it in the real app,
+ * so it's inert in production, but it lets tests/SSR render a specific currency
+ * or date format deterministically (the harness fetch fails and keeps the seed).
+ */
+export function SettingsProvider({
+  children,
+  initialSettings,
+}: {
+  children: ReactNode;
+  initialSettings?: Partial<Settings>;
+}) {
+  const [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS, ...initialSettings });
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch settings on mount
