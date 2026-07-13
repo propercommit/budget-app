@@ -1,6 +1,18 @@
 const USER_ID = "temp-user";
 
 /**
+ * Error thrown when the API answers a non-ok status. Carries the HTTP status
+ * so callers can branch on expected failures (e.g. the 401 an unauthenticated
+ * visitor gets on a public page) without matching on message text.
+ */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+/**
  * Shared transport + error surfacing for every API call — the single place
  * where a failed request becomes a user-facing Error. Returns the ok
  * `Response`; callers own the success-body parsing (JSON via `fetchAPI`,
@@ -26,7 +38,7 @@ async function requestAPI(url: string, options?: RequestInit): Promise<Response>
 
   if (response.ok === false) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || body.message || "API request failed");
+    throw new ApiError(body.error || body.message || "API request failed", response.status);
   }
 
   return response;

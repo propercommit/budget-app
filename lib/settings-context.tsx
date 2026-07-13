@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { getSettings, updateSettings } from "@/lib/api";
+import { ApiError, getSettings, updateSettings } from "@/lib/api";
 import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -63,7 +63,10 @@ export function SettingsProvider({
           darkMode: data.darkMode,
         });
       } catch (error) {
-        console.error("Failed to load settings:", error);
+        // A 401 is just an unauthenticated visitor (the root layout mounts
+        // this provider on public pages like /login) — the defaults are the
+        // right settings there, not a failure worth logging.
+        if (!(error instanceof ApiError && error.status === 401)) console.error("Failed to load settings:", error);
       } finally {
         setIsLoading(false);
       }

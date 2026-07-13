@@ -110,6 +110,12 @@ export async function proxy(request: NextRequest) {
             return response
         }
 
+        // API calls are JSON-in/JSON-out — redirecting them serves the login
+        // page's HTML to response.json() (e.g. the root layout's settings
+        // fetch on /login). Answer 401 like the recovery branch above; the
+        // route handlers re-check auth via lib/auth themselves.
+        if (user === null && pathname.startsWith("/api")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
         // Redirect unauthenticated users to login (except public routes)
         if (!user && !isPublicRoute(pathname)) {
             const url = request.nextUrl.clone()

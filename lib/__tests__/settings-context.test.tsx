@@ -2,7 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async (importOriginal) => ({
+  // Keep the real module (ApiError) — only the fetchers are stubbed.
+  ...(await importOriginal<typeof import("@/lib/api")>()),
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
 }));
@@ -13,6 +15,7 @@ vi.mock("react-hot-toast", () => ({
 
 import { SettingsProvider, useSettings } from "@/lib/settings-context";
 import * as api from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import toast from "react-hot-toast";
 
 const settings = (over: Partial<{ currency: string; dateFormat: string; darkMode: boolean }> = {}) => ({
@@ -81,5 +84,37 @@ describe("SettingsProvider — mirrors darkMode onto the <html> dark class", () 
     expect(toast.error).toHaveBeenCalledWith("Failed to update dark mode");
 
     expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
+});
+
+describe("SettingsProvider — initial load failures", () => {
+  it("keeps the defaults silently when the fetch 401s (unauthenticated visitor)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    vi.mocked(api.getSettings).mockRejectedValue(new ApiError("Unauthorized", 401));
+
+    const { result } = renderHook(() => useSettings(), { wrapper: SettingsProvider });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings).toEqual({ currency: "USD", dateFormat: "MM/DD/YYYY", darkMode: false });
+
+    expect(consoleError).not.toHaveBeenCalledWith("Failed to load settings:", expect.anything());
+
+    consoleError.mockRestore();
+  });
+
+  it("still logs non-401 load failures", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    vi.mocked(api.getSettings).mockRejectedValue(new ApiError("API request failed", 500));
+
+    const { result } = renderHook(() => useSettings(), { wrapper: SettingsProvider });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(consoleError).toHaveBeenCalledWith("Failed to load settings:", expect.any(ApiError));
+
+    consoleError.mockRestore();
   });
 });
