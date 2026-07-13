@@ -2,9 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  // Keep the real module (ApiError) — only the fetchers are stubbed.
-  ...(await importOriginal<typeof import("@/lib/api")>()),
+vi.mock("@/lib/api", () => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
 }));
@@ -15,7 +13,7 @@ vi.mock("react-hot-toast", () => ({
 
 import { SettingsProvider, useSettings } from "@/lib/settings-context";
 import * as api from "@/lib/api";
-import { ApiError } from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 import toast from "react-hot-toast";
 
 const settings = (over: Partial<{ currency: string; dateFormat: string; darkMode: boolean }> = {}) => ({

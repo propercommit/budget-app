@@ -1,16 +1,6 @@
-const USER_ID = "temp-user";
+import { ApiError } from "@/lib/api-error";
 
-/**
- * Error thrown when the API answers a non-ok status. Carries the HTTP status
- * so callers can branch on expected failures (e.g. the 401 an unauthenticated
- * visitor gets on a public page) without matching on message text.
- */
-export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
+const USER_ID = "temp-user";
 
 /**
  * Shared transport + error surfacing for every API call — the single place

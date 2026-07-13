@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { ApiError, getSettings, updateSettings } from "@/lib/api";
+import { getSettings, updateSettings } from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
