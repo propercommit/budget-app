@@ -13,7 +13,6 @@ function stubAuth(user: { id: string } | null) {
   vi.mocked(createServerClient).mockReturnValue({
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
-      signOut: vi.fn(),
     },
   } as unknown as ReturnType<typeof createServerClient>);
 }

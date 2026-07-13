@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
@@ -88,25 +88,29 @@ describe("SettingsProvider — mirrors darkMode onto the <html> dark class", () 
 });
 
 describe("SettingsProvider — initial load failures", () => {
-  it("keeps the defaults silently when the fetch 401s (unauthenticated visitor)", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  let consoleError: MockInstance;
 
+  beforeEach(() => {
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleError.mockRestore();
+  });
+
+  it("keeps the defaults silently when the fetch 401s (unauthenticated visitor)", async () => {
     vi.mocked(api.getSettings).mockRejectedValue(new ApiError("Unauthorized", 401));
 
     const { result } = renderHook(() => useSettings(), { wrapper: SettingsProvider });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(result.current.settings).toEqual({ currency: "USD", dateFormat: "MM/DD/YYYY", darkMode: false });
+    expect(result.current.settings).toEqual(settings());
 
     expect(consoleError).not.toHaveBeenCalledWith("Failed to load settings:", expect.anything());
-
-    consoleError.mockRestore();
   });
 
   it("still logs non-401 load failures", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-
     vi.mocked(api.getSettings).mockRejectedValue(new ApiError("API request failed", 500));
 
     const { result } = renderHook(() => useSettings(), { wrapper: SettingsProvider });
@@ -114,7 +118,5 @@ describe("SettingsProvider — initial load failures", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(consoleError).toHaveBeenCalledWith("Failed to load settings:", expect.any(ApiError));
-
-    consoleError.mockRestore();
   });
 });

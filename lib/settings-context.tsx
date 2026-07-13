@@ -63,10 +63,13 @@ export function SettingsProvider({
           darkMode: data.darkMode,
         });
       } catch (error) {
-        // A 401 is just an unauthenticated visitor (the root layout mounts
-        // this provider on public pages like /login) — the defaults are the
-        // right settings there, not a failure worth logging.
-        if (!(error instanceof ApiError && error.status === 401)) console.error("Failed to load settings:", error);
+        // A 401 is usually just an unauthenticated visitor (the root layout
+        // mounts this provider on public pages like /login) — the defaults
+        // are the right settings there, so keep it out of the error console;
+        // the verbose-level trace covers the rare revoked/expired-session
+        // case on an authenticated page.
+        if (error instanceof ApiError && error.status === 401) console.debug("Settings fetch unauthorized; using defaults");
+        else console.error("Failed to load settings:", error);
       } finally {
         setIsLoading(false);
       }

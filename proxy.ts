@@ -27,15 +27,19 @@ function isRecoveryAllowedRoute(pathname: string): boolean {
 }
 
 /**
- * Build a redirect that carries over any auth cookies Supabase refreshed
- * during getUser(). A bare NextResponse.redirect drops the cookies set on
- * `supabaseResponse`, desyncing the browser and server session — which
- * surfaces as OAuth needing a second click.
+ * Carry any auth cookies Supabase refreshed (or cleared) during getUser()
+ * onto an outgoing response. Dropping them desyncs the browser and server
+ * session — on redirects that surfaces as OAuth needing a second click; on
+ * the API 401 it leaves dead tokens in place, re-running the doomed refresh
+ * round trip on every subsequent request.
  */
-function redirectWithAuthCookies(url: URL, from: NextResponse): NextResponse {
-    const response = NextResponse.redirect(url)
+function withAuthCookies<T extends NextResponse>(response: T, from: NextResponse): T {
     from.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
     return response
+}
+
+function redirectWithAuthCookies(url: URL, from: NextResponse): NextResponse {
+    return withAuthCookies(NextResponse.redirect(url), from)
 }
 
 export async function proxy(request: NextRequest) {
@@ -110,14 +114,14 @@ export async function proxy(request: NextRequest) {
             return response
         }
 
-        // API calls are JSON-in/JSON-out — redirecting them serves the login
-        // page's HTML to response.json() (e.g. the root layout's settings
-        // fetch on /login). Answer 401 like the recovery branch above; the
-        // route handlers re-check auth via lib/auth themselves.
-        if (user === null && pathname.startsWith("/api")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
         // Redirect unauthenticated users to login (except public routes)
         if (!user && !isPublicRoute(pathname)) {
+            // API calls are JSON-in/JSON-out — redirecting them serves the
+            // login page's HTML to response.json() (e.g. the root layout's
+            // settings fetch on /login). Answer 401 like the recovery branch
+            // above; the route handlers re-check auth via lib/auth themselves.
+            if (pathname.startsWith("/api")) return withAuthCookies(NextResponse.json({ error: "Unauthorized" }, { status: 401 }), supabaseResponse)
+
             const url = request.nextUrl.clone()
             url.pathname = "/login"
             // Preserve the original URL to redirect back after login
