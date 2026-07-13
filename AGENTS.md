@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Commands
 
@@ -87,7 +87,7 @@ Mock patterns (match these):
 - **API route tests** mock `@/lib/prisma` and `@/lib/auth` (`getAuthenticatedUser`) inside a `vi.hoisted()` block — `vi.mock` factories hoist above imports, so module-scope consts throw "Cannot access before initialization". The `prismaMock` is a hand-rolled object of model factories returning `vi.fn()`s, built inline in the hoisted callback. Handlers are imported and called directly (`await POST(req)`). Shared fixtures live in `app/api/__tests__/helpers.ts` (`FAKE_USER`, `jsonRequest`, `getRequest`, `routeContext(id)` which wraps params as `Promise.resolve({id})` for Next 16, `readJson` which handles 204).
 - **Testing P2002→409** requires a real `new PrismaClientKnownRequestError(msg, {code:'P2002', clientVersion:'6'})` from `@prisma/client/runtime/library`; the route uses an `instanceof` check that a plain error with a `code` property fails.
 - **Hook tests** mock `@/lib/api` and `react-hot-toast` (as `{ default: { error: vi.fn(), success: vi.fn() } }` — it's the default export), use `renderHook`/`act`/`waitFor`, and assert the optimistic + rollback contract.
-- Per-file jsdom stubs kept out of shared setup: a no-op `ResizeObserver` for Radix size-hook components (e.g. Checkbox — but not all Radix needs it), and replacing `window.location` to assert navigation. See `.claude/agent-memory/test-writer/feedback_component-test-jsdom-gotchas.md`.
+- Per-file jsdom stubs kept out of shared setup: a no-op `ResizeObserver` for Radix size-hook components (e.g. Checkbox — but not all Radix needs it), and replacing `window.location` to assert navigation. See `.Codex/agent-memory/test-writer/feedback_component-test-jsdom-gotchas.md`.
 
 Coverage: all `app/api` routes, the OAuth callback open-redirect guard, the login page, the optimistic hooks, and several `lib`/component units are well covered. **Not** covered (all mocked away): `lib/auth.ts` JWT verification, `lib/redis.ts`, `proxy.ts`, and Prisma at the DB level.
 

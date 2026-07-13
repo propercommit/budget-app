@@ -4,16 +4,15 @@ Conventions for working on PlanBudget.
 
 ## Workflow at a glance
 
-GitHub Flow: branch off `main`, open a pull request, let CI run, merge. Vercel
-deploys `main` to production automatically.
+GitHub Flow: branch off `dev`, open a pull request, let CI run, merge. Only the owner of the repo deploys to main
 
 ```text
-main ──┬─────────────────────────────────────────► (auto-deploys to prod)
+dev ──┬─────────────────────────────────────────► (auto-deploys to preview)
        │
        └── feat/savings-goals ──► PR ──► CI passes ──► merge
 ```
 
-Every change reaches `main` through a PR — even working alone — because the PR is
+Every change reaches `dev` through a PR — even working alone — because the PR is
 the durable record of *why* a change was made and the gate that runs CI before
 anything hits production.
 
@@ -69,7 +68,7 @@ remounting the form clean.
 ### Title
 
 Use the same convention as commits — `<type>(<scope>): <subject>`. If you
-squash-merge, the PR title becomes the commit subject on `main`, so matching the
+squash-merge, the PR title becomes the commit subject on `dev`, so matching the
 formats keeps the history consistent.
 
 The title must summarise the *whole* PR, so it depends on what's inside:
@@ -104,16 +103,16 @@ new PR automatically.
 - [ ] CI passes (GitHub Actions + Vitest) — never merge a red build.
 - [ ] Tests added or updated for the change.
 - [ ] Previewed on the Vercel deployment (for UI or flow changes).
-- [ ] Branch is up to date with `main`.
+- [ ] Branch is up to date with `dev`.
 
 ### Branching
 
-Branch off `main`, named after the change using the commit type as a prefix:
+Branch off `dev`, named after the change using the commit type as a prefix:
 
 ```text
 fix/income-add-reset
 feat/savings-goals
 ```
 
-Open the PR, let CI run, merge to `main`. Vercel deploys `main` to production
+Open the PR, let CI run, merge to `dev`.
 automatically.
