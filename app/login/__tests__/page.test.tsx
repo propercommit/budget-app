@@ -371,60 +371,27 @@ describe("LoginPage — signup client validation (field messages + terms banner)
   });
 });
 
-describe("LoginPage — Google sign-in (handleGoogleSignIn)", () => {
-  it("starts OAuth with the bare callback URL when no redirect is present", async () => {
+describe("LoginPage — Google sign-in (disabled in production)", () => {
+  // Google OAuth is intentionally switched off (GOOGLE_SIGN_IN_DISABLED in
+  // page.tsx): the button stays in the layout but is permanently disabled.
+  // The `?error=` mount toasts above stay live — /auth/callback can still
+  // redirect here from flows started before the switch-off.
+  it("renders the button disabled on mount", () => {
+    renderPage();
+
+    expect(
+      screen.getByRole("button", { name: /continue with google/i })
+    ).toBeDisabled();
+  });
+
+  it("never starts the OAuth flow, even when a click is attempted", async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click(screen.getByRole("button", { name: /continue with google/i }));
 
-    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalled());
-    expect(signInWithOAuth).toHaveBeenCalledWith({
-      provider: "google",
-      options: { redirectTo: `${ORIGIN}/auth/callback` },
-    });
+    expect(signInWithOAuth).not.toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it("appends the page's ?redirect= as ?next= on the callback URL", async () => {
-    const user = userEvent.setup();
-    renderPage("?redirect=/budget");
-
-    await user.click(screen.getByRole("button", { name: /continue with google/i }));
-
-    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalled());
-    expect(signInWithOAuth).toHaveBeenCalledWith({
-      provider: "google",
-      options: { redirectTo: `${ORIGIN}/auth/callback?next=%2Fbudget` },
-    });
-  });
-
-  it("toasts when Supabase returns an OAuth error", async () => {
-    signInWithOAuth.mockResolvedValue({ error: { message: "oauth boom" } });
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(screen.getByRole("button", { name: /continue with google/i }));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        "Failed to connect to Google. Please try again."
-      )
-    );
-  });
-
-  it("toasts when the OAuth call throws", async () => {
-    signInWithOAuth.mockRejectedValue(new Error("network"));
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(screen.getByRole("button", { name: /continue with google/i }));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        "Failed to connect to Google. Please try again."
-      )
-    );
   });
 });
 

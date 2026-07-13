@@ -35,6 +35,11 @@ function oauthErrorMessage(code: string): string {
     return OAUTH_ERROR_MESSAGES[code] ?? "Sign-in failed. Please try again."
 }
 
+// Google sign-in is switched off in production: the button stays in the
+// layout but renders greyed out and inert. Flip this back to false (and
+// restore the tests in __tests__/page.test.tsx) to re-enable the flow.
+const GOOGLE_SIGN_IN_DISABLED = true
+
 export default function LoginPage() {
     // Form state
     const [email, setEmail] = useState("")
@@ -237,9 +242,9 @@ export default function LoginPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full h-12 text-base font-medium border-border hover:bg-muted active:bg-input transition-colors touch-manipulation"
+                                className="w-full h-12 text-base font-medium border-border hover:bg-muted active:bg-input transition-colors touch-manipulation disabled:grayscale"
                                 onClick={handleGoogleSignIn}
-                                disabled={isFormDisabled}
+                                disabled={GOOGLE_SIGN_IN_DISABLED || isFormDisabled}
                             >
                                 {isGoogleLoading ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
