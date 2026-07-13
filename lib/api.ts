@@ -1,3 +1,5 @@
+import { ApiError } from "@/lib/api-error";
+
 const USER_ID = "temp-user";
 
 /**
@@ -26,7 +28,7 @@ async function requestAPI(url: string, options?: RequestInit): Promise<Response>
 
   if (response.ok === false) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || body.message || "API request failed");
+    throw new ApiError(body.error || body.message || "API request failed", response.status);
   }
 
   return response;
