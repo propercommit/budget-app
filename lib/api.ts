@@ -251,6 +251,43 @@ export async function deleteEntry(id: string) {
   });
 }
 
+// ============ RECEIPTS ============
+
+/**
+ * Issues a signed upload token for the entry's fixed receipt path. The size
+ * claim only sharpens the server's preliminary quota check — the confirm step
+ * re-reads the real size from Storage metadata.
+ */
+export async function issueReceiptUpload(
+  entryId: string,
+  data: { sizeBytes: number }
+): Promise<{ path: string; token: string }> {
+  return fetchAPI(`/api/entries/${entryId}/receipt`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/** Finalizes an upload — the server's authoritative validation. */
+export async function confirmReceipt(
+  entryId: string
+): Promise<{ receiptPath: string; receiptSizeBytes: number }> {
+  return fetchAPI(`/api/entries/${entryId}/receipt`, {
+    method: "PUT",
+  });
+}
+
+/** Mints a short-lived signed read URL for the entry's receipt. */
+export async function getReceiptUrl(entryId: string): Promise<{ url: string }> {
+  return fetchAPI(`/api/entries/${entryId}/receipt`);
+}
+
+export async function deleteReceipt(entryId: string): Promise<void> {
+  await fetchAPI(`/api/entries/${entryId}/receipt`, {
+    method: "DELETE",
+  });
+}
+
 // ============ SETTINGS ============
 
 export async function getSettings() {

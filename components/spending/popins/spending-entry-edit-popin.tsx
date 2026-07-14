@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SpendingEntry } from "../spending-card-expanded";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldInputStyle, fiel
 import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { iconMap } from "@/lib/icon-map";
-import { compressImage } from "@/lib/compress-image";
+import { prepareReceiptFile, type ReceiptAction } from "@/lib/receipt-file";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
 /**
@@ -18,16 +18,33 @@ import { parseAmountToCents, centsToAmount } from "@/lib/money";
  * payload type shared by the whole save chain (popin → SpendingCard → Dashboard).
  * `amount` is integer cents; `direction` is always sent explicitly — the API's
  * default-to-debit is backward compat only, not a second definition of this
- * form's intent.
+ * form's intent. `receipt` is an action, not a value: the file itself never
+ * rides the entry payload (the upload chain needs the entry id first).
  */
 export interface EntrySavePayload {
     name: string;
     amount: number;
     direction: "debit" | "credit";
     date: string;
-    receipt: string | null;
+    receipt: ReceiptAction;
     link: string | null;
 }
+
+/**
+ * The receipt field's whole lifecycle in one discriminated state:
+ * `existing` (edit mode, stored receipt untouched — a static placeholder, no
+ * network read), `removed` (stored receipt marked for removal on save),
+ * `selected` (a new file staged, previewed via an object URL), `processing`
+ * (compression in flight — Save is guarded), `failed` (rejected file), and
+ * `empty`.
+ */
+type ReceiptFieldState =
+    | { status: "empty" }
+    | { status: "existing" }
+    | { status: "processing" }
+    | { status: "selected"; file: File; previewUrl: string }
+    | { status: "removed" }
+    | { status: "failed"; message: string };
 
 interface EntryEditPopinProps {
     isOpen: boolean;
@@ -58,11 +75,22 @@ export function EntryEditPopin({
     const [amount, setAmount] = useState(entry?.amount === undefined ? "" : centsToAmount(entry.amount).toString());
     const [direction, setDirection] = useState<"debit" | "credit">(entry?.direction ?? "debit");
     const [date, setDate] = useState(entry?.date || new Date().toISOString().split("T")[0]);
-    const [receipt, setReceipt] = useState<string | null>(entry?.receipt || null);
+    const [receiptState, setReceiptState] = useState<ReceiptFieldState>(
+        entry?.receiptPath !== null && entry?.receiptPath !== undefined ? { status: "existing" } : { status: "empty" }
+    );
+    const [saveBlockedByProcessing, setSaveBlockedByProcessing] = useState(false);
     const [link, setLink] = useState(entry?.link || "");
     const { submitted, reveal } = useSubmitReveal();
-    const [receiptFailed, setReceiptFailed] = useState(false);
     const { settings } = useSettings();
+
+    // Revoke a staged preview's object URL when it is replaced or on unmount.
+    const previewUrl = receiptState.status === "selected" ? receiptState.previewUrl : null;
+
+    useEffect(() => {
+        if (previewUrl === null) return;
+
+        return () => URL.revokeObjectURL(previewUrl);
+    }, [previewUrl]);
 
     const nameRef = useRef<HTMLInputElement>(null);
     const amountRef = useRef<HTMLInputElement>(null);
@@ -88,22 +116,55 @@ export function EntryEditPopin({
         if (val === "" || /^\d*\.?\d{0,2}$/.test(val)) setAmount(val);
     };
 
-    const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleReceiptSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setReceiptFailed(false);
-            try {
-                const compressed = await compressImage(file);
-                const reader = new FileReader();
-                reader.onload = (event) => setReceipt(event.target?.result as string);
-                reader.readAsDataURL(compressed);
-            } catch {
-                setReceiptFailed(true);
-            }
+
+        // Reset the input so re-selecting the SAME file re-fires onChange —
+        // without this, a failed attempt is a dead end for that file.
+        e.target.value = "";
+
+        if (file === undefined) return;
+
+        setReceiptState({ status: "processing" });
+
+        const prepared = await prepareReceiptFile(file);
+
+        if (prepared.kind === "unsupported-type") {
+            setReceiptState({ status: "failed", message: "Use a JPEG, PNG or WebP image" });
+            return;
         }
+
+        if (prepared.kind === "too-large") {
+            setReceiptState({ status: "failed", message: "Receipts can be at most 10 MB" });
+            return;
+        }
+
+        setReceiptState({ status: "selected", file: prepared.file, previewUrl: URL.createObjectURL(prepared.file) });
     };
 
+    // Discards a staged file back to the base state; marks a stored receipt
+    // for removal. (Removing a staged replacement first returns to `existing`;
+    // a second Remove then marks the stored one.)
+    const handleReceiptRemove = () => {
+        const hasStored = entry?.receiptPath !== null && entry?.receiptPath !== undefined;
+
+        if (receiptState.status === "selected") setReceiptState(hasStored ? { status: "existing" } : { status: "empty" });
+        else if (receiptState.status === "existing") setReceiptState({ status: "removed" });
+    };
+
+    const receiptAction: ReceiptAction =
+        receiptState.status === "selected" ? { action: "attach", file: receiptState.file }
+        : receiptState.status === "removed" ? { action: "remove" }
+        : { action: "keep" };
+
     const handleSave = () => {
+
+        // A save mid-compression would silently drop the receipt — block it
+        // and say why instead.
+        if (receiptState.status === "processing") {
+            setSaveBlockedByProcessing(true);
+            return;
+        }
 
         const invalid = reveal([
             { error: nameInvalid, ref: nameRef },
@@ -118,7 +179,7 @@ export function EntryEditPopin({
             amount: parsedAmount,
             direction,
             date,
-            receipt,
+            receipt: receiptAction,
             link: link || null,
         });
     };
@@ -254,18 +315,47 @@ export function EntryEditPopin({
                     <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
                         Receipt <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>(optional)</span>
                     </label>
-                    {receipt ? (
+                    {receiptState.status === "selected" ? (
                         <div className="relative rounded-xl overflow-hidden" style={{ backgroundColor: "var(--muted)" }}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={receipt} alt="Receipt preview" className="w-full h-40 object-cover" />
+                            <img src={receiptState.previewUrl} alt="Receipt preview" className="w-full h-40 object-cover" />
                             <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
                                 <button
-                                    onClick={() => setReceipt(null)}
+                                    onClick={handleReceiptRemove}
                                     className="px-4 py-2 rounded-xl bg-white/90 text-sm font-semibold text-destructive"
                                 >
                                     Remove
                                 </button>
                             </div>
+                        </div>
+                    ) : receiptState.status === "existing" ? (
+                        <div className="flex items-center justify-between px-4 py-3.5 rounded-xl" style={{ backgroundColor: "var(--muted)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--background)" }}>
+                                    <svg className="w-4 h-4" style={{ color: "var(--muted-foreground)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Receipt attached</span>
+                            </div>
+                            <button
+                                onClick={handleReceiptRemove}
+                                className="text-sm font-semibold text-destructive transition-opacity active:opacity-70"
+                            >
+                                Remove
+                            </button>
+                        </div>
+                    ) : receiptState.status === "processing" ? (
+                        <div
+                            className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed"
+                            style={{ borderColor: "var(--border)" }}
+                        >
+                            <div className="w-11 h-11 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: "var(--muted)" }}>
+                                <svg className="w-5 h-5" style={{ color: "var(--muted-foreground)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            </div>
+                            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>Processing image…</span>
                         </div>
                     ) : (
                         <label
@@ -277,11 +367,12 @@ export function EntryEditPopin({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                 </svg>
                             </div>
-                            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>Upload receipt (max 2MB)</span>
-                            <input type="file" accept="image/*" className="hidden" onChange={handleReceiptUpload} />
+                            <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>Upload receipt (max 10 MB)</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleReceiptSelect} />
                         </label>
                     )}
-                    {receiptFailed && <FieldMessage id="entry-receipt-error">Couldn&apos;t process that image — try a different one</FieldMessage>}
+                    {receiptState.status === "failed" && <FieldMessage id="entry-receipt-error">{receiptState.message}</FieldMessage>}
+                    {saveBlockedByProcessing && receiptState.status === "processing" && <FieldMessage id="entry-receipt-processing">Still processing the image — one moment</FieldMessage>}
                 </div>
 
                 <div className="space-y-2">

@@ -48,7 +48,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
-    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
+    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, receiptUploads, setEntryReceiptEverywhere, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
@@ -349,7 +349,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     date: new Date(e.date).toISOString().split("T")[0],
                     amount: e.amount,
                     direction: e.direction,
-                    receipt: e.receiptUrl ?? null,
+                    receiptPath: e.receiptPath ?? null,
                     link: e.link ?? null,
                     }))}
                     categories={categories.map((c) => ({
@@ -385,8 +385,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         amount: data.amount,
                         direction: data.direction,
                         date: data.date,
-                        receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
+                        receipt: data.receipt,
                     });
                     }}
                     onEntryUpdate={async (entryId, data) => {
@@ -395,13 +395,15 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         amount: data.amount,
                         direction: data.direction,
                         date: data.date,
-                        receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
+                        receipt: data.receipt,
                     });
                     }}
                     onEntryDelete={async (entryId) => {
                     await deleteEntry(selectedMonth, item.id, entryId);
                     }}
+                    receiptUploads={receiptUploads}
+                    onReceiptGone={(entryId) => setEntryReceiptEverywhere(entryId, null)}
                     onCreateCategory={async (data) => {
                     await addCategory(data.name, data.icon, data.color);
                     }}

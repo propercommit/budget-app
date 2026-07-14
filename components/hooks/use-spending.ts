@@ -1,12 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, materializeMonth as apiMaterializeMonth, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, type CreateSeriesPayload } from "@/lib/api";
+import { getSpending, createSpending as apiCreateSpending, updateSpending as apiUpdateSpending, deleteSpending as apiDeleteSpending, materializeMonth as apiMaterializeMonth, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry, issueReceiptUpload as apiIssueReceiptUpload, confirmReceipt as apiConfirmReceipt, deleteReceipt as apiDeleteReceipt, type CreateSeriesPayload } from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 import { Category, SpendingEntry, SpendingItem } from "@/lib/types";
 import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { monthLabel } from "@/lib/spending/month";
+import { uploadReceiptFile } from "@/lib/upload-receipt";
+import { type ReceiptAction } from "@/lib/receipt-file";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
+
+/**
+ * How long a locally-confirmed receipt patch outranks server responses.
+ * Covers the window where a materializeMonth response minted BEFORE the
+ * confirm landed would otherwise wholesale-replace the month bucket and
+ * revert the patch; evicted early as soon as a server payload agrees.
+ */
+const RECEIPT_PATCH_TTL_MS = 30_000;
 
 type SpendingData = Record<string, SpendingItem[]>;
 
@@ -42,6 +53,15 @@ export function useSpending(initialSpendingData?: SpendingData) {
   const dataRef = useRef(spendingData);
   dataRef.current = spendingData;
 
+  // Entry ids with a receipt chain in flight — kept OUTSIDE spendingData so
+  // materializeMonth's wholesale bucket replacement can't wipe the indicator.
+  const [receiptUploads, setReceiptUploads] = useState<Record<string, "uploading">>({});
+
+  // Receipt values confirmed (or removed) locally, merged over every
+  // materializeMonth response until the server catches up — see
+  // RECEIPT_PATCH_TTL_MS. Maps entry id → receiptPath (null = removed).
+  const confirmedReceiptPatches = useRef<Map<string, string | null>>(new Map());
+
   useEffect(() => {
     if (initialSpendingData) return;
     async function load() {
@@ -60,6 +80,104 @@ export function useSpending(initialSpendingData?: SpendingData) {
   const updateMonth = (month: string, fn: (items: SpendingItem[]) => SpendingItem[]) => {
     setSpendingData(prev => ({ ...prev, [month]: fn(prev[month] || []) }));
   };
+
+  const updateAllMonths = useCallback((fn: (items: SpendingItem[]) => SpendingItem[]) => {
+    setSpendingData(prev => Object.fromEntries(Object.entries(prev).map(([month, items]) => [month, fn(items)])));
+  }, []);
+
+  // =====================
+  // Receipts
+  // =====================
+
+  /**
+   * Patches an entry's receiptPath by id across ALL loaded months — never by
+   * (month, itemId) address, which goes stale when a mid-upload date edit
+   * routes the entry to another month (the id survives moves). Also records
+   * the value in `confirmedReceiptPatches` so a stale materializeMonth
+   * response can't revert it.
+   */
+  const setEntryReceiptEverywhere = useCallback((entryId: string, receiptPath: string | null) => {
+    confirmedReceiptPatches.current.set(entryId, receiptPath);
+
+    setTimeout(() => { confirmedReceiptPatches.current.delete(entryId); }, RECEIPT_PATCH_TTL_MS);
+
+    updateAllMonths(items => items.map(s => ({
+      ...s,
+      entries: (s.entries || []).map(e => e.id === entryId ? { ...e, receiptPath } : e),
+    })));
+  }, [updateAllMonths]);
+
+  /**
+   * The full upload chain, entry-id-first: issue token → direct-to-Storage
+   * upload → authoritative confirm → patch local state. Never optimistic (a
+   * receipt is only real once the server confirmed it) and never rolls back
+   * the entry — the entry save already succeeded before this runs.
+   *
+   * Failure mapping: quota/type/size codes are terminal (specific toast, no
+   * retry — the same file would fail again); a confirm 404 means the user
+   * deleted the entry mid-upload (silent); everything else — network, 500,
+   * token expiry, and 409 receipt_not_uploaded — retries by replaying the
+   * WHOLE chain (a bare confirm retry would 409 forever, since the object
+   * genuinely isn't there).
+   */
+  const uploadReceipt = useCallback(async (entryId: string, file: File, entryName: string): Promise<void> => {
+    setReceiptUploads(prev => ({ ...prev, [entryId]: "uploading" }));
+
+    try {
+      const { path, token } = await apiIssueReceiptUpload(entryId, { sizeBytes: file.size });
+
+      await uploadReceiptFile(path, token, file);
+
+      const { receiptPath } = await apiConfirmReceipt(entryId);
+
+      setEntryReceiptEverywhere(entryId, receiptPath);
+    } catch (error) {
+      console.error("Error uploading receipt:", error);
+
+      const code = error instanceof ApiError ? error.message : null;
+
+      if (code === "quota_exceeded") toast.error("Receipt storage is full (50 MB). Delete some receipts first.");
+      else if (code === "unsupported_type") toast.error("That file isn't a supported image.");
+      else if (code === "receipt_too_large") toast.error("Receipts can be at most 10 MB.");
+      else if (code !== "Entry not found") showErrorToast(`Couldn't attach the receipt to "${entryName}"`, { retry: () => { void uploadReceipt(entryId, file, entryName); } });
+    } finally {
+      setReceiptUploads(prev => {
+        const next = { ...prev };
+
+        delete next[entryId];
+
+        return next;
+      });
+    }
+  }, [setEntryReceiptEverywhere]);
+
+  /**
+   * Removes an entry's receipt: optimistic null patch, DELETE on the receipt
+   * route, rollback + toast on failure — the standard optimistic contract.
+   * This chain (not an omitted JSON key) is what makes removal persist.
+   */
+  const removeReceipt = useCallback(async (entryId: string, entryName: string): Promise<void> => {
+    let originalPath: string | null = null;
+
+    for (const items of Object.values(dataRef.current)) {
+      const found = items.flatMap(s => s.entries || []).find(e => e.id === entryId);
+
+      if (found !== undefined) {
+        originalPath = found.receiptPath;
+        break;
+      }
+    }
+
+    setEntryReceiptEverywhere(entryId, null);
+
+    try {
+      await apiDeleteReceipt(entryId);
+    } catch (error) {
+      console.error("Error removing receipt:", error);
+      setEntryReceiptEverywhere(entryId, originalPath);
+      showErrorToast(`Couldn't remove the receipt from "${entryName}"`, { retry: () => { void removeReceipt(entryId, entryName); } });
+    }
+  }, [setEntryReceiptEverywhere]);
 
   // =====================
   // Spending Item CRUD
@@ -164,7 +282,31 @@ export function useSpending(initialSpendingData?: SpendingData) {
     try {
       const items: SpendingItem[] = await apiMaterializeMonth(month);
 
-      if (Array.isArray(items)) setSpendingData(prev => ({ ...prev, [month]: items }));
+      if (Array.isArray(items)) {
+        // A response minted before an in-flight receipt confirm landed would
+        // silently revert the confirmed patch on wholesale replacement —
+        // locally-confirmed receipt values win until the server agrees.
+        const patches = confirmedReceiptPatches.current;
+
+        const merged = items.map(item => ({
+          ...item,
+          entries: (item.entries || []).map(e => {
+            const patched = patches.get(e.id);
+
+            if (patched === undefined) return e;
+
+            if (e.receiptPath === patched) {
+              patches.delete(e.id);
+
+              return e;
+            }
+
+            return { ...e, receiptPath: patched };
+          }),
+        }));
+
+        setSpendingData(prev => ({ ...prev, [month]: merged }));
+      }
     } catch (error) {
       console.error("Failed to materialize month:", error);
     }
@@ -201,15 +343,20 @@ export function useSpending(initialSpendingData?: SpendingData) {
   const createEntry = useCallback(async (
     month: string,
     spendingItemId: string,
-    data: { name: string; amount: number; date: string; direction?: "debit" | "credit"; receiptUrl?: string; link?: string }
+    data: { name: string; amount: number; date: string; direction?: "debit" | "credit"; link?: string; receipt?: ReceiptAction }
   ): Promise<void> => {
+    // The receipt never rides the entry payload: it needs a persisted entry
+    // id (the fixed Storage path is keyed on it), so the chain starts only
+    // after the POST returns — and the optimistic temp entry has no receipt.
+    const { receipt, ...fields } = data;
+
     const optimistic = {
       id: `temp-${crypto.randomUUID()}`,
       name: data.name,
       amount: data.amount,
       direction: data.direction ?? "debit",
       date: data.date,
-      receiptUrl: data.receiptUrl ?? null,
+      receiptPath: null,
       link: data.link ?? null,
       spendingItemId,
     };
@@ -221,20 +368,25 @@ export function useSpending(initialSpendingData?: SpendingData) {
     ));
 
     try {
-      const real = await apiCreateEntry({ spendingItemId, ...data });
+      const real = await apiCreateEntry({ spendingItemId, ...fields });
 
       // A cross-month date routed the entry to another month's incarnation:
       // replacing the source item below also undoes the optimistic patch.
       if (isRoutedResult(real)) {
         syncRoutedMonths(real);
-        return;
+      } else {
+        updateMonth(month, items => items.map(s =>
+          s.id === spendingItemId
+            ? { ...s, entries: (s.entries || []).map(e => e.id === optimistic.id ? real : e) }
+            : s
+        ));
       }
 
-      updateMonth(month, items => items.map(s =>
-        s.id === spendingItemId
-          ? { ...s, entries: (s.entries || []).map(e => e.id === optimistic.id ? real : e) }
-          : s
-      ));
+      const realId = isRoutedResult(real) ? real.entry.id : real.id;
+
+      // Fire-and-forget: the entry save already succeeded, and the chain
+      // owns its own failure toasts.
+      if (receipt !== undefined && receipt.action === "attach") void uploadReceipt(realId, receipt.file, data.name);
     } catch (error) {
       showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void createEntry(month, spendingItemId, data); } });
       console.error("Error creating entry:", error);
@@ -244,27 +396,30 @@ export function useSpending(initialSpendingData?: SpendingData) {
           : s
       ));
     }
-  }, [syncRoutedMonths]);
+  }, [syncRoutedMonths, uploadReceipt]);
 
   const updateEntry = useCallback(async (
     month: string,
     spendingItemId: string,
     entryId: string,
-    data: { name: string; amount: number; date: string; direction?: "debit" | "credit"; receiptUrl?: string; link?: string }
+    data: { name: string; amount: number; date: string; direction?: "debit" | "credit"; link?: string; receipt?: ReceiptAction }
   ): Promise<void> => {
     const item = dataRef.current[month]?.find(s => s.id === spendingItemId);
     const original = item?.entries?.find(e => e.id === entryId);
 
     if (original === undefined) return;
 
-    // A form that doesn't expose direction keeps the entry's stored one.
+    const { receipt, ...fields } = data;
+
+    // A form that doesn't expose direction keeps the entry's stored one. The
+    // receipt is untouched here: remove/attach run as their own chains after
+    // the PUT succeeds, and each owns its optimistic state and rollback.
     const updated = {
       ...original,
       name: data.name,
       amount: data.amount,
       direction: data.direction ?? original.direction,
       date: data.date,
-      receiptUrl: data.receiptUrl ?? null,
       link: data.link ?? null,
     };
 
@@ -279,12 +434,18 @@ export function useSpending(initialSpendingData?: SpendingData) {
     ));
 
     try {
-      const real = await apiUpdateEntry(entryId, data);
+      const real = await apiUpdateEntry(entryId, fields);
 
       // The new date moved the entry to another month (D19): the server
       // recomputed both incarnations; replacing the source item also undoes
       // the optimistic in-place patch above.
       if (isRoutedResult(real)) syncRoutedMonths(real);
+
+      // Receipt actions run only after the entry PUT succeeded — a failed
+      // PUT skips them entirely (one toast per action).
+      if (receipt !== undefined && receipt.action === "remove") await removeReceipt(entryId, data.name);
+
+      if (receipt !== undefined && receipt.action === "attach") void uploadReceipt(entryId, receipt.file, data.name);
     } catch (error) {
       showErrorToast(`Couldn't save "${data.name}"`, { retry: () => { void updateEntry(month, spendingItemId, entryId, data); } });
       console.error("Error updating entry:", error);
@@ -299,7 +460,7 @@ export function useSpending(initialSpendingData?: SpendingData) {
           : s
       ));
     }
-  }, [syncRoutedMonths]);
+  }, [syncRoutedMonths, removeReceipt, uploadReceipt]);
 
   const deleteEntry = useCallback(async (
     month: string,
@@ -335,10 +496,6 @@ export function useSpending(initialSpendingData?: SpendingData) {
     }
   }, []);
 
-  const updateAllMonths = useCallback((fn: (items: SpendingItem[]) => SpendingItem[]) => {
-    setSpendingData(prev => Object.fromEntries(Object.entries(prev).map(([month, items]) => [month, fn(items)])));
-  }, []);
-
   /**
    * Mirrors a category cascade delete in client state: drops the category's
    * spending items (and with them their entries) across ALL loaded months.
@@ -368,6 +525,8 @@ export function useSpending(initialSpendingData?: SpendingData) {
     createEntry,
     updateEntry,
     deleteEntry,
+    receiptUploads,
+    setEntryReceiptEverywhere,
     removeItemsByCategory,
     updateCategoryOnItems,
   };
