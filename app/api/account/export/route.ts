@@ -132,8 +132,8 @@ export async function GET() {
             {
                 title: "Spending Entries",
                 header: ["Month", "Spending Item", "Name", "Amount", "Direction", "Date", "Link", "Has Receipt"],
-                // Receipts are inlined base64 images — far too large for a CSV
-                // cell, so only their presence is exported.
+                // Receipts live as files in Storage; only their presence is
+                // exported (the CSV never carries image data).
                 rows: spendingItems.flatMap((item) =>
                     item.spendingEntries.map((entry) => [
                         item.month,
@@ -143,7 +143,7 @@ export async function GET() {
                         entry.direction,
                         isoDate(entry.date),
                         entry.link,
-                        entry.receiptUrl !== null && entry.receiptUrl !== "" ? "yes" : "no",
+                        entry.receiptPath !== null && entry.receiptPath !== "" ? "yes" : "no",
                     ])
                 ),
             },
