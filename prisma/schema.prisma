@@ -115,7 +115,8 @@ model SpendingEntry {
   name            String
   amount          Int       @default(0) // integer minor units (cents); always a positive magnitude — sign comes from direction
   direction       Direction @default(debit)
-  receiptUrl      String?
+  receiptPath      String?   // Storage object key "<userId>/<entryId>" in the private `receipts` bucket
+  receiptSizeBytes Int?      // authoritative object size, written only by the receipt confirm step; drives the 50 MB/user cap
   link            String?
   date            DateTime  @default(now())
   spendingItemId  String
