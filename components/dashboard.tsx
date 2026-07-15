@@ -50,8 +50,10 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
     const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, receiptUploads, setEntryReceiptEverywhere, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
 
-    // A refresh/close mid-chain kills the receipt upload silently (the entry
-    // saves, the receipt vanishes) — warn while any chain is in flight.
+    // A refresh/close mid-chain kills the receipt upload (the entry saves,
+    // the receipt doesn't) — warn while any chain is in flight. The resume
+    // markers surface whatever slips through on the next load, but a
+    // mid-upload death still loses the file, so the warning stays.
     const hasReceiptUploadInFlight = Object.keys(receiptUploads).length > 0;
 
     useEffect(() => {

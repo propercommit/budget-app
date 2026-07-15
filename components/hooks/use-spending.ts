@@ -8,6 +8,7 @@ import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { monthLabel } from "@/lib/spending/month";
 import { uploadReceiptFile } from "@/lib/upload-receipt";
 import { type ReceiptAction } from "@/lib/receipt-file";
+import { addPendingReceipt, clearPendingReceipt, readPendingReceipts, resumeOutcome } from "@/lib/receipt-resume";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 
@@ -56,6 +57,8 @@ export function useSpending(initialSpendingData?: SpendingData) {
   // Entry ids with a receipt chain in flight — kept OUTSIDE spendingData so
   // materializeMonth's wholesale bucket replacement can't wipe the indicator.
   const [receiptUploads, setReceiptUploads] = useState<Record<string, "uploading">>({});
+  const receiptUploadsRef = useRef(receiptUploads);
+  receiptUploadsRef.current = receiptUploads;
 
   // Receipt values confirmed (or removed) locally, merged over every
   // materializeMonth response until the server catches up — see
@@ -134,6 +137,11 @@ export function useSpending(initialSpendingData?: SpendingData) {
   const uploadReceipt = useCallback(async (entryId: string, file: File, entryName: string): Promise<void> => {
     setReceiptUploads(prev => ({ ...prev, [entryId]: "uploading" }));
 
+    // Armed for the whole chain so a refresh/quit at ANY point surfaces on
+    // the next load (the resume effect below); cleared in the finally, so
+    // the showErrorToast retry — which replays this function — re-arms it.
+    addPendingReceipt(entryId, entryName);
+
     try {
       const { path, token } = await apiIssueReceiptUpload(entryId, { sizeBytes: file.size });
 
@@ -152,6 +160,8 @@ export function useSpending(initialSpendingData?: SpendingData) {
       else if (code === "receipt_too_large") toast.error("Receipts can be at most 10 MB.");
       else if (code !== "Entry not found") showErrorToast(`Couldn't attach the receipt to "${entryName}"`, { retry: () => { void uploadReceipt(entryId, file, entryName); } });
     } finally {
+      clearPendingReceipt(entryId);
+
       setReceiptUploads(prev => {
         const next = { ...prev };
 
@@ -160,6 +170,48 @@ export function useSpending(initialSpendingData?: SpendingData) {
         return next;
       });
     }
+  }, [setEntryReceiptEverywhere]);
+
+  // Resume: on mount, finish what a refresh/quit interrupted. Each pending
+  // marker gets one idempotent confirm — an upload whose confirm never
+  // landed heals silently; an upload that never finished becomes a
+  // re-attach toast (the File is gone, so there is nothing to retry).
+  const resumeRanRef = useRef(false);
+
+  useEffect(() => {
+    if (resumeRanRef.current === true) return;
+
+    resumeRanRef.current = true;
+
+    const pending = readPendingReceipts();
+
+    if (pending.length === 0) return;
+
+    void (async () => {
+      // Sequential on purpose: deterministic toast order, no request burst.
+      for (const marker of pending) {
+        // A live chain in this session owns the marker — leave it alone.
+        if (receiptUploadsRef.current[marker.entryId] !== undefined) continue;
+
+        try {
+          const { receiptPath } = await apiConfirmReceipt(marker.entryId);
+
+          setEntryReceiptEverywhere(marker.entryId, receiptPath);
+          clearPendingReceipt(marker.entryId);
+        } catch (error) {
+          const outcome = resumeOutcome(error instanceof ApiError ? error.status : null);
+
+          if (outcome === "keep") {
+            console.error("Receipt resume failed, keeping marker:", error);
+            continue;
+          }
+
+          clearPendingReceipt(marker.entryId);
+
+          if (outcome === "reattach") toast.error(`The receipt for "${marker.entryName}" didn't finish uploading. Open the entry to attach it again.`);
+        }
+      }
+    })();
   }, [setEntryReceiptEverywhere]);
 
   /**

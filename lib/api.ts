@@ -268,12 +268,19 @@ export async function issueReceiptUpload(
   });
 }
 
-/** Finalizes an upload — the server's authoritative validation. */
+/**
+ * Finalizes an upload — the server's authoritative validation. Sent with
+ * `keepalive` so a confirm dispatched right before a refresh/close still
+ * reaches the server and writes the DB pointer (empty body, so the keepalive
+ * size cap is irrelevant); a confirm that never got dispatched is covered by
+ * the resume markers in `lib/receipt-resume.ts`.
+ */
 export async function confirmReceipt(
   entryId: string
 ): Promise<{ receiptPath: string; receiptSizeBytes: number }> {
   return fetchAPI(`/api/entries/${entryId}/receipt`, {
     method: "PUT",
+    keepalive: true,
   });
 }
 

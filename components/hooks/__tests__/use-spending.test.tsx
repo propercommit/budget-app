@@ -31,10 +31,14 @@ vi.mock("react-hot-toast", () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }));
 
+import { StrictMode } from "react";
 import { useSpending, type CreateSpendingConflict } from "@/components/hooks/use-spending";
 import * as api from "@/lib/api";
 import { ApiError } from "@/lib/api-error";
 import { uploadReceiptFile } from "@/lib/upload-receipt";
+// Deliberately NOT mocked: the marker lifecycle is exercised end-to-end
+// against jsdom's real localStorage.
+import { PENDING_RECEIPT_TTL_MS, addPendingReceipt, pendingReceiptKey } from "@/lib/receipt-resume";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
@@ -71,8 +75,14 @@ const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
 
 const data = (items: SpendingItem[]) => ({ [MONTH]: items });
 
+const markerKey = pendingReceiptKey;
+
+const receiptFile = () => new File(["fake-jpeg-bytes"], "receipt.jpg", { type: "image/jpeg" });
+
 beforeEach(() => {
   vi.clearAllMocks();
+
+  localStorage.clear();
 });
 
 describe("useSpending — spending item create (optimistic)", () => {
@@ -623,7 +633,6 @@ describe("useSpending — category cascade mirrors (local state only)", () => {
 });
 
 describe("useSpending — receipt attach chain (create)", () => {
-  const receiptFile = () => new File(["fake-jpeg-bytes"], "receipt.jpg", { type: "image/jpeg" });
 
   const stubHappyChain = (file: File) => {
     vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
@@ -835,5 +844,194 @@ describe("useSpending — receipt remove chain (update)", () => {
     });
 
     expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t remove the receipt from "Coffee"', { retry: expect.any(Function) });
+  });
+});
+
+describe("useSpending — receipt resume markers (chain lifecycle)", () => {
+
+  it("arms the marker while the chain is in flight and clears it on success", async () => {
+    const file = receiptFile();
+
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
+    vi.mocked(api.issueReceiptUpload).mockResolvedValue({ path: "u1/real", token: "tok" });
+    vi.mocked(uploadReceiptFile).mockResolvedValue(undefined);
+
+    // Park the confirm so the in-flight window is observable.
+    let releaseConfirm: (value: { receiptPath: string; receiptSizeBytes: number }) => void = () => undefined;
+
+    vi.mocked(api.confirmReceipt).mockImplementation(() => new Promise((resolve) => { releaseConfirm = resolve; }));
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    await waitFor(() => {
+      expect(localStorage.getItem(markerKey("real"))).not.toBeNull();
+    });
+
+    await act(async () => {
+      releaseConfirm({ receiptPath: "u1/real", receiptSizeBytes: file.size });
+    });
+
+    await waitFor(() => {
+      expect(localStorage.getItem(markerKey("real"))).toBeNull();
+    });
+  });
+
+  it("clears the marker on a terminal failure and re-arms it when the retry replays the chain", async () => {
+    const file = receiptFile();
+
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
+    vi.mocked(api.issueReceiptUpload).mockResolvedValue({ path: "u1/real", token: "tok" });
+    vi.mocked(uploadReceiptFile).mockRejectedValue(new Error("network down"));
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    await waitFor(() => {
+      expect(showErrorToast).toHaveBeenCalled();
+    });
+
+    expect(localStorage.getItem(markerKey("real"))).toBeNull();
+
+    // The retry closure replays uploadReceipt from the top — park the second
+    // upload attempt to observe the re-armed marker.
+    vi.mocked(uploadReceiptFile).mockImplementation(() => new Promise(() => undefined));
+
+    const retry = vi.mocked(showErrorToast).mock.calls[0][1]?.retry;
+
+    expect(retry).toBeDefined();
+
+    await act(async () => {
+      retry?.();
+    });
+
+    await waitFor(() => {
+      expect(localStorage.getItem(markerKey("real"))).not.toBeNull();
+    });
+  });
+});
+
+describe("useSpending — receipt resume on mount", () => {
+  it("confirms a pending marker, patches the entry, and clears the marker", async () => {
+    addPendingReceipt("e1", "Coffee");
+
+    vi.mocked(api.confirmReceipt).mockResolvedValue({ receiptPath: "u1/e1", receiptSizeBytes: 99 });
+
+    const { result } = renderHook(() => useSpending(data([item({ entries: [entry()] })])));
+
+    await waitFor(() => {
+      expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBe("u1/e1");
+    });
+
+    expect(api.confirmReceipt).toHaveBeenCalledWith("e1");
+    expect(localStorage.getItem(markerKey("e1"))).toBeNull();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("toasts the re-attach message and clears the marker on 409 receipt_not_uploaded", async () => {
+    addPendingReceipt("e1", "Coffee");
+
+    vi.mocked(api.confirmReceipt).mockRejectedValue(new ApiError("receipt_not_uploaded", 409));
+
+    renderHook(() => useSpending(data([item({ entries: [entry()] })])));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('The receipt for "Coffee" didn\'t finish uploading. Open the entry to attach it again.');
+    });
+
+    expect(localStorage.getItem(markerKey("e1"))).toBeNull();
+  });
+
+  it("clears silently when the entry is gone (404)", async () => {
+    addPendingReceipt("e1", "Coffee");
+
+    vi.mocked(api.confirmReceipt).mockRejectedValue(new ApiError("Entry not found", 404));
+
+    renderHook(() => useSpending(data([item()])));
+
+    await waitFor(() => {
+      expect(localStorage.getItem(markerKey("e1"))).toBeNull();
+    });
+
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps the marker on a network failure", async () => {
+    addPendingReceipt("e1", "Coffee");
+
+    vi.mocked(api.confirmReceipt).mockRejectedValue(new Error("network down"));
+
+    renderHook(() => useSpending(data([item()])));
+
+    await waitFor(() => {
+      expect(api.confirmReceipt).toHaveBeenCalledTimes(1);
+    });
+
+    expect(localStorage.getItem(markerKey("e1"))).not.toBeNull();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps the marker on 401 (token-refresh race at mount)", async () => {
+    addPendingReceipt("e1", "Coffee");
+
+    vi.mocked(api.confirmReceipt).mockRejectedValue(new ApiError("Unauthorized", 401));
+
+    renderHook(() => useSpending(data([item()])));
+
+    await waitFor(() => {
+      expect(api.confirmReceipt).toHaveBeenCalledTimes(1);
+    });
+
+    expect(localStorage.getItem(markerKey("e1"))).not.toBeNull();
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("prunes an expired marker without calling confirm", async () => {
+    localStorage.setItem(
+      markerKey("stale"),
+      JSON.stringify({ entryId: "stale", entryName: "Old", startedAt: Date.now() - PENDING_RECEIPT_TTL_MS - 1_000 })
+    );
+
+    renderHook(() => useSpending(data([item()])));
+
+    await waitFor(() => {
+      expect(localStorage.getItem(markerKey("stale"))).toBeNull();
+    });
+
+    expect(api.confirmReceipt).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when no markers exist", async () => {
+    renderHook(() => useSpending(data([item()])));
+
+    await act(async () => undefined);
+
+    expect(api.confirmReceipt).not.toHaveBeenCalled();
+  });
+
+  it("runs the resume exactly once under StrictMode double-effects", async () => {
+    addPendingReceipt("e1", "Coffee");
+
+    vi.mocked(api.confirmReceipt).mockResolvedValue({ receiptPath: "u1/e1", receiptSizeBytes: 99 });
+
+    renderHook(() => useSpending(data([item({ entries: [entry()] })])), { wrapper: StrictMode });
+
+    await waitFor(() => {
+      expect(localStorage.getItem(markerKey("e1"))).toBeNull();
+    });
+
+    expect(api.confirmReceipt).toHaveBeenCalledTimes(1);
   });
 });
