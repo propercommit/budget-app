@@ -244,6 +244,35 @@ describe("POST /api/entries", () => {
     });
   });
 
+  // The receipt lives on its own sub-resource route (D27) — a client-sent
+  // receiptUrl/receiptPath must never reach the row the POST creates.
+  it("drops client-sent receiptUrl/receiptPath from the create data", async () => {
+    prismaMock.spendingItem.findFirst.mockResolvedValue(FAKE_ITEM);
+    prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });
+    prismaMock.spendingEntry.findMany.mockResolvedValue([]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    const { status } = await readJson(
+      await POST(
+        jsonRequest({ ...validBody, receiptUrl: "https://cdn.example/x.jpg", receiptPath: "user-123/e1" })
+      )
+    );
+
+    expect(status).toBe(201);
+
+    const arg = prismaMock.spendingEntry.create.mock.calls[0][0];
+    expect("receiptUrl" in arg.data).toBe(false);
+    expect("receiptPath" in arg.data).toBe(false);
+    expect(Object.keys(arg.data).sort()).toEqual([
+      "amount",
+      "date",
+      "direction",
+      "link",
+      "name",
+      "spendingItemId",
+    ]);
+  });
+
   it("defaults date to now when omitted", async () => {
     prismaMock.spendingItem.findFirst.mockResolvedValue(FAKE_ITEM);
     prismaMock.spendingEntry.create.mockResolvedValue({ id: "e1" });

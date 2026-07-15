@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { removeReceiptObjects } from "@/lib/receipt-cleanup";
 import {
     flattenSpendingItem,
     spendingItemInclude,
@@ -190,11 +191,21 @@ export async function DELETE(
             return NextResponse.json({ error: "Spending item not found" }, { status: 404 });
         }
 
+        // The DB cascade is about to destroy this item's entries without
+        // application code ever seeing them — enumerate their receipt paths
+        // first (one month's entries, bounded) for the post-delete cleanup.
+        const entriesWithReceipts = await prisma.spendingEntry.findMany({
+            where: { spendingItemId: id, receiptPath: { not: null } },
+            select: { receiptPath: true },
+        });
+
         // Deletes this month's incarnation only. The series stays behind (possibly
         // dormant) — reactivating it is always an explicit user choice (D24).
         await prisma.spendingItem.delete({
             where: { id },
         });
+
+        await removeReceiptObjects(entriesWithReceipts.map(e => e.receiptPath).filter((p): p is string => p !== null));
 
         return NextResponse.json({ success: true });
     } catch (error) {

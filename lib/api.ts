@@ -1,3 +1,5 @@
+import { ApiError } from "@/lib/api-error";
+
 const USER_ID = "temp-user";
 
 /**
@@ -26,7 +28,7 @@ async function requestAPI(url: string, options?: RequestInit): Promise<Response>
 
   if (response.ok === false) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || body.message || "API request failed");
+    throw new ApiError(body.error || body.message || "API request failed", response.status);
   }
 
   return response;
@@ -213,16 +215,11 @@ export async function deleteIncomeSource(id: string) {
 
 // ============ ENTRIES ============
 
-export async function getEntries(spendingItemId: string) {
-  return fetchAPI(`/api/entries?spendingItemId=${spendingItemId}`);
-}
-
 export async function createEntry(data: {
   spendingItemId: string;
   name: string;
   amount: number;
   direction?: "debit" | "credit"; // server defaults absent to "debit"
-  receiptUrl?: string;
   link?: string;
   date?: string;
 }) {
@@ -238,7 +235,6 @@ export async function updateEntry(
     name?: string;
     amount?: number;
     direction?: "debit" | "credit"; // absent keeps the stored direction
-    receiptUrl?: string;
     link?: string;
     date?: string;
   }
@@ -251,6 +247,50 @@ export async function updateEntry(
 
 export async function deleteEntry(id: string) {
   return fetchAPI(`/api/entries/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// ============ RECEIPTS ============
+
+/**
+ * Issues a signed upload token for the entry's fixed receipt path. The size
+ * claim only sharpens the server's preliminary quota check — the confirm step
+ * re-reads the real size from Storage metadata.
+ */
+export async function issueReceiptUpload(
+  entryId: string,
+  data: { sizeBytes: number }
+): Promise<{ path: string; token: string }> {
+  return fetchAPI(`/api/entries/${entryId}/receipt`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Finalizes an upload — the server's authoritative validation. Sent with
+ * `keepalive` so a confirm dispatched right before a refresh/close still
+ * reaches the server and writes the DB pointer (empty body, so the keepalive
+ * size cap is irrelevant); a confirm that never got dispatched is covered by
+ * the resume markers in `lib/receipt-resume.ts`.
+ */
+export async function confirmReceipt(
+  entryId: string
+): Promise<{ receiptPath: string; receiptSizeBytes: number }> {
+  return fetchAPI(`/api/entries/${entryId}/receipt`, {
+    method: "PUT",
+    keepalive: true,
+  });
+}
+
+/** Mints a short-lived signed read URL for the entry's receipt. */
+export async function getReceiptUrl(entryId: string): Promise<{ url: string }> {
+  return fetchAPI(`/api/entries/${entryId}/receipt`);
+}
+
+export async function deleteReceipt(entryId: string): Promise<void> {
+  await fetchAPI(`/api/entries/${entryId}/receipt`, {
     method: "DELETE",
   });
 }

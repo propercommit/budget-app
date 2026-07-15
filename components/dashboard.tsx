@@ -27,6 +27,7 @@ import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
 import { StickyBudgetBar } from "./sticky-budget-bar";
 import { WelcomeBanner } from "./welcome-banner";
 import { hasAccountData } from "@/lib/first-run";
+import { getTrendMonths } from "@/lib/trend-months";
 import { SpendingEmptyState } from "./spending/spending-empty-state";
 import { findStarterCategory, StarterCategory } from "@/lib/starter-categories";
 import { Plus, Settings2 } from "lucide-react";
@@ -48,7 +49,23 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
-    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
+    const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, receiptUploads, setEntryReceiptEverywhere, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
+
+    // A refresh/close mid-chain kills the receipt upload (the entry saves,
+    // the receipt doesn't) — warn while any chain is in flight. The resume
+    // markers surface whatever slips through on the next load, but a
+    // mid-upload death still loses the file, so the warning stays.
+    const hasReceiptUploadInFlight = Object.keys(receiptUploads).length > 0;
+
+    useEffect(() => {
+        if (hasReceiptUploadInFlight === false) return;
+
+        const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+
+        window.addEventListener("beforeunload", warn);
+
+        return () => window.removeEventListener("beforeunload", warn);
+    }, [hasReceiptUploadInFlight]);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
@@ -86,10 +103,10 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     // banner now and the trends/budget-overview empty states with it.
     const isFirstRun = hasAccountData(spendingData, incomeSources, allIncomeSources) === false;
 
-    const historicalData = Object.entries(spendingData)
-        .filter(([month]) => month <= selectedMonth)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([month, spending]) => ({ month, spending }));
+    // Trend series span every month with data — spending buckets and
+    // income-only months alike (income without spending must still chart).
+    const historicalData = getTrendMonths(spendingData, allIncomeSources, selectedMonth)
+        .map(month => ({ month, spending: spendingData[month] ?? [] }));
 
     const incomeByMonth = historicalData.map(monthData => {
         const monthIncome = allIncomeSources
@@ -349,7 +366,7 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                     date: new Date(e.date).toISOString().split("T")[0],
                     amount: e.amount,
                     direction: e.direction,
-                    receipt: e.receiptUrl ?? null,
+                    receiptPath: e.receiptPath ?? null,
                     link: e.link ?? null,
                     }))}
                     categories={categories.map((c) => ({
@@ -385,8 +402,8 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         amount: data.amount,
                         direction: data.direction,
                         date: data.date,
-                        receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
+                        receipt: data.receipt,
                     });
                     }}
                     onEntryUpdate={async (entryId, data) => {
@@ -395,13 +412,15 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
                         amount: data.amount,
                         direction: data.direction,
                         date: data.date,
-                        receiptUrl: data.receipt ?? undefined,
                         link: data.link ?? undefined,
+                        receipt: data.receipt,
                     });
                     }}
                     onEntryDelete={async (entryId) => {
                     await deleteEntry(selectedMonth, item.id, entryId);
                     }}
+                    receiptUploads={receiptUploads}
+                    onReceiptGone={(entryId) => setEntryReceiptEverywhere(entryId, null)}
                     onCreateCategory={async (data) => {
                     await addCategory(data.name, data.icon, data.color);
                     }}

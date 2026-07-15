@@ -57,7 +57,7 @@ export default async function Home() {
                   amount: true,
                   direction: true,
                   date: true,
-                  receiptUrl: true,
+                  receiptPath: true,
                   link: true,
                   spendingItemId: true,
               }
@@ -67,9 +67,6 @@ export default async function Home() {
   });
   
 
-  const spendingMonths = [...new Set(spendingItems.map(i => i.month))];
-
-  
   const [categories, incomeSources, allIncomeSources, preWindowItems] = await Promise.all([
     prisma.category.findMany({
       where: { userId: user.id },
@@ -79,8 +76,10 @@ export default async function Home() {
       where: { userId: user.id, month: currentMonth },
       orderBy: { createdAt: "asc" },
     }),
+    // Cross-month income (drives trends) — same 12-month window as the items
+    // load above, so a month with income but no spending items still charts.
     prisma.incomeSource.findMany({
-      where: { userId: user.id, month: { in: spendingMonths } },
+      where: { userId: user.id, month: { gte: cutoffMonth } },
       orderBy: { createdAt: "asc" },
     }),
     // Entry counts for months older than the loaded window, so the Manage
@@ -133,7 +132,7 @@ export default async function Home() {
         amount: e.amount,
         direction: e.direction,
         date: e.date?.toISOString().split("T")[0] ?? "",
-        receiptUrl: e.receiptUrl ?? null,
+        receiptPath: e.receiptPath ?? null,
         link: e.link ?? null,
         spendingItemId: e.spendingItemId,
       })),

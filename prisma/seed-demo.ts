@@ -121,6 +121,9 @@ async function main() {
   // -------------------------------------------
   console.log("2️⃣  Cleaning existing data...");
 
+  // Storage-unaware by design: entries deleted here may leave inert receipt
+  // objects in the `receipts` bucket (`<userId>/<entryId>`). The seed never
+  // creates receipts, so nothing orphans in practice.
   await prisma.spendingEntry.deleteMany({ where: { spendingItem: { series: { userId } } } });
   await prisma.spendingItem.deleteMany({ where: { series: { userId } } });
   await prisma.budgetSeries.deleteMany({ where: { userId } });

@@ -62,7 +62,7 @@ function entry(
     amount,
     direction: extras.direction ?? "debit",
     date,
-    receiptUrl: null,
+    receiptPath: null,
     link: extras.link ?? null,
     spendingItemId: itemId,
   };

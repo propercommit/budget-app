@@ -7,7 +7,7 @@ export const WELCOME_BANNER_DISMISSED_KEY = "planbudget.welcome-banner-dismissed
  * Whether the account has any budgeting data in the loaded window — a spending
  * item in any loaded month, or an income source in either list (the selected
  * month's or the cross-month one; they can differ because the cross-month list
- * is scoped to months that have spending items).
+ * spans the whole 12-month window).
  *
  * The first-run surfaces (welcome banner, trends and budget-overview empty
  * states) key off the negation. Month buckets may exist empty — materializing

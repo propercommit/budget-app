@@ -14,7 +14,8 @@ export interface SpendingEntry {
     date: string;
     amount: number; // integer cents, always a positive magnitude
     direction: "debit" | "credit"; // sign of the entry's effect on spent
-    receipt?: string | null;
+    /** Opaque presence marker (Storage object key), never an img src — rendering fetches a signed URL by entry id. */
+    receiptPath?: string | null;
     link?: string | null;
 }
 

@@ -34,6 +34,10 @@ interface SpendingCardProps {
     onEntryUpdate: (entryId: string, data: EntrySavePayload) => void;
     onEntryDelete: (entryId: string) => void;
     onCreateCategory: (data: { name: string; icon: string; color: string }) => void;
+    /** Entry ids whose receipt chain is in flight — drives the detail popin's uploading row. */
+    receiptUploads?: Record<string, "uploading">;
+    /** Called when a receipt read 404s (removed elsewhere / stale payload) so the owner clears local state. */
+    onReceiptGone?: (entryId: string) => void;
     isExpanded: boolean;
     onToggleExpand: ()=> void;
 }
@@ -55,6 +59,8 @@ export function SpendingCard({
     onEntryUpdate,
     onEntryDelete,
     onCreateCategory,
+    receiptUploads,
+    onReceiptGone,
     onToggleExpand,
 }: SpendingCardProps) {
 
@@ -68,6 +74,13 @@ export function SpendingCard({
     // Entry state
     const [selectedEntry, setSelectedEntry] = useState<SpendingEntry | null>(null);
     const [entryMode, setEntryMode] = useState<"create" | "edit">("create");
+
+    // The detail popin renders the LIVE copy of the selected entry, so a
+    // receipt confirm landing while it is open propagates in; the snapshot is
+    // only the fallback for an entry that just left the list.
+    const liveSelectedEntry = selectedEntry === null
+        ? null
+        : entries.find(e => e.id === selectedEntry.id) ?? selectedEntry;
 
     // Snapshot of the list as displayed when the detail popin opened — the
     // popin pages through these siblings (swipe / arrow keys).
@@ -218,9 +231,11 @@ export function SpendingCard({
                         isOpen={showEntryDetail}
                         onClose={() => { setShowEntryDetail(false); setSelectedEntry(null); }}
                         onEdit={handleEntryDetailToEdit}
-                        entry={selectedEntry}
+                        entry={liveSelectedEntry}
                         entries={detailNavEntries}
                         onNavigate={setSelectedEntry}
+                        isReceiptUploading={liveSelectedEntry !== null && receiptUploads?.[liveSelectedEntry.id] !== undefined}
+                        onReceiptGone={onReceiptGone}
                         spendingName={spendingName}
                         spendingItemIcon={spendingItemIcon}
                         spendingCategoryColor={spendingCategoryColor}

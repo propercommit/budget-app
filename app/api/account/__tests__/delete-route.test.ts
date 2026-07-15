@@ -6,25 +6,34 @@ const {
   getAuthenticatedUser,
   revokeUserSessions,
   deleteUserMock,
-  storageListMock,
-  storageRemoveMock,
+  avatarListMock,
+  avatarRemoveMock,
+  receiptListMock,
+  receiptRemoveMock,
 } = vi.hoisted(() => ({
   // The route only touches the User row — the DB cascades wipe everything else.
   prismaMock: { user: { deleteMany: vi.fn() } },
   getAuthenticatedUser: vi.fn(),
   revokeUserSessions: vi.fn(),
   deleteUserMock: vi.fn(),
-  storageListMock: vi.fn(),
-  storageRemoveMock: vi.fn(),
+  avatarListMock: vi.fn(),
+  avatarRemoveMock: vi.fn(),
+  receiptListMock: vi.fn(),
+  receiptRemoveMock: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ getAuthenticatedUser, revokeUserSessions }));
+// The route sweeps two buckets ("avatars" and "receipts") with different
+// list/remove call shapes, so the storage mock dispatches per bucket.
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     auth: { admin: { deleteUser: deleteUserMock } },
     storage: {
-      from: () => ({ list: storageListMock, remove: storageRemoveMock }),
+      from: (bucket: string) =>
+        bucket === "receipts"
+          ? { list: receiptListMock, remove: receiptRemoveMock }
+          : { list: avatarListMock, remove: avatarRemoveMock },
     },
   }),
 }));
@@ -38,8 +47,10 @@ beforeEach(() => {
   revokeUserSessions.mockResolvedValue(undefined);
   prismaMock.user.deleteMany.mockResolvedValue({ count: 1 });
   deleteUserMock.mockResolvedValue({ error: null });
-  storageListMock.mockResolvedValue({ data: [], error: null });
-  storageRemoveMock.mockResolvedValue({ error: null });
+  avatarListMock.mockResolvedValue({ data: [], error: null });
+  avatarRemoveMock.mockResolvedValue({ error: null });
+  receiptListMock.mockResolvedValue({ data: [], error: null });
+  receiptRemoveMock.mockResolvedValue({ error: null });
 });
 
 afterEach(() => {
@@ -91,28 +102,92 @@ describe("DELETE /api/account/delete", () => {
   });
 
   it("removes the user's uploaded avatar files", async () => {
-    storageListMock.mockResolvedValue({
+    avatarListMock.mockResolvedValue({
       data: [{ name: `${FAKE_USER.id}-123.jpg` }, { name: `${FAKE_USER.id}-456.png` }],
       error: null,
     });
     const { status } = await readJson(await DELETE());
     expect(status).toBe(200);
-    expect(storageListMock).toHaveBeenCalledWith("avatars", {
+    expect(avatarListMock).toHaveBeenCalledWith("avatars", {
       search: `${FAKE_USER.id}-`,
     });
-    expect(storageRemoveMock).toHaveBeenCalledWith([
+    expect(avatarRemoveMock).toHaveBeenCalledWith([
       `avatars/${FAKE_USER.id}-123.jpg`,
       `avatars/${FAKE_USER.id}-456.png`,
     ]);
   });
 
   it("still succeeds when avatar cleanup fails (best-effort)", async () => {
-    storageListMock.mockResolvedValue({ data: null, error: { message: "boom" } });
+    avatarListMock.mockResolvedValue({ data: null, error: { message: "boom" } });
     const { status, body } = await readJson(await DELETE());
     expect(status).toBe(200);
     expect(body).toEqual({ success: true });
-    expect(storageRemoveMock).not.toHaveBeenCalled();
+    expect(avatarRemoveMock).not.toHaveBeenCalled();
     expect(deleteUserMock).toHaveBeenCalledWith(FAKE_USER.id);
+  });
+
+  it("sweeps the user's receipts folder: lists `<userId>/` in the receipts bucket and removes every object", async () => {
+    receiptListMock.mockResolvedValueOnce({
+      data: [{ name: "entry-1" }, { name: "entry-2" }],
+      error: null,
+    });
+    const { status, body } = await readJson(await DELETE());
+    expect(status).toBe(200);
+    expect(body).toEqual({ success: true });
+
+    expect(receiptListMock).toHaveBeenCalledWith(FAKE_USER.id, { limit: 100 });
+    expect(receiptRemoveMock).toHaveBeenCalledTimes(1);
+    expect(receiptRemoveMock).toHaveBeenCalledWith([
+      `${FAKE_USER.id}/entry-1`,
+      `${FAKE_USER.id}/entry-2`,
+    ]);
+  });
+
+  it("paginates the receipts sweep: a full page of 100 triggers a re-list from the front", async () => {
+    // Removal shifts the listing window, so the route re-lists page 1 after
+    // each remove instead of advancing an offset — a full page (100) must be
+    // followed by another list; the short page (2) ends the sweep.
+    const fullPage = Array.from({ length: 100 }, (_, i) => ({ name: `entry-${i}` }));
+
+    receiptListMock
+      .mockResolvedValueOnce({ data: fullPage, error: null })
+      .mockResolvedValueOnce({ data: [{ name: "entry-100" }, { name: "entry-101" }], error: null });
+
+    const { status } = await readJson(await DELETE());
+    expect(status).toBe(200);
+
+    expect(receiptListMock).toHaveBeenCalledTimes(2);
+    expect(receiptListMock).toHaveBeenNthCalledWith(1, FAKE_USER.id, { limit: 100 });
+    expect(receiptListMock).toHaveBeenNthCalledWith(2, FAKE_USER.id, { limit: 100 });
+
+    expect(receiptRemoveMock).toHaveBeenCalledTimes(2);
+    expect(receiptRemoveMock).toHaveBeenNthCalledWith(
+      1,
+      fullPage.map((file) => `${FAKE_USER.id}/${file.name}`)
+    );
+    expect(receiptRemoveMock).toHaveBeenNthCalledWith(2, [
+      `${FAKE_USER.id}/entry-100`,
+      `${FAKE_USER.id}/entry-101`,
+    ]);
+  });
+
+  it("still succeeds when the receipts sweep fails to list (best-effort)", async () => {
+    receiptListMock.mockResolvedValue({ data: null, error: { message: "boom" } });
+    avatarListMock.mockResolvedValue({
+      data: [{ name: `${FAKE_USER.id}-123.jpg` }],
+      error: null,
+    });
+
+    const { status, body } = await readJson(await DELETE());
+    expect(status).toBe(200);
+    expect(body).toEqual({ success: true });
+    expect(receiptRemoveMock).not.toHaveBeenCalled();
+
+    // The failure is contained to the receipts sweep: the avatar cleanup and
+    // the auth-user delete still run.
+    expect(avatarRemoveMock).toHaveBeenCalledWith([`avatars/${FAKE_USER.id}-123.jpg`]);
+    expect(deleteUserMock).toHaveBeenCalledWith(FAKE_USER.id);
+    expect(revokeUserSessions).toHaveBeenCalledWith(FAKE_USER.id);
   });
 
   it("500 when Supabase auth deletion fails — success would leave a working login", async () => {
