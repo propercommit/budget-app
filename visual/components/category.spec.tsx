@@ -1,4 +1,5 @@
 import { test, expect } from "../test";
+import type { Page } from "@playwright/test";
 import { CategoryRibbon } from "@/components/category/category-ribbon";
 import { CategoryPopin } from "@/components/category/popins/category-popin";
 import { ManageCategoriesPopin } from "@/components/category/popins/manage-categories-popin";
@@ -19,6 +20,10 @@ const entryCounts: Record<string, number> = {
 };
 
 const noopAsync = async () => {};
+
+/** Scrolls the popin sheet to the bottom, revealing the floating footer. */
+const scrollSheetToBottom = (page: Page) =>
+  page.locator("[data-popin-scroll]").evaluate((el) => { el.scrollTop = el.scrollHeight; });
 
 /** More categories than the desktop pill budget, to trigger the "+N" peek. */
 const manyCardCategories = [
@@ -185,7 +190,7 @@ test.describe("Category components", () => {
       </Providers>,
     );
 
-    await page.locator(".overflow-y-auto").evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await scrollSheetToBottom(page);
     await expect(page.getByRole("button", { name: "Create Category" })).toBeInViewport();
 
     await expect(page).toHaveScreenshot("category-popin-create-scrolled.png");
@@ -207,7 +212,7 @@ test.describe("Category components", () => {
       </Providers>,
     );
 
-    await page.locator(".overflow-y-auto").evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await scrollSheetToBottom(page);
     await expect(page.getByRole("button", { name: "Delete Category" })).toBeInViewport();
 
     await expect(page).toHaveScreenshot("category-popin-edit-scrolled.png");

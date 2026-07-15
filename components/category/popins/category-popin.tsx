@@ -67,7 +67,7 @@ export function CategoryPopin({
                     className="inline-flex max-w-full items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold"
                     style={{ backgroundColor: selectedColor, boxShadow: "0 2px 12px rgba(0, 0, 0, 0.12)" }}
                 >
-                    <span className="inline-flex text-lg">{iconMap[selectedIcon]}</span>
+                    <span className="inline-flex text-lg">{iconMap[selectedIcon] ?? selectedIcon}</span>
                     <span className="truncate">{name || (isCreate ? "New Category" : "Edit Category")}</span>
                 </div>
             }
