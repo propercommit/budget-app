@@ -165,26 +165,14 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     }
   }, [opacity, onChange])
 
-  const handleGradientClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!gradientRef.current) return
-
-    const rect = gradientRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    const s = Math.round((x / rect.width) * 100)
-    const l = Math.round(100 - (y / rect.height) * 100)
-
-    updateColor(hue, s, l)
-  }
-
-  const handleGradientMouseMove = React.useCallback(
-    (e: MouseEvent) => {
-      if (!gradientRef.current) return
+  /** Picks saturation/lightness from a viewport position on the gradient square (clamped, so drags past the edge stick to it). */
+  const pickGradientColor = React.useCallback(
+    (clientX: number, clientY: number) => {
+      if (gradientRef.current === null) return
 
       const rect = gradientRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
+      const x = clientX - rect.left
+      const y = clientY - rect.top
 
       const s = Math.max(0, Math.min(100, Math.round((x / rect.width) * 100)))
       const l = Math.max(0, Math.min(100, Math.round(100 - (y / rect.height) * 100)))
@@ -194,22 +182,12 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     [hue, updateColor]
   )
 
-  const handleHueClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!hueRef.current) return
-
-    const rect = hueRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const h = Math.round((x / rect.width) * 360)
-
-    updateColor(h, saturation, lightness)
-  }
-
-  const handleHueMouseMove = React.useCallback(
-    (e: MouseEvent) => {
-      if (!hueRef.current) return
+  const pickHueColor = React.useCallback(
+    (clientX: number) => {
+      if (hueRef.current === null) return
 
       const rect = hueRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
+      const x = clientX - rect.left
       const h = Math.max(0, Math.min(360, Math.round((x / rect.width) * 360)))
 
       updateColor(h, saturation, lightness)
@@ -217,22 +195,12 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     [saturation, lightness, updateColor]
   )
 
-  const handleOpacityClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!opacityRef.current) return
-
-    const rect = opacityRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const a = Math.round((x / rect.width) * 100)
-
-    updateColor(hue, saturation, lightness, a)
-  }
-
-  const handleOpacityMouseMove = React.useCallback(
-    (e: MouseEvent) => {
-      if (!opacityRef.current) return
+  const pickOpacityColor = React.useCallback(
+    (clientX: number) => {
+      if (opacityRef.current === null) return
 
       const rect = opacityRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
+      const x = clientX - rect.left
       const a = Math.max(0, Math.min(100, Math.round((x / rect.width) * 100)))
 
       updateColor(hue, saturation, lightness, a)
@@ -241,38 +209,40 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
   )
 
   React.useEffect(() => {
-    const handleMouseUp = () => {
+    const isDragging = isGradientActive || isHueActive || isOpacityActive
+
+    if (!isDragging) return
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (isGradientActive) pickGradientColor(e.clientX, e.clientY)
+
+      if (isHueActive) pickHueColor(e.clientX)
+
+      if (isOpacityActive) pickOpacityColor(e.clientX)
+    }
+
+    const handlePointerEnd = () => {
       setIsGradientActive(false)
       setIsHueActive(false)
       setIsOpacityActive(false)
     }
 
-    if (isGradientActive) {
-      document.addEventListener("mousemove", handleGradientMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
-    }
-    if (isHueActive) {
-      document.addEventListener("mousemove", handleHueMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
-    }
-    if (isOpacityActive) {
-      document.addEventListener("mousemove", handleOpacityMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
-    }
+    document.addEventListener("pointermove", handlePointerMove)
+    document.addEventListener("pointerup", handlePointerEnd)
+    document.addEventListener("pointercancel", handlePointerEnd)
 
     return () => {
-      document.removeEventListener("mousemove", handleGradientMouseMove)
-      document.removeEventListener("mousemove", handleHueMouseMove)
-      document.removeEventListener("mousemove", handleOpacityMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
+      document.removeEventListener("pointermove", handlePointerMove)
+      document.removeEventListener("pointerup", handlePointerEnd)
+      document.removeEventListener("pointercancel", handlePointerEnd)
     }
   }, [
     isGradientActive,
     isHueActive,
     isOpacityActive,
-    handleGradientMouseMove,
-    handleHueMouseMove,
-    handleOpacityMouseMove,
+    pickGradientColor,
+    pickHueColor,
+    pickOpacityColor,
   ])
 
   const currentColor = hslToHex(hue, saturation, lightness)
@@ -283,17 +253,23 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     <div className={cn("space-y-3 p-4 bg-muted/50 rounded-lg border", className)}>
       <div
         ref={gradientRef}
-        className="relative w-full h-48 rounded-lg cursor-crosshair overflow-hidden"
+        role="slider"
+        aria-label="Saturation and lightness"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={saturation}
+        aria-valuetext={`Saturation ${saturation}%, lightness ${lightness}%`}
+        className="relative w-full h-48 rounded-lg cursor-crosshair overflow-hidden touch-none select-none"
         style={{
           background: `
             linear-gradient(to bottom, transparent, black),
             linear-gradient(to right, white, hsl(${hue}, 100%, 50%))
           `,
         }}
-        onClick={handleGradientClick}
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
+          e.preventDefault()
           setIsGradientActive(true)
-          handleGradientClick(e)
+          pickGradientColor(e.clientX, e.clientY)
         }}
       >
         <div
@@ -308,14 +284,19 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
 
       <div
         ref={hueRef}
-        className="relative w-full h-3 rounded-full cursor-pointer overflow-hidden"
+        role="slider"
+        aria-label="Hue"
+        aria-valuemin={0}
+        aria-valuemax={360}
+        aria-valuenow={hue}
+        className="relative w-full h-3 rounded-full cursor-pointer overflow-hidden touch-none select-none"
         style={{
           background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
         }}
-        onClick={handleHueClick}
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
+          e.preventDefault()
           setIsHueActive(true)
-          handleHueClick(e)
+          pickHueColor(e.clientX)
         }}
       >
         <div
@@ -329,7 +310,12 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
 
       <div
         ref={opacityRef}
-        className="relative w-full h-3 rounded-full cursor-pointer overflow-hidden"
+        role="slider"
+        aria-label="Opacity"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={opacity}
+        className="relative w-full h-3 rounded-full cursor-pointer overflow-hidden touch-none select-none"
         style={{
           background: `linear-gradient(to right, transparent, ${currentColor})`,
           backgroundImage: `
@@ -337,10 +323,10 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
             repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px
           `,
         }}
-        onClick={handleOpacityClick}
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
+          e.preventDefault()
           setIsOpacityActive(true)
-          handleOpacityClick(e)
+          pickOpacityColor(e.clientX)
         }}
       >
         <div
