@@ -8,7 +8,7 @@ import {
   readJson,
 } from "../../__tests__/helpers";
 
-const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
+const { prismaMock, getAuthenticatedUser, removeReceiptObjects } = vi.hoisted(() => {
   const model = () => ({
     findMany: vi.fn(),
     findFirst: vi.fn(),
@@ -20,13 +20,15 @@ const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
     upsert: vi.fn(),
   });
   return {
-    prismaMock: { category: model(), spendingItem: model() },
+    prismaMock: { category: model(), spendingItem: model(), spendingEntry: model() },
     getAuthenticatedUser: vi.fn(),
+    removeReceiptObjects: vi.fn(),
   };
 });
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ getAuthenticatedUser }));
+vi.mock("@/lib/receipt-cleanup", () => ({ removeReceiptObjects }));
 
 import { PUT, DELETE } from "@/app/api/categories/[id]/route";
 
@@ -179,6 +181,7 @@ describe("DELETE /api/categories/[id]", () => {
 
   it("deletes the category and returns success", async () => {
     prismaMock.category.findFirst.mockResolvedValue({ id: "c1" });
+    prismaMock.spendingEntry.findMany.mockResolvedValue([]);
     prismaMock.category.delete.mockResolvedValue({ id: "c1" });
     const { status, body } = await readJson(
       await DELETE(getRequest("http://localhost"), routeContext("c1"))
@@ -188,5 +191,51 @@ describe("DELETE /api/categories/[id]", () => {
     expect(prismaMock.category.delete).toHaveBeenCalledWith({
       where: { id: "c1" },
     });
+    // No receipts in the blast radius — the cleanup still runs, with nothing to remove.
+    expect(removeReceiptObjects).toHaveBeenCalledWith([]);
+  });
+
+  // The category delete is the hidden mass-delete: the DB cascade (category →
+  // series → items → entries) destroys every entry across ALL months without
+  // application code seeing them — the route must enumerate receipt paths via
+  // the series traversal BEFORE the delete and clean them up AFTER it.
+  it("enumerates receipt paths across the cascade and removes them after the delete", async () => {
+    prismaMock.category.findFirst.mockResolvedValue({ id: "c1" });
+    prismaMock.spendingEntry.findMany.mockResolvedValue([
+      { receiptPath: "user-123/e1" },
+      { receiptPath: "user-123/e2" },
+      { receiptPath: "user-123/e3" },
+    ]);
+    prismaMock.category.delete.mockResolvedValue({ id: "c1" });
+
+    const { status } = await readJson(
+      await DELETE(getRequest("http://localhost"), routeContext("c1"))
+    );
+
+    expect(status).toBe(200);
+    expect(prismaMock.spendingEntry.findMany).toHaveBeenCalledWith({
+      where: { spendingItem: { series: { categoryId: "c1" } }, receiptPath: { not: null } },
+      select: { receiptPath: true },
+    });
+    expect(removeReceiptObjects).toHaveBeenCalledTimes(1);
+    expect(removeReceiptObjects).toHaveBeenCalledWith([
+      "user-123/e1",
+      "user-123/e2",
+      "user-123/e3",
+    ]);
+
+    // DB first, storage second — the reverse would let a failed delete leave
+    // live entries pointing at dead objects.
+    const deleteOrder = prismaMock.category.delete.mock.invocationCallOrder[0];
+    const removeOrder = removeReceiptObjects.mock.invocationCallOrder[0];
+    expect(deleteOrder).toBeLessThan(removeOrder);
+  });
+
+  it("does not touch storage when the category is missing or foreign", async () => {
+    prismaMock.category.findFirst.mockResolvedValue(null);
+
+    await DELETE(getRequest("http://localhost"), routeContext("c1"));
+
+    expect(removeReceiptObjects).not.toHaveBeenCalled();
   });
 });

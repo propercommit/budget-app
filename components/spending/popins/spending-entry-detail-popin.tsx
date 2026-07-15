@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
 import { ReceiptViewer } from "@/components/ui/receipt-viewer";
+import { useReceiptUrl } from "@/components/hooks/use-receipt-url";
 
 /** Minimum horizontal travel (px) before a touch counts as a page swipe. */
 const SWIPE_THRESHOLD = 48;
@@ -25,15 +26,24 @@ interface EntryDetailPopinProps {
     entries?: SpendingEntry[];
     /** Receives the sibling to display when the user pages. */
     onNavigate?: (entry: SpendingEntry) => void;
+    /** True while this entry's receipt chain is in flight (uploading row). */
+    isReceiptUploading?: boolean;
+    /** Called when the receipt read 404s — the receipt is gone, not erroring. */
+    onReceiptGone?: (entryId: string) => void;
     spendingName: string;
     spendingItemIcon: string;
     spendingCategoryColor: string;
 }
 
 export function EntryDetailPopin(props: EntryDetailPopinProps) {
-    const { isOpen, onClose, onEdit, entry, entries = [], onNavigate, spendingName, spendingItemIcon, spendingCategoryColor } = props;
+    const { isOpen, onClose, onEdit, entry, entries = [], onNavigate, isReceiptUploading = false, onReceiptGone, spendingName, spendingItemIcon, spendingCategoryColor } = props;
     const { formatDateFull, formatAmount } = useSettings();
     const [isReceiptViewerOpen, setIsReceiptViewerOpen] = useState(false);
+
+    // Fetch-on-open: the receipt renders from a signed URL minted by entry id;
+    // receiptPath itself is only the presence marker. Cached per id for the
+    // popin session, so paging between siblings doesn't refetch.
+    const receiptUrl = useReceiptUrl(entry?.id ?? null, isOpen ? entry?.receiptPath : null, onReceiptGone);
 
     // Where the current touch began — a ref, since it never affects rendering.
     const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -79,7 +89,15 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
     if (entry === null) return null;
 
     const entryLink = entry.link || null;
-    const entryReceipt = entry.receipt || null;
+    const hasReceipt = entry.receiptPath !== null && entry.receiptPath !== undefined;
+
+    // Interaction-time freshness: a popin left open past the URL's TTL must
+    // not feed a dead URL to the viewer's brand-new image fetch.
+    const handleOpenViewer = async () => {
+        const fresh = await receiptUrl.getFreshUrl();
+
+        if (fresh !== null) setIsReceiptViewerOpen(true);
+    };
 
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -160,21 +178,43 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
                     <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{formatDateFull(entry.date)}</span>
                 </div>
 
-                {entryReceipt !== null && (
+                {hasReceipt && (
                     <div>
                         <p className="text-sm font-medium mb-2" style={{ color: "var(--muted-foreground)" }}>Receipt</p>
-                        <div
-                            className="relative rounded-xl overflow-hidden h-48 cursor-pointer"
-                            style={{ backgroundColor: "var(--muted)" }}
-                            onClick={() => setIsReceiptViewerOpen(true)}
-                        >
-                            <Image
-                                src={entryReceipt}
-                                alt="Receipt"
-                                fill
-                                className="object-cover hover:opacity-90 transition-opacity"
-                                unoptimized
-                            />
+                        {receiptUrl.status === "error" ? (
+                            <button
+                                onClick={receiptUrl.retry}
+                                className="w-full flex items-center justify-center h-48 rounded-xl text-sm font-medium transition-opacity active:opacity-70"
+                                style={{ backgroundColor: "var(--muted)", color: "var(--muted-foreground)" }}
+                            >
+                                Couldn&apos;t load receipt — tap to retry
+                            </button>
+                        ) : receiptUrl.url === null ? (
+                            <div className="h-48 rounded-xl animate-pulse" style={{ backgroundColor: "var(--muted)" }} />
+                        ) : (
+                            <div
+                                className="relative rounded-xl overflow-hidden h-48 cursor-pointer"
+                                style={{ backgroundColor: "var(--muted)" }}
+                                onClick={() => { void handleOpenViewer(); }}
+                            >
+                                <Image
+                                    src={receiptUrl.url}
+                                    alt="Receipt"
+                                    fill
+                                    className="object-cover hover:opacity-90 transition-opacity"
+                                    unoptimized
+                                    onError={receiptUrl.markBroken}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {hasReceipt === false && isReceiptUploading && (
+                    <div>
+                        <p className="text-sm font-medium mb-2" style={{ color: "var(--muted-foreground)" }}>Receipt</p>
+                        <div className="flex items-center justify-center h-48 rounded-xl animate-pulse text-sm" style={{ backgroundColor: "var(--muted)", color: "var(--muted-foreground)" }}>
+                            Uploading receipt…
                         </div>
                     </div>
                 )}
@@ -185,7 +225,8 @@ export function EntryDetailPopin(props: EntryDetailPopinProps) {
             <ReceiptViewer
                 isOpen={isReceiptViewerOpen}
                 onClose={() => setIsReceiptViewerOpen(false)}
-                imageUrl={entryReceipt ?? ""}
+                imageUrl={receiptUrl.url ?? ""}
+                getFreshUrl={receiptUrl.getFreshUrl}
             />
         </PopinWrapper>
     );

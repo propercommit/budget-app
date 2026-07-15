@@ -4,16 +4,13 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { monthOfDate } from "@/lib/spending/month";
 import { routeEntryToMonth } from "@/lib/spending/route-entry";
+import { HTTP_URL_REGEX } from "@/lib/normalize-link";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
 const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
-const MAX_RECEIPT_SIZE = 5_000_000; // ~5MB base64
-
-// URL validation regex (basic)
-const URL_REGEX = /^https?:\/\/.+/i;
 
 // GET /api/entries - Fetch entries for a spending item
 export async function GET(request: Request) {
@@ -78,7 +75,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { spendingItemId, name, amount, direction, receiptUrl, link, date } = body;
+        const { spendingItemId, name, amount, direction, link, date } = body;
 
         // Validate spendingItemId
         if (!spendingItemId || typeof spendingItemId !== "string") {
@@ -147,25 +144,9 @@ export async function POST(request: Request) {
                     { status: 400 }
                 );
             }
-            if (!URL_REGEX.test(link)) {
+            if (!HTTP_URL_REGEX.test(link)) {
                 return NextResponse.json(
                     { error: "Link must be a valid URL starting with http:// or https://" },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // Validate receiptUrl if provided (base64 image)
-        if (receiptUrl !== undefined && receiptUrl !== null && receiptUrl !== "") {
-            if (typeof receiptUrl !== "string") {
-                return NextResponse.json(
-                    { error: "Receipt URL must be a string" },
-                    { status: 400 }
-                );
-            }
-            if (receiptUrl.length > MAX_RECEIPT_SIZE) {
-                return NextResponse.json(
-                    { error: "Receipt image is too large. Maximum size is approximately 5MB" },
                     { status: 400 }
                 );
             }
@@ -207,7 +188,6 @@ export async function POST(request: Request) {
             name: name.trim(),
             amount,
             direction: (direction ?? "debit") as "debit" | "credit",
-            receiptUrl: receiptUrl || null,
             link: link || null,
             date: entryDate,
         };

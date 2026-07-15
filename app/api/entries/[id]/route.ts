@@ -4,16 +4,15 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { monthOfDate } from "@/lib/spending/month";
 import { routeEntryToMonth } from "@/lib/spending/route-entry";
+import { receiptObjectPath } from "@/lib/receipt-storage";
+import { removeReceiptObjects } from "@/lib/receipt-cleanup";
+import { HTTP_URL_REGEX } from "@/lib/normalize-link";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
 const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
-const MAX_RECEIPT_SIZE = 5_000_000; // ~5MB base64
-
-// URL validation regex
-const URL_REGEX = /^https?:\/\/.+/i;
 
 // PUT /api/entries/[id] - Update an entry
 export async function PUT(
@@ -32,14 +31,13 @@ export async function PUT(
 
         const { id } = await params;
         const body = await request.json();
-        const { name, amount, direction, receiptUrl, link, date } = body;
+        const { name, amount, direction, link, date } = body;
 
         // Validate at least one field is being updated
         if (
             name === undefined &&
             amount === undefined &&
             direction === undefined &&
-            receiptUrl === undefined &&
             link === undefined &&
             date === undefined
         ) {
@@ -103,25 +101,9 @@ export async function PUT(
                     { status: 400 }
                 );
             }
-            if (!URL_REGEX.test(link)) {
+            if (!HTTP_URL_REGEX.test(link)) {
                 return NextResponse.json(
                     { error: "Link must be a valid URL starting with http:// or https://" },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // Validate receiptUrl if provided
-        if (receiptUrl !== undefined && receiptUrl !== null && receiptUrl !== "") {
-            if (typeof receiptUrl !== "string") {
-                return NextResponse.json(
-                    { error: "Receipt URL must be a string" },
-                    { status: 400 }
-                );
-            }
-            if (receiptUrl.length > MAX_RECEIPT_SIZE) {
-                return NextResponse.json(
-                    { error: "Receipt image is too large. Maximum size is approximately 5MB" },
                     { status: 400 }
                 );
             }
@@ -169,7 +151,6 @@ export async function PUT(
             name?: string;
             amount?: number;
             direction?: "debit" | "credit";
-            receiptUrl?: string | null;
             link?: string | null;
             date?: Date;
         } = {};
@@ -177,7 +158,6 @@ export async function PUT(
         if (name !== undefined) updateData.name = name.trim();
         if (amount !== undefined) updateData.amount = amount;
         if (direction !== undefined) updateData.direction = direction;
-        if (receiptUrl !== undefined) updateData.receiptUrl = receiptUrl || null;
         if (link !== undefined) updateData.link = link || null;
         if (date !== undefined) updateData.date = new Date(date);
 
@@ -273,6 +253,12 @@ export async function DELETE(
 
         // Recalculate spent amount
         await updateSpentAmount(spendingItemId);
+
+        // Best-effort receipt cleanup at the fixed path — deliberately NOT
+        // gated on receiptPath: this is the only reaper for an uploaded-but-
+        // never-confirmed object once its entry dies (cuid ids never recur,
+        // so such an orphan would otherwise be permanent).
+        await removeReceiptObjects([receiptObjectPath(user.id, id)]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

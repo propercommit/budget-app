@@ -1,17 +1,27 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { EntryDetailPopin } from "@/components/spending/popins/spending-entry-detail-popin";
 import type { SpendingEntry } from "@/components/spending/spending-card-expanded";
 import { SettingsProvider } from "@/lib/settings-context";
+import { getReceiptUrl } from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
 
 // SettingsProvider calls getSettings() on mount; keep it offline so it falls
-// back to the USD default.
+// back to the USD default. getReceiptUrl backs useReceiptUrl's fetch-on-open;
+// each receipt test programs it explicitly.
 vi.mock("@/lib/api", () => ({
   getSettings: vi.fn().mockRejectedValue(new Error("offline")),
   updateSettings: vi.fn(),
+  getReceiptUrl: vi.fn(),
 }));
+
+const getReceiptUrlMock = vi.mocked(getReceiptUrl);
+
+beforeEach(() => {
+  getReceiptUrlMock.mockReset();
+});
 
 const entries: SpendingEntry[] = [
   { id: "e1", name: "Coop", date: "2026-06-01", amount: 1200, direction: "debit" },
@@ -150,5 +160,70 @@ describe("EntryDetailPopin — sibling paging", () => {
     fireEvent.keyDown(window, { key: "ArrowRight" });
 
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("EntryDetailPopin — receipt block", () => {
+
+  const receiptEntry: SpendingEntry = { id: "e9", name: "Pharmacy", date: "2026-06-15", amount: 2500, direction: "debit", receiptPath: "user-1/e9" };
+
+  it("fetches a signed URL once and renders the thumbnail from it", async () => {
+    getReceiptUrlMock.mockResolvedValue({ url: "https://signed.example/receipts/user-1/e9?token=abc" });
+
+    renderPopin({ entry: receiptEntry, entries: [receiptEntry] });
+
+    const thumbnail = await screen.findByAltText("Receipt");
+
+    expect(thumbnail).toHaveAttribute("src", "https://signed.example/receipts/user-1/e9?token=abc");
+
+    expect(getReceiptUrlMock).toHaveBeenCalledTimes(1);
+
+    expect(getReceiptUrlMock).toHaveBeenCalledWith("e9");
+  });
+
+  it("shows no receipt block and fetches nothing when the entry has no receiptPath", () => {
+    renderPopin();
+
+    expect(screen.queryByText("Receipt")).toBeNull();
+
+    expect(getReceiptUrlMock).not.toHaveBeenCalled();
+  });
+
+  it("treats a 404 as receipt-gone: no thumbnail, no retry, and the owner is told", async () => {
+    getReceiptUrlMock.mockRejectedValue(new ApiError("no_receipt", 404));
+
+    const onReceiptGone = vi.fn();
+
+    const { rerenderPopin } = renderPopin({ entry: receiptEntry, entries: [receiptEntry], onReceiptGone });
+
+    await waitFor(() => expect(onReceiptGone).toHaveBeenCalledWith("e9"));
+
+    expect(screen.queryByAltText("Receipt")).toBeNull();
+
+    expect(screen.queryByText(/tap to retry/)).toBeNull();
+
+    // The gone-callback lets the owner clear the stale pointer — once it
+    // does, the whole receipt block disappears.
+    rerenderPopin({ entry: { ...receiptEntry, receiptPath: null }, entries: [receiptEntry], onReceiptGone });
+
+    expect(screen.queryByText("Receipt")).toBeNull();
+  });
+
+  it("renders the retry affordance on a 500 and refetches on tap", async () => {
+    getReceiptUrlMock
+      .mockRejectedValueOnce(new ApiError("Failed to create receipt URL", 500))
+      .mockResolvedValueOnce({ url: "https://signed.example/fresh" });
+
+    renderPopin({ entry: receiptEntry, entries: [receiptEntry] });
+
+    const retryButton = await screen.findByRole("button", { name: "Couldn't load receipt — tap to retry" });
+
+    fireEvent.click(retryButton);
+
+    const thumbnail = await screen.findByAltText("Receipt");
+
+    expect(thumbnail).toHaveAttribute("src", "https://signed.example/fresh");
+
+    expect(getReceiptUrlMock).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,21 +1,60 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import toast from "react-hot-toast";
 
 interface ReceiptViewerProps {
     isOpen: boolean;
     onClose: () => void;
     imageUrl: string;
+    /**
+     * Interaction-time URL refresh for downloads: a viewer left open past the
+     * signed URL's TTL must fetch fresh bytes, not a dead link. Optional — a
+     * caller passing a stable URL (or a data URL) can omit it.
+     */
+    getFreshUrl?: () => Promise<string | null>;
 }
 
-export function ReceiptViewer({ isOpen, onClose, imageUrl }: ReceiptViewerProps) {
+/** Download filename extension per sniffed blob type; unknowns fall back to jpg. */
+const DOWNLOAD_EXTENSIONS: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+};
+
+export function ReceiptViewer({ isOpen, onClose, imageUrl, getFreshUrl }: ReceiptViewerProps) {
     if (!isOpen) return null;
 
-    const handleDownload = () => {
-        const a = document.createElement("a");
-        a.href = imageUrl;
-        a.download = "receipt.jpg";
-        a.click();
+    // The anchor `download` attribute is ignored cross-origin (WHATWG), so a
+    // remote signed URL would navigate instead of downloading. Fetching into a
+    // blob makes the anchor same-origin (`blob:`), which downloads everywhere
+    // — and works unchanged for data URLs.
+    const handleDownload = async () => {
+        try {
+            const source = getFreshUrl !== undefined ? await getFreshUrl() : imageUrl;
+
+            if (source === null || source === "") {
+                toast.error("Couldn't download the receipt");
+                return;
+            }
+
+            const response = await fetch(source);
+
+            if (response.ok === false) throw new Error(`Receipt download failed with status ${response.status}`);
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = objectUrl;
+            a.download = `receipt.${DOWNLOAD_EXTENSIONS[blob.type] ?? "jpg"}`;
+            a.click();
+
+            URL.revokeObjectURL(objectUrl);
+        } catch (error) {
+            console.error("Failed to download receipt:", error);
+            toast.error("Couldn't download the receipt");
+        }
     };
 
     return createPortal(
@@ -32,7 +71,7 @@ export function ReceiptViewer({ isOpen, onClose, imageUrl }: ReceiptViewerProps)
                 <span className="text-white font-semibold text-base">Receipt</span>
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={handleDownload}
+                        onClick={() => { void handleDownload(); }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium text-white transition-opacity active:opacity-70"
                         style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
                     >

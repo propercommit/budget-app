@@ -7,7 +7,7 @@ import {
   readJson,
 } from "../../__tests__/helpers";
 
-const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
+const { prismaMock, getAuthenticatedUser, removeReceiptObjects } = vi.hoisted(() => {
   const model = () => ({
     findMany: vi.fn(),
     findFirst: vi.fn(),
@@ -26,11 +26,13 @@ const { prismaMock, getAuthenticatedUser } = vi.hoisted(() => {
       $transaction: vi.fn(),
     },
     getAuthenticatedUser: vi.fn(),
+    removeReceiptObjects: vi.fn(),
   };
 });
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth", () => ({ getAuthenticatedUser }));
+vi.mock("@/lib/receipt-cleanup", () => ({ removeReceiptObjects }));
 
 import { PUT, DELETE } from "@/app/api/entries/[id]/route";
 
@@ -65,6 +67,21 @@ describe("PUT /api/entries/[id]", () => {
     expect(body).toEqual({ error: "At least one field is required to update" });
   });
 
+  // The receipt moved off the entry body and onto its own sub-resource route
+  // (D27) — receiptUrl/receiptPath no longer count as updatable fields, so a
+  // body carrying only those hits the all-undefined guard.
+  it("400 when only receiptUrl/receiptPath are provided — receipts left the entry body", async () => {
+    const { status, body } = await readJson(
+      await PUT(
+        jsonRequest({ receiptUrl: "https://cdn.example/x.jpg", receiptPath: "user-123/e1" }),
+        routeContext("e1")
+      )
+    );
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "At least one field is required to update" });
+    expect(prismaMock.spendingEntry.update).not.toHaveBeenCalled();
+  });
+
   it("404 when entry does not exist", async () => {
     prismaMock.spendingEntry.findUnique.mockResolvedValue(null);
     const { status, body } = await readJson(
@@ -86,6 +103,25 @@ describe("PUT /api/entries/[id]", () => {
     expect(status).toBe(404);
     expect(body).toEqual({ error: "Entry not found" });
     expect(prismaMock.spendingEntry.update).not.toHaveBeenCalled();
+  });
+
+  it("ignores stray receiptUrl/receiptPath riders on an otherwise valid update", async () => {
+    prismaMock.spendingEntry.findUnique.mockResolvedValue(FAKE_ENTRY);
+    prismaMock.spendingEntry.update.mockResolvedValue({ id: "e1", name: "New" });
+
+    const { status } = await readJson(
+      await PUT(
+        jsonRequest({ name: "New", receiptUrl: "https://cdn.example/x.jpg", receiptPath: "user-123/e1" }),
+        routeContext("e1")
+      )
+    );
+
+    expect(status).toBe(200);
+
+    const arg = prismaMock.spendingEntry.update.mock.calls[0][0];
+    expect(arg.data).toEqual({ name: "New" });
+    expect("receiptUrl" in arg.data).toBe(false);
+    expect("receiptPath" in arg.data).toBe(false);
   });
 
   it("updates the entry and does NOT recompute spent when amount is unchanged", async () => {
@@ -299,6 +335,37 @@ describe("DELETE /api/entries/[id]", () => {
       where: { id: "s1" },
       data: { spent: 500 },
     });
+  });
+
+  // Deliberately not gated on receiptPath: the fixed-path remove is the only
+  // reaper for an uploaded-but-never-confirmed object once its entry dies.
+  it("cleans up the fixed receipt path AFTER the prisma delete", async () => {
+    prismaMock.spendingEntry.findUnique.mockResolvedValue(FAKE_ENTRY);
+    prismaMock.spendingEntry.delete.mockResolvedValue({ id: "e1" });
+    prismaMock.spendingEntry.findMany.mockResolvedValue([]);
+    prismaMock.spendingItem.update.mockResolvedValue({});
+
+    const { status } = await readJson(
+      await DELETE(getRequest("http://localhost"), routeContext("e1"))
+    );
+
+    expect(status).toBe(200);
+    expect(removeReceiptObjects).toHaveBeenCalledTimes(1);
+    expect(removeReceiptObjects).toHaveBeenCalledWith([`${FAKE_USER.id}/e1`]);
+
+    // The DB row must be gone before the storage object — a remove-first
+    // failure would leave a live entry pointing at a dead object.
+    const deleteOrder = prismaMock.spendingEntry.delete.mock.invocationCallOrder[0];
+    const removeOrder = removeReceiptObjects.mock.invocationCallOrder[0];
+    expect(deleteOrder).toBeLessThan(removeOrder);
+  });
+
+  it("does not touch storage when the entry is missing or foreign", async () => {
+    prismaMock.spendingEntry.findUnique.mockResolvedValue(null);
+
+    await DELETE(getRequest("http://localhost"), routeContext("e1"));
+
+    expect(removeReceiptObjects).not.toHaveBeenCalled();
   });
 
   it("persists a negative spent when only credits remain after the delete", async () => {

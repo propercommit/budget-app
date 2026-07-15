@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { removeReceiptObjects } from "@/lib/receipt-cleanup";
 
 // Constants
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -148,10 +149,21 @@ export async function DELETE(
             );
         }
 
-        // Delete the category (spending items will cascade delete)
+        // The hidden mass-delete: the DB cascade (category → series → items →
+        // entries) destroys every entry across ALL months without application
+        // code seeing them — enumerate receipt paths across the whole blast
+        // radius first for the post-delete cleanup.
+        const entriesWithReceipts = await prisma.spendingEntry.findMany({
+            where: { spendingItem: { series: { categoryId: id } }, receiptPath: { not: null } },
+            select: { receiptPath: true },
+        });
+
+        // Delete the category (series, items and entries cascade in the DB)
         await prisma.category.delete({
             where: { id },
         });
+
+        await removeReceiptObjects(entriesWithReceipts.map(e => e.receiptPath).filter((p): p is string => p !== null));
 
         return NextResponse.json({ success: true });
     } catch (error) {

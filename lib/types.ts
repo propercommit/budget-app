@@ -3,7 +3,12 @@ export interface SpendingEntry {
   name: string;
   amount: number; // integer cents, always a positive magnitude
   direction: "debit" | "credit"; // sign of the entry's effect on spent
-  receiptUrl: string | null;
+  /**
+   * Storage object key of the receipt (`<userId>/<entryId>` in the private
+   * `receipts` bucket) — an opaque presence marker client-side, never an img
+   * src. Rendering fetches a signed URL via GET /api/entries/[id]/receipt.
+   */
+  receiptPath: string | null;
   link: string | null;
   date: string;
   spendingItemId: string;

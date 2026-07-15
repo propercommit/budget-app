@@ -25,7 +25,7 @@ import {
 const LONG_NAME = "Subscriptions & Memberships International";
 
 const longEntries: SpendingEntry[] = [
-  { id: "e1", name: "Annual renewal — international premium family plan", date: "2026-06-03", amount: cents(84.2), direction: "debit", receipt: null, link: null },
+  { id: "e1", name: "Annual renewal — international premium family plan", date: "2026-06-03", amount: cents(84.2), direction: "debit", receiptPath: null, link: null },
 ];
 
 const longCardProps = {

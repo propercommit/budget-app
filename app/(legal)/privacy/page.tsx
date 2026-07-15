@@ -65,8 +65,10 @@ export default function PrivacyPolicyPage() {
 
             <p>
                 <strong>Receipts.</strong> Images you attach to spending entries.
-                Images are compressed in your browser before upload and stored in our
-                database.
+                Images are compressed in your browser before upload and stored as
+                files in a private storage bucket on our infrastructure (Supabase),
+                accessible only through short-lived signed links tied to your
+                session.
             </p>
 
             <p>
@@ -224,8 +226,9 @@ export default function PrivacyPolicyPage() {
                     account. You can delete your account at any time in the account
                     settings of the Service; this permanently removes your account and
                     all associated content — categories, spending items and entries,
-                    receipts, income records and settings — from our live database.
-                    Residual copies in encrypted backups are purged within 30 days.
+                    income records and settings — from our live database, and deletes
+                    your receipt files from storage. Residual copies of database
+                    records in encrypted backups are purged within 30 days.
                 </li>
                 <li>
                     <strong>Server and security logs:</strong> kept for short periods for

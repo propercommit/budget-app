@@ -67,7 +67,7 @@ A personal budget tracking application built with a mobile-first, Apple-inspired
 User
  ├── Category[]       (label, icon, hex color)
  ├── SpendingItem[]   (name, icon, budgeted, spent, month, date range, note)
- │    └── SpendingEntry[]  (name, amount, date, receipt URL, link)
+ │    └── SpendingEntry[]  (name, amount, date, receipt path + size, link)
  └── IncomeSource[]   (name, amount, icon, active|passive, month, date range, note)
 ```
 

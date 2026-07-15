@@ -18,21 +18,22 @@ import { baseCardProps, cardCategories, noop, cents, seriesOptions, SELECTED_MON
  * base pins the clock so that screenshot is stable.
  */
 
-// Card-shaped entries (the card uses `receipt`, not the fixtures' `receiptUrl`).
+// Card-shaped entries: both the card shape and the fixtures' `SpendingEntry`
+// now carry `receiptPath` (a Storage-key presence marker, never an img src).
 const coopEntry: SpendingEntry = {
   id: "e2",
   name: "Coop",
   date: "2026-06-11",
   amount: cents(52.75),
   direction: "debit",
-  receipt: null,
+  receiptPath: null,
   link: "https://example.com/receipt",
 };
 
 const cardEntries: SpendingEntry[] = [
-  { id: "e1", name: "Migros", date: "2026-06-03", amount: cents(84.2), direction: "debit", receipt: null, link: null },
+  { id: "e1", name: "Migros", date: "2026-06-03", amount: cents(84.2), direction: "debit", receiptPath: null, link: null },
   coopEntry,
-  { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), direction: "debit", receipt: null, link: null },
+  { id: "e3", name: "Farmers market", date: "2026-06-18", amount: cents(31.5), direction: "debit", receiptPath: null, link: null },
 ];
 
 // A credit (refund) entry: editing it preloads the popin's Credit state —
@@ -43,7 +44,7 @@ const refundEntry: SpendingEntry = {
   date: "2026-06-12",
   amount: cents(15),
   direction: "credit",
-  receipt: null,
+  receiptPath: null,
   link: null,
 };
 
