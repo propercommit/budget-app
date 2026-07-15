@@ -11,6 +11,7 @@ import { useSettings } from "@/lib/settings-context";
 import { CURRENCY_SYMBOLS } from "@/lib/constants";
 import { iconMap } from "@/lib/icon-map";
 import { prepareReceiptFile, type ReceiptAction } from "@/lib/receipt-file";
+import { normalizeLink } from "@/lib/normalize-link";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
 /**
@@ -198,7 +199,7 @@ export function EntryEditPopin({
             direction,
             date,
             receipt: receiptAction,
-            link: link || null,
+            link: normalizeLink(link),
         });
     };
 

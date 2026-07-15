@@ -104,6 +104,21 @@ describe("EntryEditPopin — direction control", () => {
         });
     });
 
+    it("auto-prefixes https:// on a scheme-less link in the payload", () => {
+
+        const { onSave } = renderPopin();
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Shell Station, Grocery run"), { target: { value: "Groceries" } });
+
+        fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "12" } });
+
+        fireEvent.change(screen.getByPlaceholderText("https://example.com"), { target: { value: "migros.ch" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Add Entry" }));
+
+        expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ link: "https://migros.ch" }));
+    });
+
     it("preloads Credit when editing a credit entry and keeps it in the payload", () => {
 
         const { onSave } = renderPopin({ mode: "edit", entry: creditEntry });
