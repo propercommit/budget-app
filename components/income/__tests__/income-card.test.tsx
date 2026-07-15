@@ -111,6 +111,25 @@ describe("IncomeCard — type focus (collapsed)", () => {
 
     expect(screen.getAllByText(ACTIVE)).toHaveLength(4);
   });
+
+  it("hovering floats the type's share beside the desktop donut; a pin alone doesn't", () => {
+    renderCard();
+
+    // At rest only the mobile breakdown row carries the share.
+    expect(screen.getAllByText("83%")).toHaveLength(1);
+
+    fireEvent.mouseEnter(typeRow("Active"));
+
+    expect(screen.getAllByText("83%")).toHaveLength(2);
+
+    fireEvent.mouseLeave(typeRow("Active"));
+
+    expect(screen.getAllByText("83%")).toHaveLength(1);
+
+    fireEvent.click(typeRow("Active"));
+
+    expect(screen.getAllByText("83%")).toHaveLength(1);
+  });
 });
 
 describe("IncomeCard — type focus (expanded)", () => {

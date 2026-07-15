@@ -69,6 +69,7 @@ export function IncomeCard({ incomes, onAdd, onSelect }: IncomeCardProps) {
                     incomeTypes={incomeTypes}
                     onAdd={onAdd}
                     focusedType={focusedType}
+                    hoveredType={hoveredType}
                     setHoveredType={setHoveredType}
                     onSelectType={toggleSelectedType}
                 />
