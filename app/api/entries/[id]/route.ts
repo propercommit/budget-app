@@ -4,6 +4,8 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { monthOfDate } from "@/lib/spending/month";
 import { routeEntryToMonth } from "@/lib/spending/route-entry";
+import { receiptObjectPath } from "@/lib/receipt-storage";
+import { removeReceiptObjects } from "@/lib/receipt-cleanup";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
@@ -253,6 +255,12 @@ export async function DELETE(
 
         // Recalculate spent amount
         await updateSpentAmount(spendingItemId);
+
+        // Best-effort receipt cleanup at the fixed path — deliberately NOT
+        // gated on receiptPath: this is the only reaper for an uploaded-but-
+        // never-confirmed object once its entry dies (cuid ids never recur,
+        // so such an orphan would otherwise be permanent).
+        await removeReceiptObjects([receiptObjectPath(user.id, id)]);
 
         return NextResponse.json({ success: true });
     } catch (error) {

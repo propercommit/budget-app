@@ -803,7 +803,9 @@ async function rollback(manifestPath: string, opts: ReturnType<typeof parseArgs>
     }
   }
 
-  // Delete in FK-safe order, scoped to the IDs we created.
+  // Delete in FK-safe order, scoped to the IDs we created. Storage-unaware:
+  // entries deleted here may leave inert receipt objects in the `receipts`
+  // bucket (this script never writes receipts, so nothing orphans today).
   const delEntries = await prisma.spendingEntry.deleteMany({
     where: { id: { in: manifest.spendingEntryIds } },
   });
