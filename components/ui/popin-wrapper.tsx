@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect, ReactNode, TouchEventHandler } from "react";
+import { useRef, useState, useEffect, ReactNode, TouchEventHandler, UIEvent } from "react";
 import { useLockScroll } from "@/components/hooks/use-lock-scroll";
 
 interface PopinWrapperProps {
     isOpen: boolean;
     onClose: () => void;
-    title: string;
+    /** Standard-chrome title bar text. Ignored when `floatingHeader` is set. */
+    title?: string;
     subtitle?: string;
     headerActions?: ReactNode;
     children: ReactNode;
@@ -30,10 +31,54 @@ interface PopinWrapperProps {
      * intersects down the tree, so only set it when no child needs pan-x).
      */
     sheetClassName?: string;
+    /**
+     * Floating-chrome mode. Instead of the standard title bar, this node
+     * (typically a live-preview chip) floats over the top of the scrolling
+     * content with the close button beside it, and the header padding
+     * condenses once the content is scrolled. The footer becomes an overlay
+     * that slides in on scroll — or is pinned visible when the content has
+     * nothing to scroll, since a scroll-gated footer would otherwise be
+     * unreachable on tall viewports.
+     */
+    floatingHeader?: ReactNode;
 }
 
-export function PopinWrapper({
-    isOpen,
+/** The shared 44px circular dismiss button, identical in both chrome modes. */
+function CloseButton({ onClose, className }: { onClose: () => void; className?: string }) {
+    return (
+        <button
+            onClick={onClose}
+            className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted${className !== undefined ? ` ${className}` : ""}`}
+        >
+            <svg
+                className="w-5 h-5 text-muted-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                />
+            </svg>
+        </button>
+    );
+}
+
+export function PopinWrapper(props: PopinWrapperProps) {
+
+    useLockScroll(props.isOpen);
+
+    if (!props.isOpen) return null;
+
+    // The sheet is its own component so per-open state (scroll position
+    // flags) starts fresh on every open instead of leaking across closes.
+    return <PopinSheet {...props} />;
+}
+
+function PopinSheet({
     onClose,
     title,
     subtitle,
@@ -45,18 +90,47 @@ export function PopinWrapper({
     onTouchEnd,
     sheetKey,
     sheetClassName,
+    floatingHeader,
 }: PopinWrapperProps) {
     const popinRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [scrolled, setScrolled] = useState(false);
+    const [scrollable, setScrollable] = useState(true);
 
-    useLockScroll(isOpen);
+    const isFloating = floatingHeader !== undefined;
 
     useEffect(() => {
-        if (isOpen) {
-            popinRef.current?.focus();
-        }
-    }, [isOpen]);
+        popinRef.current?.focus();
+    }, []);
 
-    if (!isOpen) return null;
+    // Tracks whether the content overflows: the observer fires on mount, on
+    // viewport resizes (the scroller's box tracks vh) and on content growth
+    // (e.g. a validation message appearing), so the pinned-footer fallback
+    // stays correct for the popin's whole lifetime.
+    useEffect(() => {
+        if (!isFloating) return;
+
+        const scroller = scrollRef.current;
+        const content = contentRef.current;
+
+        if (scroller === null || content === null) return;
+
+        const observer = new ResizeObserver(() => {
+            setScrollable(scroller.scrollHeight > scroller.clientHeight);
+        });
+
+        observer.observe(scroller);
+        observer.observe(content);
+
+        return () => observer.disconnect();
+    }, [isFloating]);
+
+    const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+        setScrolled(e.currentTarget.scrollTop > 8);
+    };
+
+    const footerVisible = scrolled || !scrollable;
 
     return (
         <div
@@ -89,58 +163,73 @@ export function PopinWrapper({
                     flexDirection: "column",
                 }}
             >
-                <div className="sm:hidden flex justify-center pt-3 pb-1">
-                    <div className="w-10 h-1 rounded-full bg-border" />
-                </div>
+                {isFloating ? (
+                    /* pointer-events-none lets taps in the gap between the
+                       chip and the close button reach the content scrolling
+                       beneath the overlay. */
+                    <div
+                        className="absolute top-0 left-0 right-0 z-[2] flex items-center justify-between pointer-events-none"
+                        style={{ padding: scrolled ? "8px 20px" : "16px 20px", transition: "padding 0.25s" }}
+                    >
+                        <div className="pointer-events-auto min-w-0">{floatingHeader}</div>
+                        <CloseButton onClose={onClose} className="pointer-events-auto shrink-0" />
+                    </div>
+                ) : (
+                    <>
+                        <div className="sm:hidden flex justify-center pt-3 pb-1">
+                            <div className="w-10 h-1 rounded-full bg-border" />
+                        </div>
 
-                <div
-                    className="flex items-center justify-between px-5 py-4 border-b border-border"
-                >
-                    <div>
-                        <h2 className="text-lg font-semibold text-foreground">
-                            {title}
-                        </h2>
-                        {subtitle && (
-                            <p className="text-sm text-muted-foreground">
-                                {subtitle}
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {headerActions}
-                        <button
-                            onClick={onClose}
-                            className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 bg-muted"
+                        <div
+                            className="flex items-center justify-between px-5 py-4 border-b border-border"
                         >
-                            <svg
-                                className="w-5 h-5 text-muted-foreground"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">
+                                    {title}
+                                </h2>
+                                {subtitle && (
+                                    <p className="text-sm text-muted-foreground">
+                                        {subtitle}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {headerActions}
+                                <CloseButton onClose={onClose} />
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 {/* overscroll containment: hitting the end of the sheet's own
                     scroll must not rubber-band into scrolling the page. */}
-                <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-5">
-                    {children}
+                <div
+                    ref={scrollRef}
+                    onScroll={isFloating ? handleScroll : undefined}
+                    className={`flex-1 overflow-y-auto overscroll-contain px-5 ${isFloating ? "pt-[76px] pb-[120px]" : "py-5"}`}
+                >
+                    {isFloating ? <div ref={contentRef}>{children}</div> : children}
                 </div>
 
-                {footer && (
-                    <div
-                        className="px-5 py-4 border-t border-border"
-                    >
-                        {footer}
-                    </div>
+                {footer !== undefined && (
+                    isFloating ? (
+                        <div
+                            className="absolute bottom-0 left-0 right-0 z-[2] px-5 py-4 border-t border-border bg-card"
+                            style={{
+                                boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.06)",
+                                transform: footerVisible ? "translateY(0)" : "translateY(110%)",
+                                transition: "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+                            }}
+                        >
+                            {footer}
+                        </div>
+                    ) : (
+                        <div
+                            className="px-5 py-4 border-t border-border"
+                        >
+                            {footer}
+                        </div>
+                    )
                 )}
             </div>
         </div>
