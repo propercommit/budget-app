@@ -4,15 +4,13 @@ import { getAuthenticatedUser } from "@/lib/auth";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { monthOfDate } from "@/lib/spending/month";
 import { routeEntryToMonth } from "@/lib/spending/route-entry";
+import { HTTP_URL_REGEX } from "@/lib/normalize-link";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
 const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
-
-// URL validation regex (basic)
-const URL_REGEX = /^https?:\/\/.+/i;
 
 // GET /api/entries - Fetch entries for a spending item
 export async function GET(request: Request) {
@@ -146,7 +144,7 @@ export async function POST(request: Request) {
                     { status: 400 }
                 );
             }
-            if (!URL_REGEX.test(link)) {
+            if (!HTTP_URL_REGEX.test(link)) {
                 return NextResponse.json(
                     { error: "Link must be a valid URL starting with http:// or https://" },
                     { status: 400 }

@@ -2,35 +2,19 @@ import { describe, it, expect } from "vitest";
 import { normalizeLink } from "@/lib/normalize-link";
 
 describe("normalizeLink", () => {
-    it("prepends https:// to a bare domain", () => {
-        expect(normalizeLink("migros.ch")).toBe("https://migros.ch");
+    it.each([
+        ["bare domain (trimmed)", "  migros.ch  ", "https://migros.ch"],
+        ["www address with a path", "www.migros.ch/receipts/42", "https://www.migros.ch/receipts/42"],
+        ["https link unchanged", "https://example.com/x", "https://example.com/x"],
+        ["http link unchanged", "http://example.com", "http://example.com"],
+        ["scheme matched case-insensitively", "HTTPS://EXAMPLE.COM", "HTTPS://EXAMPLE.COM"],
+    ])("%s", (_label, input, expected) => {
+        expect(normalizeLink(input)).toBe(expected);
     });
 
-    it("prepends https:// to a www address with a path", () => {
-        expect(normalizeLink("www.migros.ch/receipts/42")).toBe("https://www.migros.ch/receipts/42");
-    });
-
-    it("passes an https link through unchanged", () => {
-        expect(normalizeLink("https://example.com/x")).toBe("https://example.com/x");
-    });
-
-    it("passes an http link through unchanged", () => {
-        expect(normalizeLink("http://example.com")).toBe("http://example.com");
-    });
-
-    it("matches the scheme case-insensitively", () => {
-        expect(normalizeLink("HTTPS://EXAMPLE.COM")).toBe("HTTPS://EXAMPLE.COM");
-    });
-
-    it("returns null for an empty value", () => {
+    it("returns null for empty or whitespace-only input", () => {
         expect(normalizeLink("")).toBeNull();
-    });
 
-    it("returns null for whitespace only", () => {
         expect(normalizeLink("   ")).toBeNull();
-    });
-
-    it("trims surrounding whitespace before normalizing", () => {
-        expect(normalizeLink("  migros.ch  ")).toBe("https://migros.ch");
     });
 });

@@ -6,15 +6,13 @@ import { monthOfDate } from "@/lib/spending/month";
 import { routeEntryToMonth } from "@/lib/spending/route-entry";
 import { receiptObjectPath } from "@/lib/receipt-storage";
 import { removeReceiptObjects } from "@/lib/receipt-cleanup";
+import { HTTP_URL_REGEX } from "@/lib/normalize-link";
 
 // Constants
 const MAX_NAME_LENGTH = 100;
 const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
 const MIN_AMOUNT_CENTS = 0; // entry amounts are positive magnitudes; sign comes from `direction`
 const MAX_LINK_LENGTH = 2048;
-
-// URL validation regex
-const URL_REGEX = /^https?:\/\/.+/i;
 
 // PUT /api/entries/[id] - Update an entry
 export async function PUT(
@@ -103,7 +101,7 @@ export async function PUT(
                     { status: 400 }
                 );
             }
-            if (!URL_REGEX.test(link)) {
+            if (!HTTP_URL_REGEX.test(link)) {
                 return NextResponse.json(
                     { error: "Link must be a valid URL starting with http:// or https://" },
                     { status: 400 }
