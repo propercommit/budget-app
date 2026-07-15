@@ -12,6 +12,12 @@ type CachedUrl = { url: string; expiresAt: number };
 
 export type ReceiptUrlStatus = "idle" | "loading" | "ready" | "error";
 
+type UrlState = { url: string | null; status: ReceiptUrlStatus };
+
+function isFresh(cached: CachedUrl | undefined): cached is CachedUrl {
+    return cached !== undefined && cached.expiresAt - EXPIRY_MARGIN_MS > Date.now();
+}
+
 /**
  * Fetch-on-open seam for receipt rendering: mints a signed read URL for the
  * entry via GET /api/entries/[id]/receipt when the detail popin shows an
@@ -31,6 +37,10 @@ export type ReceiptUrlStatus = "idle" | "loading" | "ready" | "error";
  * `getFreshUrl` is the interaction-time check: awaited before opening the
  * full-screen viewer and before a download, so a popin left open past the
  * TTL never feeds a dead URL to a brand-new fetch.
+ *
+ * Synchronous state transitions happen during render via the
+ * adjust-state-when-props-change pattern (repo precedent: the detail popin's
+ * pager); the effect performs only the async fetch.
  */
 export function useReceiptUrl(
     entryId: string | null,
@@ -38,38 +48,55 @@ export function useReceiptUrl(
     onReceiptGone?: (entryId: string) => void,
 ): { url: string | null; status: ReceiptUrlStatus; retry: () => void; markBroken: () => void; getFreshUrl: () => Promise<string | null> } {
 
-    const cache = useRef<Map<string, CachedUrl>>(new Map());
-    const [state, setState] = useState<{ url: string | null; status: ReceiptUrlStatus }>({ url: null, status: "idle" });
+    // A stable mutable container, not a ref: entries are read during render
+    // (the cached-state derivation) and mutated from handlers/async code; the
+    // Map identity itself never changes.
+    const [cache] = useState(() => new Map<string, CachedUrl>());
     const [refreshNonce, setRefreshNonce] = useState(0);
 
-    // The gone-callback is intentionally not an effect dependency — a parent
-    // re-render must not refetch.
+    // The gone-callback is intentionally not a fetch-effect dependency — a
+    // parent re-render must not refetch. Synced post-render (latest-ref).
     const onGoneRef = useRef(onReceiptGone);
-    onGoneRef.current = onReceiptGone;
-
-    const wantsUrl = entryId !== null && entryId.startsWith("temp-") === false
-        && receiptPath !== null && receiptPath !== undefined;
 
     useEffect(() => {
-        if (wantsUrl === false || entryId === null) {
-            setState({ url: null, status: "idle" });
-            return;
-        }
+        onGoneRef.current = onReceiptGone;
+    });
 
-        const cached = cache.current.get(entryId);
+    const subject = entryId !== null && entryId.startsWith("temp-") === false
+        && receiptPath !== null && receiptPath !== undefined
+        ? entryId
+        : null;
 
-        if (cached !== undefined && cached.expiresAt - EXPIRY_MARGIN_MS > Date.now()) {
-            setState({ url: cached.url, status: "ready" });
-            return;
-        }
+    const stateFor = (id: string | null): UrlState => {
+        if (id === null) return { url: null, status: "idle" };
+
+        const cached = cache.get(id);
+
+        if (isFresh(cached)) return { url: cached.url, status: "ready" };
+
+        return { url: null, status: "loading" };
+    };
+
+    const [state, setState] = useState<UrlState>(() => stateFor(subject));
+    const [prevSubject, setPrevSubject] = useState(subject);
+
+    // Render-phase adjustment: entering/leaving an entry resets the display
+    // state synchronously, without an extra effect-driven render pass.
+    if (prevSubject !== subject) {
+        setPrevSubject(subject);
+        setState(stateFor(subject));
+    }
+
+    useEffect(() => {
+        if (subject === null) return;
+
+        if (isFresh(cache.get(subject))) return;
 
         let cancelled = false;
 
-        setState({ url: null, status: "loading" });
-
-        getReceiptUrl(entryId)
+        getReceiptUrl(subject)
             .then(({ url }) => {
-                cache.current.set(entryId, { url, expiresAt: Date.now() + RECEIPT_SIGNED_URL_TTL_SECONDS * 1000 });
+                cache.set(subject, { url, expiresAt: Date.now() + RECEIPT_SIGNED_URL_TTL_SECONDS * 1000 });
 
                 if (cancelled === false) setState({ url, status: "ready" });
             })
@@ -80,7 +107,7 @@ export function useReceiptUrl(
 
                 if (code === "no_receipt" || code === "Entry not found") {
                     setState({ url: null, status: "idle" });
-                    onGoneRef.current?.(entryId);
+                    onGoneRef.current?.(subject);
                     return;
                 }
 
@@ -89,31 +116,32 @@ export function useReceiptUrl(
             });
 
         return () => { cancelled = true; };
-    }, [entryId, wantsUrl, refreshNonce]);
+    }, [subject, refreshNonce]);
 
     const retry = useCallback(() => {
-        if (entryId !== null) cache.current.delete(entryId);
+        if (entryId !== null) cache.delete(entryId);
 
+        setState({ url: null, status: "loading" });
         setRefreshNonce(n => n + 1);
-    }, [entryId]);
+    }, [entryId, cache]);
 
     const markBroken = useCallback(() => {
-        if (entryId !== null) cache.current.delete(entryId);
+        if (entryId !== null) cache.delete(entryId);
 
         setState({ url: null, status: "error" });
-    }, [entryId]);
+    }, [entryId, cache]);
 
     const getFreshUrl = useCallback(async (): Promise<string | null> => {
-        if (wantsUrl === false || entryId === null) return null;
+        if (subject === null) return null;
 
-        const cached = cache.current.get(entryId);
+        const cached = cache.get(subject);
 
-        if (cached !== undefined && cached.expiresAt - EXPIRY_MARGIN_MS > Date.now()) return cached.url;
+        if (isFresh(cached)) return cached.url;
 
         try {
-            const { url } = await getReceiptUrl(entryId);
+            const { url } = await getReceiptUrl(subject);
 
-            cache.current.set(entryId, { url, expiresAt: Date.now() + RECEIPT_SIGNED_URL_TTL_SECONDS * 1000 });
+            cache.set(subject, { url, expiresAt: Date.now() + RECEIPT_SIGNED_URL_TTL_SECONDS * 1000 });
             setState({ url, status: "ready" });
 
             return url;
@@ -121,7 +149,7 @@ export function useReceiptUrl(
             console.error("Failed to refresh receipt URL:", error);
             return null;
         }
-    }, [entryId, wantsUrl]);
+    }, [subject, cache]);
 
     return { url: state.url, status: state.status, retry, markBroken, getFreshUrl };
 }

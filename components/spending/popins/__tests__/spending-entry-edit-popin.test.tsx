@@ -1,19 +1,48 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { EntryEditPopin } from "@/components/spending/popins/spending-entry-edit-popin";
 import type { SpendingEntry } from "@/components/spending/spending-card-expanded";
 import { SettingsProvider } from "@/lib/settings-context";
+import { prepareReceiptFile } from "@/lib/receipt-file";
+
+// Only the runtime export is mocked — ReceiptAction/PreparedReceipt are
+// type-only exports, erased at compile time, so the real union still types
+// the mock's resolved values below.
+vi.mock("@/lib/receipt-file", () => ({
+    prepareReceiptFile: vi.fn(),
+}));
+
+const prepareReceiptFileMock = vi.mocked(prepareReceiptFile);
+
+// jsdom has no object-URL support; stub the statics onto the real URL class
+// so `new URL(...)` elsewhere keeps working.
+const createObjectURLMock = vi.fn(() => "blob:fake-preview");
+const revokeObjectURLMock = vi.fn();
+
+beforeAll(() => {
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: createObjectURLMock, revokeObjectURL: revokeObjectURLMock }));
+});
+
+beforeEach(() => {
+    prepareReceiptFileMock.mockReset();
+
+    createObjectURLMock.mockClear();
+
+    revokeObjectURLMock.mockClear();
+});
 
 // The harness has no settings API, so SettingsProvider falls back to USD —
 // the sign preview therefore reads "−$" (debit) / "+$" (credit).
 const DEBIT_PREFIX = "−$";
 const CREDIT_PREFIX = "+$";
 
-const creditEntry: SpendingEntry = { id: "e1", name: "Refund", date: "2026-06-10", amount: 4200, direction: "credit", receipt: null, link: null };
+const creditEntry: SpendingEntry = { id: "e1", name: "Refund", date: "2026-06-10", amount: 4200, direction: "credit", receiptPath: null, link: null };
 
-const debitEntry: SpendingEntry = { id: "e2", name: "Coffee", date: "2026-06-05", amount: 10000, direction: "debit", receipt: null, link: null };
+const debitEntry: SpendingEntry = { id: "e2", name: "Coffee", date: "2026-06-05", amount: 10000, direction: "debit", receiptPath: null, link: null };
+
+const receiptEntry: SpendingEntry = { id: "e3", name: "Pharmacy", date: "2026-06-12", amount: 2500, direction: "debit", receiptPath: "user-1/e3", link: null };
 
 type PopinProps = ComponentProps<typeof EntryEditPopin>;
 
@@ -70,7 +99,7 @@ describe("EntryEditPopin — direction control", () => {
             amount: 450,
             direction: "debit",
             date: new Date().toISOString().split("T")[0],
-            receipt: null,
+            receipt: { action: "keep" },
             link: null,
         });
     });
@@ -88,7 +117,7 @@ describe("EntryEditPopin — direction control", () => {
             amount: 4200,
             direction: "credit",
             date: "2026-06-10",
-            receipt: null,
+            receipt: { action: "keep" },
             link: null,
         });
     });
@@ -127,7 +156,7 @@ describe("EntryEditPopin — direction control", () => {
             amount: 1000,
             direction: "credit",
             date: new Date().toISOString().split("T")[0],
-            receipt: null,
+            receipt: { action: "keep" },
             link: null,
         });
     });
@@ -145,7 +174,7 @@ describe("EntryEditPopin — direction control", () => {
             amount: 10000,
             direction: "credit",
             date: "2026-06-05",
-            receipt: null,
+            receipt: { action: "keep" },
             link: null,
         });
     });
@@ -173,5 +202,148 @@ describe("EntryEditPopin — amount input guard", () => {
         fireEvent.change(input, { target: { value: "" } });
 
         expect(input).toHaveValue("");
+    });
+});
+
+describe("EntryEditPopin — receipt field", () => {
+
+    const rawFile = new File(["raw-bytes"], "receipt.jpg", { type: "image/jpeg" });
+
+    /** The hidden file input inside the "Upload receipt" dropzone label. */
+    const fileInput = () => screen.getByLabelText("Upload receipt (max 10 MB)");
+
+    const selectFile = (file: File) => fireEvent.change(fileInput(), { target: { files: [file] } });
+
+    it("stages a prepared file and sends attach in the save payload", async () => {
+
+        const preparedFile = new File(["compressed"], "receipt.jpg", { type: "image/jpeg" });
+
+        prepareReceiptFileMock.mockResolvedValue({ kind: "ready", file: preparedFile });
+
+        const { onSave } = renderPopin();
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Shell Station, Grocery run"), { target: { value: "Coffee" } });
+
+        fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "4.50" } });
+
+        selectFile(rawFile);
+
+        // The staged preview renders from the (stubbed) object URL of the
+        // PREPARED file — what the save payload must carry, not the raw one.
+        const preview = await screen.findByAltText("Receipt preview");
+
+        expect(preview).toHaveAttribute("src", "blob:fake-preview");
+
+        expect(createObjectURLMock).toHaveBeenCalledWith(preparedFile);
+
+        fireEvent.click(screen.getByRole("button", { name: "Add Entry" }));
+
+        expect(onSave).toHaveBeenCalledWith({
+            name: "Coffee",
+            amount: 450,
+            direction: "debit",
+            date: new Date().toISOString().split("T")[0],
+            receipt: { action: "attach", file: preparedFile },
+            link: null,
+        });
+    });
+
+    it("sends remove after Remove is clicked on a stored receipt", () => {
+
+        const { onSave } = renderPopin({ mode: "edit", entry: receiptEntry });
+
+        // A stored receipt renders as a static placeholder — no network read.
+        expect(screen.getByText("Receipt attached")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+        expect(screen.queryByText("Receipt attached")).toBeNull();
+
+        fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+        expect(onSave).toHaveBeenCalledWith({
+            name: "Pharmacy",
+            amount: 2500,
+            direction: "debit",
+            date: "2026-06-12",
+            receipt: { action: "remove" },
+            link: null,
+        });
+    });
+
+    it("blocks save while the selected file is still processing", () => {
+
+        prepareReceiptFileMock.mockReturnValue(new Promise(() => {}));
+
+        const { onSave } = renderPopin();
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Shell Station, Grocery run"), { target: { value: "Coffee" } });
+
+        fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "4.50" } });
+
+        selectFile(rawFile);
+
+        fireEvent.click(screen.getByRole("button", { name: "Add Entry" }));
+
+        expect(onSave).not.toHaveBeenCalled();
+
+        expect(screen.getByText("Still processing the image — one moment")).toBeInTheDocument();
+    });
+
+    it("re-fires the handler when the same file is reselected after a failure", async () => {
+
+        prepareReceiptFileMock.mockResolvedValue({ kind: "unsupported-type" });
+
+        renderPopin();
+
+        selectFile(rawFile);
+
+        await screen.findByText("Use a JPEG, PNG or WebP image");
+
+        // The input value is reset after every selection, so dispatching a
+        // change with the SAME file is not a dead end.
+        selectFile(rawFile);
+
+        await waitFor(() => expect(prepareReceiptFileMock).toHaveBeenCalledTimes(2));
+    });
+
+    it("rejects an oversized file up front and never saves an attach", async () => {
+
+        prepareReceiptFileMock.mockResolvedValue({ kind: "too-large" });
+
+        const { onSave } = renderPopin();
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Shell Station, Grocery run"), { target: { value: "Coffee" } });
+
+        fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "4.50" } });
+
+        selectFile(rawFile);
+
+        await screen.findByText("Receipts can be at most 10 MB");
+
+        fireEvent.click(screen.getByRole("button", { name: "Add Entry" }));
+
+        expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ receipt: { action: "keep" } }));
+    });
+
+    it("revokes the staged preview's object URL when the selection is discarded", async () => {
+
+        const preparedFile = new File(["compressed"], "receipt.jpg", { type: "image/jpeg" });
+
+        prepareReceiptFileMock.mockResolvedValue({ kind: "ready", file: preparedFile });
+
+        renderPopin();
+
+        selectFile(rawFile);
+
+        await screen.findByAltText("Receipt preview");
+
+        expect(revokeObjectURLMock).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+        expect(screen.queryByAltText("Receipt preview")).toBeNull();
+
+        expect(revokeObjectURLMock).toHaveBeenCalledWith("blob:fake-preview");
     });
 });

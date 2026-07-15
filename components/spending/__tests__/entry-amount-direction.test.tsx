@@ -3,10 +3,12 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 // SettingsProvider calls getSettings() on mount; keep it offline so it falls
-// back to the USD default ("<value> $").
+// back to the USD default ("<value> $"). getReceiptUrl is inert: the fixtures
+// carry receiptPath null, so useReceiptUrl stays idle and never fetches.
 vi.mock("@/lib/api", () => ({
   getSettings: vi.fn().mockRejectedValue(new Error("offline")),
   updateSettings: vi.fn(),
+  getReceiptUrl: vi.fn(),
 }));
 
 import { SettingsProvider } from "@/lib/settings-context";
@@ -19,9 +21,9 @@ import { installRadixJsdomStubs } from "./radix-jsdom-stubs";
 beforeAll(installRadixJsdomStubs);
 
 // Amounts in integer cents; formatAmount divides by 100 → "42 $" / "100 $".
-const debit: SpendingEntry = { id: "e1", name: "Monthly rent", date: "2026-06-01", amount: 4200, direction: "debit", receipt: null, link: null };
+const debit: SpendingEntry = { id: "e1", name: "Monthly rent", date: "2026-06-01", amount: 4200, direction: "debit", receiptPath: null, link: null };
 
-const credit: SpendingEntry = { id: "e2", name: "Deposit refund", date: "2026-06-02", amount: 10_000, direction: "credit", receipt: null, link: null };
+const credit: SpendingEntry = { id: "e2", name: "Deposit refund", date: "2026-06-02", amount: 10_000, direction: "credit", receiptPath: null, link: null };
 
 function renderExpandedWith(entries: SpendingEntry[]) {
   render(

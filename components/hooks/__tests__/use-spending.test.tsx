@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 
 vi.mock("@/lib/api", () => ({
   getSpending: vi.fn(),
@@ -11,6 +11,15 @@ vi.mock("@/lib/api", () => ({
   createEntry: vi.fn(),
   updateEntry: vi.fn(),
   deleteEntry: vi.fn(),
+  issueReceiptUpload: vi.fn(),
+  confirmReceipt: vi.fn(),
+  deleteReceipt: vi.fn(),
+}));
+
+// The direct-to-Storage upload leg — the hook-test seam (never mock
+// @supabase/supabase-js here; the browser client comes from @supabase/ssr).
+vi.mock("@/lib/upload-receipt", () => ({
+  uploadReceiptFile: vi.fn(),
 }));
 
 vi.mock("@/lib/toast", () => ({
@@ -24,6 +33,8 @@ vi.mock("react-hot-toast", () => ({
 
 import { useSpending, type CreateSpendingConflict } from "@/components/hooks/use-spending";
 import * as api from "@/lib/api";
+import { ApiError } from "@/lib/api-error";
+import { uploadReceiptFile } from "@/lib/upload-receipt";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
@@ -36,7 +47,7 @@ const entry = (over: Partial<SpendingEntry> = {}): SpendingEntry => ({
   name: "Coffee",
   amount: 425,
   direction: "debit",
-  receiptUrl: null,
+  receiptPath: null,
   link: null,
   date: "2026-06-02",
   spendingItemId: "s1",
@@ -608,5 +619,221 @@ describe("useSpending — category cascade mirrors (local state only)", () => {
     expect(result.current.spendingData[MONTH][0].category).toEqual(renamed);
     // Other categories' items are untouched.
     expect(result.current.spendingData[MONTH][1].category?.label).toBe("Transport");
+  });
+});
+
+describe("useSpending — receipt attach chain (create)", () => {
+  const receiptFile = () => new File(["fake-jpeg-bytes"], "receipt.jpg", { type: "image/jpeg" });
+
+  const stubHappyChain = (file: File) => {
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
+    vi.mocked(api.issueReceiptUpload).mockResolvedValue({ path: "u1/real", token: "tok" });
+    vi.mocked(uploadReceiptFile).mockResolvedValue(undefined);
+    vi.mocked(api.confirmReceipt).mockResolvedValue({ receiptPath: "u1/real", receiptSizeBytes: file.size });
+  };
+
+  it("keeps the receipt off the POST body and runs issue → upload → confirm against the real id, then patches the entry", async () => {
+    const file = receiptFile();
+    stubHappyChain(file);
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    // The receipt never rides the entry POST body.
+    expect(vi.mocked(api.createEntry).mock.calls[0][0]).not.toHaveProperty("receipt");
+
+    // The confirmed receiptPath lands on the entry (patched by id).
+    await waitFor(() => {
+      expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBe("u1/real");
+    });
+
+    // Every leg addresses the REAL id from the POST response, never the temp id.
+    expect(api.issueReceiptUpload).toHaveBeenCalledWith("real", { sizeBytes: file.size });
+    expect(uploadReceiptFile).toHaveBeenCalledWith("u1/real", "tok", file);
+    expect(api.confirmReceipt).toHaveBeenCalledWith("real");
+
+    // Strict ordering: entry POST, then issue → upload → confirm.
+    const [postOrder] = vi.mocked(api.createEntry).mock.invocationCallOrder;
+    const [issueOrder] = vi.mocked(api.issueReceiptUpload).mock.invocationCallOrder;
+    const [uploadOrder] = vi.mocked(uploadReceiptFile).mock.invocationCallOrder;
+    const [confirmOrder] = vi.mocked(api.confirmReceipt).mock.invocationCallOrder;
+
+    expect(postOrder).toBeLessThan(issueOrder);
+
+    expect(issueOrder).toBeLessThan(uploadOrder);
+
+    expect(uploadOrder).toBeLessThan(confirmOrder);
+  });
+
+  it("keeps the created entry (no rollback) and toasts a retry when the upload leg fails", async () => {
+    const file = receiptFile();
+
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
+    vi.mocked(api.issueReceiptUpload).mockResolvedValue({ path: "u1/real", token: "tok" });
+    vi.mocked(uploadReceiptFile).mockRejectedValue(new Error("network down"));
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    await waitFor(() => {
+      expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t attach the receipt to "Coffee"', { retry: expect.any(Function) });
+    });
+
+    // The entry save already succeeded — it stays, just without a receipt.
+    expect(result.current.spendingData[MONTH][0].entries?.[0].id).toBe("real");
+    expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBeNull();
+    expect(api.confirmReceipt).not.toHaveBeenCalled();
+  });
+
+  it("treats quota_exceeded from confirm as terminal: specific toast, no retry toast", async () => {
+    const file = receiptFile();
+
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
+    vi.mocked(api.issueReceiptUpload).mockResolvedValue({ path: "u1/real", token: "tok" });
+    vi.mocked(uploadReceiptFile).mockResolvedValue(undefined);
+    vi.mocked(api.confirmReceipt).mockRejectedValue(new ApiError("quota_exceeded", 413));
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Receipt storage is full (50 MB). Delete some receipts first.");
+    });
+
+    // Terminal: the same file would fail again, so no retry is offered.
+    expect(showErrorToast).not.toHaveBeenCalled();
+    expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBeNull();
+  });
+
+  it("merges a landed confirm patch over a stale materializeMonth response", async () => {
+    const file = receiptFile();
+    stubHappyChain(file);
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBe("u1/real");
+    });
+
+    // A materialize response minted BEFORE the confirm landed still carries
+    // receiptPath null — the wholesale bucket replacement must not revert it.
+    const stale = [item({ entries: [entry({ id: "real", receiptPath: null })] })];
+    vi.mocked(api.materializeMonth).mockResolvedValue(stale);
+
+    await act(async () => {
+      await result.current.materializeMonth(MONTH);
+    });
+
+    expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBe("u1/real");
+  });
+
+  it("tracks the entry id in receiptUploads while the chain is in flight and clears it after", async () => {
+    const file = receiptFile();
+
+    vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
+    vi.mocked(api.issueReceiptUpload).mockResolvedValue({ path: "u1/real", token: "tok" });
+    vi.mocked(uploadReceiptFile).mockResolvedValue(undefined);
+
+    let resolveConfirm!: (v: { receiptPath: string; receiptSizeBytes: number }) => void;
+    vi.mocked(api.confirmReceipt).mockReturnValue(
+      new Promise<{ receiptPath: string; receiptSizeBytes: number }>((r) => { resolveConfirm = r; }) as ReturnType<typeof api.confirmReceipt>
+    );
+
+    const { result } = renderHook(() => useSpending(data([item()])));
+
+    await act(async () => {
+      await result.current.createEntry(MONTH, "s1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "attach", file },
+      });
+    });
+
+    // Chain parked on the pending confirm — the indicator is up.
+    await waitFor(() => {
+      expect(result.current.receiptUploads).toEqual({ real: "uploading" });
+    });
+
+    await act(async () => {
+      resolveConfirm({ receiptPath: "u1/real", receiptSizeBytes: file.size });
+    });
+
+    await waitFor(() => {
+      expect(result.current.receiptUploads).toEqual({});
+    });
+  });
+});
+
+describe("useSpending — receipt remove chain (update)", () => {
+  it("keeps the receipt off the PUT body, calls deleteReceipt after it resolves, and nulls receiptPath", async () => {
+    vi.mocked(api.updateEntry).mockResolvedValue(undefined);
+    vi.mocked(api.deleteReceipt).mockResolvedValue(undefined);
+
+    const withReceipt = entry({ receiptPath: "u1/e1" });
+    const { result } = renderHook(() => useSpending(data([item({ spent: 425, entries: [withReceipt] })])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "remove" },
+      });
+    });
+
+    // The removal is its own chain, never an omitted JSON key on the PUT.
+    expect(vi.mocked(api.updateEntry).mock.calls[0][1]).not.toHaveProperty("receipt");
+
+    expect(api.deleteReceipt).toHaveBeenCalledWith("e1");
+
+    const [putOrder] = vi.mocked(api.updateEntry).mock.invocationCallOrder;
+    const [deleteOrder] = vi.mocked(api.deleteReceipt).mock.invocationCallOrder;
+
+    expect(putOrder).toBeLessThan(deleteOrder);
+
+    expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBeNull();
+  });
+
+  it("restores receiptPath and toasts a retry when deleteReceipt fails", async () => {
+    vi.mocked(api.updateEntry).mockResolvedValue(undefined);
+    vi.mocked(api.deleteReceipt).mockRejectedValue(new Error("x"));
+
+    const withReceipt = entry({ receiptPath: "u1/e1" });
+    const { result } = renderHook(() => useSpending(data([item({ spent: 425, entries: [withReceipt] })])));
+
+    await act(async () => {
+      await result.current.updateEntry(MONTH, "s1", "e1", {
+        name: "Coffee", amount: 425, date: "2026-06-02",
+        receipt: { action: "remove" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.spendingData[MONTH][0].entries?.[0].receiptPath).toBe("u1/e1");
+    });
+
+    expect(showErrorToast).toHaveBeenCalledWith('Couldn\'t remove the receipt from "Coffee"', { retry: expect.any(Function) });
   });
 });

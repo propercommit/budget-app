@@ -3,7 +3,7 @@ import { countCategoryEntries } from "@/lib/category-entry-counts";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
 
 function entry(id: string): SpendingEntry {
-  return { id, name: id, amount: 100, direction: "debit", date: "2026-06-01", receiptUrl: null, link: null, spendingItemId: "s1" };
+  return { id, name: id, amount: 100, direction: "debit", date: "2026-06-01", receiptPath: null, link: null, spendingItemId: "s1" };
 }
 
 function item(overrides: Partial<SpendingItem> & Pick<SpendingItem, "id" | "month" | "categoryId">): SpendingItem {
