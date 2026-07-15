@@ -62,6 +62,10 @@ export function useSpending(initialSpendingData?: SpendingData) {
   // RECEIPT_PATCH_TTL_MS. Maps entry id → receiptPath (null = removed).
   const confirmedReceiptPatches = useRef<Map<string, string | null>>(new Map());
 
+  // Eviction timers per entry — a newer patch must cancel the older timer,
+  // or a confirm followed by a remove within the TTL gets evicted early.
+  const receiptPatchTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
   useEffect(() => {
     if (initialSpendingData) return;
     async function load() {
@@ -99,7 +103,14 @@ export function useSpending(initialSpendingData?: SpendingData) {
   const setEntryReceiptEverywhere = useCallback((entryId: string, receiptPath: string | null) => {
     confirmedReceiptPatches.current.set(entryId, receiptPath);
 
-    setTimeout(() => { confirmedReceiptPatches.current.delete(entryId); }, RECEIPT_PATCH_TTL_MS);
+    const previousTimer = receiptPatchTimers.current.get(entryId);
+
+    if (previousTimer !== undefined) clearTimeout(previousTimer);
+
+    receiptPatchTimers.current.set(entryId, setTimeout(() => {
+      confirmedReceiptPatches.current.delete(entryId);
+      receiptPatchTimers.current.delete(entryId);
+    }, RECEIPT_PATCH_TTL_MS));
 
     updateAllMonths(items => items.map(s => ({
       ...s,
@@ -372,15 +383,12 @@ export function useSpending(initialSpendingData?: SpendingData) {
 
       // A cross-month date routed the entry to another month's incarnation:
       // replacing the source item below also undoes the optimistic patch.
-      if (isRoutedResult(real)) {
-        syncRoutedMonths(real);
-      } else {
-        updateMonth(month, items => items.map(s =>
-          s.id === spendingItemId
-            ? { ...s, entries: (s.entries || []).map(e => e.id === optimistic.id ? real : e) }
-            : s
-        ));
-      }
+      if (isRoutedResult(real)) syncRoutedMonths(real);
+      else updateMonth(month, items => items.map(s =>
+        s.id === spendingItemId
+          ? { ...s, entries: (s.entries || []).map(e => e.id === optimistic.id ? real : e) }
+          : s
+      ));
 
       const realId = isRoutedResult(real) ? real.entry.id : real.id;
 

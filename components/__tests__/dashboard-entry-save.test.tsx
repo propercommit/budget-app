@@ -24,7 +24,6 @@ vi.mock("@/lib/api", () => ({
   createIncomeSource: vi.fn(),
   updateIncomeSource: vi.fn(),
   deleteIncomeSource: vi.fn(),
-  getEntries: vi.fn(),
   createEntry: vi.fn(),
   updateEntry: vi.fn(),
   deleteEntry: vi.fn(),

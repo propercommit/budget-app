@@ -58,14 +58,19 @@ export function useReceiptUrl(
     // parent re-render must not refetch. Synced post-render (latest-ref).
     const onGoneRef = useRef(onReceiptGone);
 
-    useEffect(() => {
-        onGoneRef.current = onReceiptGone;
-    });
-
     const subject = entryId !== null && entryId.startsWith("temp-") === false
         && receiptPath !== null && receiptPath !== undefined
         ? entryId
         : null;
+
+    // Latest subject, for getFreshUrl's staleness guard: a fetch started for
+    // entry A must not clobber display state after the user paged to entry B.
+    const subjectRef = useRef(subject);
+
+    useEffect(() => {
+        onGoneRef.current = onReceiptGone;
+        subjectRef.current = subject;
+    });
 
     const stateFor = (id: string | null): UrlState => {
         if (id === null) return { url: null, status: "idle" };
@@ -142,10 +147,26 @@ export function useReceiptUrl(
             const { url } = await getReceiptUrl(subject);
 
             cache.set(subject, { url, expiresAt: Date.now() + RECEIPT_SIGNED_URL_TTL_SECONDS * 1000 });
-            setState({ url, status: "ready" });
+
+            // The user may have paged to another entry while this resolved —
+            // the cache write above is subject-keyed and safe, but display
+            // state belongs to whatever entry is current now.
+            if (subjectRef.current === subject) setState({ url, status: "ready" });
 
             return url;
         } catch (error) {
+            const code = error instanceof ApiError ? error.message : null;
+
+            // Same contract as the fetch effect: a gone receipt is a state,
+            // not an error — clear the block instead of a silent dead tap.
+            if (code === "no_receipt" || code === "Entry not found") {
+                if (subjectRef.current === subject) setState({ url: null, status: "idle" });
+
+                onGoneRef.current?.(subject);
+
+                return null;
+            }
+
             console.error("Failed to refresh receipt URL:", error);
             return null;
         }

@@ -95,6 +95,10 @@ async function discardFailedUpload(admin: SupabaseClient, entry: SpendingEntry, 
 
 type HeadReadResult =
     | { kind: "ok"; head: Uint8Array; totalBytes: number | null }
+    // The read itself failed (network throw, Storage non-2xx) — says nothing
+    // about the file; the client retries the full chain.
+    | { kind: "fetch-failed" }
+    // Fewer than 12 readable bytes — no real image is that small.
     | { kind: "unreadable" };
 
 /**
@@ -113,7 +117,7 @@ async function readObjectHead(path: string): Promise<HeadReadResult> {
 
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE;
 
-    if (serviceRoleKey === undefined) return { kind: "unreadable" };
+    if (serviceRoleKey === undefined) return { kind: "fetch-failed" };
 
     const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${RECEIPTS_BUCKET}/${path}?nonce=${crypto.randomUUID()}`;
 
@@ -129,10 +133,10 @@ async function readObjectHead(path: string): Promise<HeadReadResult> {
         });
     } catch (error) {
         console.error("[Receipt] Head read failed", path, error);
-        return { kind: "unreadable" };
+        return { kind: "fetch-failed" };
     }
 
-    if (response.ok === false || response.body === null) return { kind: "unreadable" };
+    if (response.ok === false || response.body === null) return { kind: "fetch-failed" };
 
     let totalBytes: number | null = null;
 
@@ -232,8 +236,8 @@ export async function POST(
         if (user === null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await params;
-        const body = await request.json();
-        const { sizeBytes } = body;
+        const body: unknown = await request.json();
+        const sizeBytes = typeof body === "object" && body !== null ? (body as { sizeBytes?: unknown }).sizeBytes : undefined;
 
         // The claim is advisory — it sharpens the preliminary quota check so a
         // doomed upload fails before the bytes travel. The confirm step never
@@ -333,6 +337,15 @@ export async function PUT(
         }
 
         const headRead = await readObjectHead(path);
+
+        // A failed READ is not a bad FILE: transient network/Storage errors
+        // answer the retryable 409 (the client replays the whole chain), so a
+        // valid upload is never terminally rejected as "unsupported".
+        if (headRead.kind === "fetch-failed") {
+            await discardFailedUpload(admin, entry, path);
+
+            return NextResponse.json({ error: "receipt_not_uploaded" }, { status: 409 });
+        }
 
         if (headRead.kind === "unreadable") {
             await discardFailedUpload(admin, entry, path);

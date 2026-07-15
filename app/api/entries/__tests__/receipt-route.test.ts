@@ -364,13 +364,25 @@ describe("PUT /api/entries/[id]/receipt (confirm)", () => {
     expect(prismaMock.spendingEntry.updateMany).not.toHaveBeenCalled();
   });
 
-  it("415 unsupported_type when the sniff fetch answers non-ok — object removed", async () => {
+  it("409 receipt_not_uploaded when the sniff fetch answers non-ok (a failed READ is not a bad FILE) — object removed", async () => {
     fetchMock.mockImplementation(async () => new Response(null, { status: 416 }));
 
     const { status, body } = await readJson(await putReceipt());
-    expect(status).toBe(415);
-    expect(body).toEqual({ error: "unsupported_type" });
+    expect(status).toBe(409);
+    expect(body).toEqual({ error: "receipt_not_uploaded" });
     expect(removeMock).toHaveBeenCalledWith([FIXED_PATH]);
+  });
+
+  it("409 receipt_not_uploaded when the sniff fetch throws (transient network) — object removed, never a terminal 415", async () => {
+    fetchMock.mockImplementation(async () => { throw new TypeError("fetch failed"); });
+
+    const { status, body } = await readJson(await putReceipt());
+    expect(status).toBe(409);
+    expect(body).toEqual({ error: "receipt_not_uploaded" });
+    expect(removeMock).toHaveBeenCalledWith([FIXED_PATH]);
+    expect(prismaMock.spendingEntry.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ receiptPath: FIXED_PATH }) })
+    );
   });
 
   it("415 unsupported_type when fewer than 12 bytes are readable — object removed", async () => {

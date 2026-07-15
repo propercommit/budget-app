@@ -229,9 +229,6 @@ export default function PrivacyPolicyPage() {
                     income records and settings — from our live database, and deletes
                     your receipt files from storage. Residual copies of database
                     records in encrypted backups are purged within 30 days.
-                    {/* TODO(owner/legal): review the backup-purge sentence — storage
-                        objects are not part of database backups, so the 30-day claim
-                        is now scoped to DB records only. Confirm wording. */}
                 </li>
                 <li>
                     <strong>Server and security logs:</strong> kept for short periods for

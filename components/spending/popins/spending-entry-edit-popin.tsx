@@ -92,6 +92,17 @@ export function EntryEditPopin({
         return () => URL.revokeObjectURL(previewUrl);
     }, [previewUrl]);
 
+    // Liveness guard for the async select handler: closing the popin during
+    // compression unmounts it, and an object URL created after that would
+    // never reach state — revoke it immediately instead of leaking it.
+    const isMountedRef = useRef(true);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+
+        return () => { isMountedRef.current = false; };
+    }, []);
+
     const nameRef = useRef<HTMLInputElement>(null);
     const amountRef = useRef<HTMLInputElement>(null);
     const dateRef = useRef<HTMLInputElement>(null);
@@ -139,7 +150,14 @@ export function EntryEditPopin({
             return;
         }
 
-        setReceiptState({ status: "selected", file: prepared.file, previewUrl: URL.createObjectURL(prepared.file) });
+        const stagedPreviewUrl = URL.createObjectURL(prepared.file);
+
+        if (isMountedRef.current === false) {
+            URL.revokeObjectURL(stagedPreviewUrl);
+            return;
+        }
+
+        setReceiptState({ status: "selected", file: prepared.file, previewUrl: stagedPreviewUrl });
     };
 
     // Discards a staged file back to the base state; marks a stored receipt
