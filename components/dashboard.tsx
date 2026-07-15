@@ -27,6 +27,7 @@ import { IncomeDetailPopin } from "./income/popins/income-detail-popin";
 import { StickyBudgetBar } from "./sticky-budget-bar";
 import { WelcomeBanner } from "./welcome-banner";
 import { hasAccountData } from "@/lib/first-run";
+import { getTrendMonths } from "@/lib/trend-months";
 import { SpendingEmptyState } from "./spending/spending-empty-state";
 import { findStarterCategory, StarterCategory } from "@/lib/starter-categories";
 import { Plus, Settings2 } from "lucide-react";
@@ -102,10 +103,10 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
     // banner now and the trends/budget-overview empty states with it.
     const isFirstRun = hasAccountData(spendingData, incomeSources, allIncomeSources) === false;
 
-    const historicalData = Object.entries(spendingData)
-        .filter(([month]) => month <= selectedMonth)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([month, spending]) => ({ month, spending }));
+    // Trend series span every month with data — spending buckets and
+    // income-only months alike (income without spending must still chart).
+    const historicalData = getTrendMonths(spendingData, allIncomeSources, selectedMonth)
+        .map(month => ({ month, spending: spendingData[month] ?? [] }));
 
     const incomeByMonth = historicalData.map(monthData => {
         const monthIncome = allIncomeSources

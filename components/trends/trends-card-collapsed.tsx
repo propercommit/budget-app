@@ -4,8 +4,8 @@ import { StatBox } from "./stat-box";
 import { useSettings } from "@/lib/settings-context";
 
 interface TrendsCardCollapsedProps {
-    spendingStats: { current: number; change: number };
-    incomeStats: { current: number; change: number };
+    spendingStats: { current: number; change: number | null };
+    incomeStats: { current: number; change: number | null };
     netCurrent: number;
     isNetPositive: boolean;
     spendingData: { label: string; value: number }[];

@@ -5,6 +5,7 @@ import { AreaLineChart } from "@/components/area-line-chart";
 import { CategoryTrendCard } from "./category-trend-card";
 import { iconMap } from "@/lib/icon-map";
 import { useSettings } from "@/lib/settings-context";
+import { getTrendStats } from "./trend-stats";
 
 interface CategoryInfo {
     name: string;
@@ -13,8 +14,8 @@ interface CategoryInfo {
 }
 
 interface TrendsCardExpandedProps {
-    spendingStats: { current: number; change: number };
-    incomeStats: { current: number; change: number };
+    spendingStats: { current: number; change: number | null };
+    incomeStats: { current: number; change: number | null };
     netCurrent: number;
     netPrevious: number;
     isNetPositive: boolean;
@@ -36,19 +37,15 @@ export function TrendsCardExpanded({
     categories,
 }: TrendsCardExpandedProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const selectedCategoryData = selectedCategory ? categoryData[selectedCategory] : null;
+    const selectedCategoryData = selectedCategory !== null ? categoryData[selectedCategory] ?? null : null;
     const selectedCategoryInfo = categories.find(c => c.name === selectedCategory);
     const { formatAmount } = useSettings();
 
-    const getStats = (data: { label: string; value: number }[]) => {
-        if (!data || data.length < 2) return { current: 0, change: 0 };
-        const current = data[data.length - 1].value;
-        const previous = data[data.length - 2].value;
-        const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
-        return { current, change };
-    };
+    const selectedCategoryStats = selectedCategoryData !== null ? getTrendStats(selectedCategoryData) : null;
 
-    const selectedCategoryStats = selectedCategoryData ? getStats(selectedCategoryData) : null;
+    // `change: null` means the series has no previous point — with spending and
+    // income sharing one month axis, either one implies a comparable last month.
+    const hasPreviousMonth = spendingStats.change !== null || incomeStats.change !== null;
 
     // Transform data for AreaLineChart (needs monthLabel instead of label)
     const toChartData = (data: { label: string; value: number }[]) =>
@@ -65,15 +62,17 @@ export function TrendsCardExpanded({
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#FF3B30" }} />
                             <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Spending</span>
                         </div>
-                        <span
-                            className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                            style={{
-                                color: spendingStats.change <= 0 ? "#34C759" : "#FF3B30",
-                                backgroundColor: spendingStats.change <= 0 ? "rgba(52, 199, 89, 0.1)" : "rgba(255, 59, 48, 0.1)",
-                            }}
-                        >
-                            {spendingStats.change <= 0 ? "↓" : "↑"}{Math.abs(spendingStats.change).toFixed(1)}%
-                        </span>
+                        {spendingStats.change !== null && (
+                            <span
+                                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                style={{
+                                    color: spendingStats.change <= 0 ? "#34C759" : "#FF3B30",
+                                    backgroundColor: spendingStats.change <= 0 ? "rgba(52, 199, 89, 0.1)" : "rgba(255, 59, 48, 0.1)",
+                                }}
+                            >
+                                {spendingStats.change <= 0 ? "↓" : "↑"}{Math.abs(spendingStats.change).toFixed(1)}%
+                            </span>
+                        )}
                     </div>
                     <AreaLineChart
                         data={toChartData(spendingData)}
@@ -90,15 +89,17 @@ export function TrendsCardExpanded({
                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#34C759" }} />
                             <span className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Income</span>
                         </div>
-                        <span
-                            className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                            style={{
-                                color: incomeStats.change >= 0 ? "#34C759" : "#FF3B30",
-                                backgroundColor: incomeStats.change >= 0 ? "rgba(52, 199, 89, 0.1)" : "rgba(255, 59, 48, 0.1)",
-                            }}
-                        >
-                            {incomeStats.change >= 0 ? "↑" : "↓"}{Math.abs(incomeStats.change).toFixed(1)}%
-                        </span>
+                        {incomeStats.change !== null && (
+                            <span
+                                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                style={{
+                                    color: incomeStats.change >= 0 ? "#34C759" : "#FF3B30",
+                                    backgroundColor: incomeStats.change >= 0 ? "rgba(52, 199, 89, 0.1)" : "rgba(255, 59, 48, 0.1)",
+                                }}
+                            >
+                                {incomeStats.change >= 0 ? "↑" : "↓"}{Math.abs(incomeStats.change).toFixed(1)}%
+                            </span>
+                        )}
                     </div>
                     <AreaLineChart
                         data={toChartData(incomeData)}
@@ -124,15 +125,17 @@ export function TrendsCardExpanded({
                             {isNetPositive ? "+" : "-"}{formatAmount(Math.abs(netCurrent))}
                         </p>
                     </div>
-                    <div className="text-right">
-                        <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>vs last month</p>
-                        <p
-                            className="text-lg font-semibold"
-                            style={{ color: (netCurrent - netPrevious) >= 0 ? "#34C759" : "#FF3B30" }}
-                        >
-                            {(netCurrent - netPrevious) >= 0 ? "↑" : "↓"}{formatAmount(Math.abs(netCurrent - netPrevious))}
-                        </p>
-                    </div>
+                    {hasPreviousMonth && (
+                        <div className="text-right">
+                            <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>vs last month</p>
+                            <p
+                                className="text-lg font-semibold"
+                                style={{ color: (netCurrent - netPrevious) >= 0 ? "#34C759" : "#FF3B30" }}
+                            >
+                                {(netCurrent - netPrevious) >= 0 ? "↑" : "↓"}{formatAmount(Math.abs(netCurrent - netPrevious))}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -182,15 +185,17 @@ export function TrendsCardExpanded({
                                     <span className="text-base font-semibold" style={{ color: "var(--foreground)" }}>{selectedCategory}</span>
                                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedCategoryInfo.color }} />
                                 </div>
-                                <span
-                                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                                    style={{
-                                        color: selectedCategoryStats.change <= 0 ? "#34C759" : "#FF3B30",
-                                        backgroundColor: selectedCategoryStats.change <= 0 ? "rgba(52, 199, 89, 0.1)" : "rgba(255, 59, 48, 0.1)",
-                                    }}
-                                >
-                                    {selectedCategoryStats.change <= 0 ? "↓" : "↑"}{Math.abs(selectedCategoryStats.change).toFixed(1)}%
-                                </span>
+                                {selectedCategoryStats.change !== null && (
+                                    <span
+                                        className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                        style={{
+                                            color: selectedCategoryStats.change <= 0 ? "#34C759" : "#FF3B30",
+                                            backgroundColor: selectedCategoryStats.change <= 0 ? "rgba(52, 199, 89, 0.1)" : "rgba(255, 59, 48, 0.1)",
+                                        }}
+                                    >
+                                        {selectedCategoryStats.change <= 0 ? "↓" : "↑"}{Math.abs(selectedCategoryStats.change).toFixed(1)}%
+                                    </span>
+                                )}
                             </div>
                             <AreaLineChart
                                 data={toChartData(selectedCategoryData)}
