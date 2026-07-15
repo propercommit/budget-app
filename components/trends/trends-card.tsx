@@ -5,11 +5,7 @@ import { TrendsCardCollapsed } from "./trends-card-collapsed";
 import { TrendsCardExpanded } from "./trends-card-expanded";
 import { TrendsEmptyState } from "./trends-empty-state";
 import { CardHeader } from "../ui/card-header";
-
-interface TrendDataPoint {
-    label: string;
-    value: number;
-}
+import { getTrendStats, TrendDataPoint } from "./trend-stats";
 
 interface CategoryInfo {
     name: string;
@@ -26,19 +22,11 @@ interface TrendsCardProps {
     isEmpty?: boolean;
 }
 
-function getStats(data: TrendDataPoint[]) {
-    if (!data || data.length < 2) return { current: 0, previous: 0, change: 0 };
-    const current = data[data.length - 1].value;
-    const previous = data[data.length - 2].value;
-    const change = previous > 0 ? ((current - previous) / previous) * 100 : 0;
-    return { current, previous, change };
-}
-
 export function TrendsCard({ spendingData, incomeData, categoryData, categories, isEmpty = false }: TrendsCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const spendingStats = getStats(spendingData);
-    const incomeStats = getStats(incomeData);
+    const spendingStats = getTrendStats(spendingData);
+    const incomeStats = getTrendStats(incomeData);
 
     const netCurrent = incomeStats.current - spendingStats.current;
     const netPrevious = incomeStats.previous - spendingStats.previous;
