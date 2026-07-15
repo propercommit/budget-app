@@ -345,6 +345,26 @@ describe("PUT /api/entries/[id]/receipt (confirm)", () => {
     expect(prismaMock.spendingEntry.updateMany).not.toHaveBeenCalled();
   });
 
+  it("409 receipt_not_uploaded when info() hangs past the step timeout — nothing removed (the 300s-504 regression)", async () => {
+    vi.useFakeTimers();
+
+    try {
+      infoMock.mockImplementation(() => new Promise(() => undefined));
+
+      const pending = putReceipt();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      const { status, body } = await readJson(await pending);
+      expect(status).toBe(409);
+      expect(body).toEqual({ error: "receipt_not_uploaded" });
+      expect(removeMock).not.toHaveBeenCalled();
+      expect(prismaMock.spendingEntry.updateMany).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("500 when Storage metadata reports no size — object removed", async () => {
     infoMock.mockResolvedValue({ data: {}, error: null });
 

@@ -25,7 +25,39 @@ import { sniffReceiptType } from "@/lib/receipt-validation";
  * Error vocabulary (structured codes the client switches on):
  * `quota_exceeded` 413 · `receipt_too_large` 413 · `unsupported_type` 415 ·
  * `receipt_not_uploaded` 409 · `no_receipt` 404.
+ *
+ * Every network step in the confirm path carries its own timeout, and the
+ * whole route is capped by `maxDuration`: a hung storage call must surface as
+ * a fast, retryable failure — never a silent multi-minute 504 (observed live:
+ * a confirm that blocked until Vercel's 300 s task limit, leaving an orphan
+ * upload and no user feedback).
  */
+
+/** Route-level cap — the backstop for anything a step timeout doesn't cover. */
+export const maxDuration = 30;
+
+/** Per-step budget for the confirm path's storage calls. */
+const CONFIRM_STEP_TIMEOUT_MS = 10_000;
+
+/**
+ * Bounds a promise that has no abort mechanism of its own (storage-js calls
+ * take no signal). The loser keeps running in the background — acceptable,
+ * since the handler returns and the platform freezes the instance.
+ */
+async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const deadline = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${CONFIRM_STEP_TIMEOUT_MS}ms`)), CONFIRM_STEP_TIMEOUT_MS);
+    });
+
+    try {
+        return await Promise.race([promise, deadline]);
+    } finally {
+        clearTimeout(timer);
+    }
+}
 
 /**
  * Loads the entry and verifies ownership through its series. Returns `null`
@@ -124,12 +156,15 @@ async function readObjectHead(path: string): Promise<HeadReadResult> {
     let response: Response;
 
     try {
+        // The timeout signal also aborts body reads below — a stalled stream
+        // rejects the pending read() instead of hanging the function.
         response = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${serviceRoleKey}`,
                 apikey: serviceRoleKey,
                 Range: "bytes=0-31",
             },
+            signal: AbortSignal.timeout(CONFIRM_STEP_TIMEOUT_MS),
         });
     } catch (error) {
         console.error("[Receipt] Head read failed", path, error);
@@ -158,14 +193,21 @@ async function readObjectHead(path: string): Promise<HeadReadResult> {
 
     let received = 0;
 
-    while (received < 12) {
-        const { done, value } = await reader.read();
+    try {
+        while (received < 12) {
+            const { done, value } = await reader.read();
 
-        if (done) break;
+            if (done) break;
 
-        chunks.push(value);
+            chunks.push(value);
 
-        received += value.length;
+            received += value.length;
+        }
+    } catch (error) {
+        // The abort signal fired mid-read (stalled stream) — a failed READ,
+        // not a bad file.
+        console.error("[Receipt] Head read aborted", path, error);
+        return { kind: "fetch-failed" };
     }
 
     await reader.cancel().catch(() => undefined);
@@ -313,11 +355,24 @@ export async function PUT(
             return NextResponse.json({ error: "Entry not found" }, { status: 404 });
         }
 
-        const { data: objectInfo, error: infoError } = await admin.storage.from(RECEIPTS_BUCKET).info(path);
+        let objectInfo: { size?: number | null };
 
-        // Nothing at the fixed path: confirm was called before (or without) an
-        // upload. Nothing to delete; the client retries the FULL chain.
-        if (infoError !== null || objectInfo === null) {
+        try {
+            const infoResult = await withTimeout(admin.storage.from(RECEIPTS_BUCKET).info(path), "info()");
+
+            // Nothing at the fixed path: confirm was called before (or
+            // without) an upload. Nothing to delete; the client retries the
+            // FULL chain.
+            if (infoResult.error !== null || infoResult.data === null) {
+                return NextResponse.json({ error: "receipt_not_uploaded" }, { status: 409 });
+            }
+
+            objectInfo = infoResult.data;
+        } catch (error) {
+            // Timed out — the object's state is unknown, so delete nothing;
+            // the retryable code makes the client replay the chain, and the
+            // upsert overwrite makes that safe.
+            console.error("[Receipt PUT] info() timed out:", error);
             return NextResponse.json({ error: "receipt_not_uploaded" }, { status: 409 });
         }
 

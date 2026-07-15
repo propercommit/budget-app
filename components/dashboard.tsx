@@ -49,6 +49,20 @@ export function Dashboard({initialIncomeSources, initialAllIncomeSources, initia
 
     const { categories, isLoading: categoriesLoading, addCategory, updateCategory, deleteCategory } = useCategories(initialCategories);
     const { spendingData, isLoading: spendingLoading, createSpending, updateSpending, deleteSpending, materializeMonth, createEntry, updateEntry, deleteEntry, receiptUploads, setEntryReceiptEverywhere, removeItemsByCategory, updateCategoryOnItems } = useSpending(initialSpendingData);
+
+    // A refresh/close mid-chain kills the receipt upload silently (the entry
+    // saves, the receipt vanishes) — warn while any chain is in flight.
+    const hasReceiptUploadInFlight = Object.keys(receiptUploads).length > 0;
+
+    useEffect(() => {
+        if (hasReceiptUploadInFlight === false) return;
+
+        const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+
+        window.addEventListener("beforeunload", warn);
+
+        return () => window.removeEventListener("beforeunload", warn);
+    }, [hasReceiptUploadInFlight]);
     const { incomeSources, allIncomeSources, isLoading: incomeLoading, createIncome, updateIncome, deleteIncome, loadMonth } = useIncome(selectedMonth, initialIncomeSources, initialAllIncomeSources);
 
     const isLoading = categoriesLoading || spendingLoading || incomeLoading;
