@@ -178,6 +178,41 @@ test.describe("Category components", () => {
     await expect(page).toHaveScreenshot("category-popin-edit.png");
   });
 
+  test("popin — create mode, scrolled (condensed header, footer revealed)", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <CategoryPopin isOpen={true} onClose={noop} onSave={noop} mode="create" />
+      </Providers>,
+    );
+
+    await page.locator(".overflow-y-auto").evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await expect(page.getByRole("button", { name: "Create Category" })).toBeInViewport();
+
+    await expect(page).toHaveScreenshot("category-popin-create-scrolled.png");
+  });
+
+  test("popin — edit mode, scrolled (delete action in footer)", async ({ mount, page }) => {
+    await mount(
+      <Providers>
+        <CategoryPopin
+          isOpen={true}
+          onClose={noop}
+          onSave={noop}
+          onDelete={noop}
+          mode="edit"
+          initialName="Groceries"
+          initialIcon="shopping-cart"
+          initialColor="#34C759"
+        />
+      </Providers>,
+    );
+
+    await page.locator(".overflow-y-auto").evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await expect(page.getByRole("button", { name: "Delete Category" })).toBeInViewport();
+
+    await expect(page).toHaveScreenshot("category-popin-edit-scrolled.png");
+  });
+
   test("manage popin", async ({ mount, page }) => {
     await mount(
       <Providers>
