@@ -29,7 +29,7 @@ function renderPicker() {
 
   const onChange = vi.fn();
 
-  render(<ColorPicker value="#ff0000" onChange={onChange} />);
+  const { unmount } = render(<ColorPicker value="#ff0000" onChange={onChange} />);
 
   const gradient = screen.getByRole("slider", { name: "Saturation and lightness" });
   const hueBar = screen.getByRole("slider", { name: "Hue" });
@@ -37,7 +37,21 @@ function renderPicker() {
 
   for (const el of [gradient, hueBar, opacityBar]) el.getBoundingClientRect = () => RECT;
 
-  return { onChange, gradient, hueBar, opacityBar };
+  return { onChange, gradient, hueBar, opacityBar, unmount };
+}
+
+/**
+ * Dispatches a cancelable touchmove on the document (jsdom lacks TouchEvent,
+ * a plain Event carries everything the scroll-lock listener reads) and reports
+ * whether the picker blocked it — i.e. whether the view is currently locked.
+ */
+function touchScrollBlocked() {
+
+  const event = new Event("touchmove", { bubbles: true, cancelable: true });
+
+  document.dispatchEvent(event);
+
+  return event.defaultPrevented;
 }
 
 describe("ColorPicker — pointer drag (mouse and touch)", () => {
@@ -102,5 +116,48 @@ describe("ColorPicker — pointer drag (mouse and touch)", () => {
     fireEvent(document, pointer("pointermove", { clientX: 90, clientY: 90 }));
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("ColorPicker — view lock while dragging", () => {
+  it("locks touch scrolling on pointerdown and unlocks on pointerup", () => {
+
+    const { hueBar } = renderPicker();
+
+    expect(touchScrollBlocked()).toBe(false);
+
+    fireEvent(hueBar, pointer("pointerdown", { clientX: 50 }));
+
+    expect(touchScrollBlocked()).toBe(true);
+
+    fireEvent(document, pointer("pointerup"));
+
+    expect(touchScrollBlocked()).toBe(false);
+  });
+
+  it("unlocks on pointercancel", () => {
+
+    const { gradient } = renderPicker();
+
+    fireEvent(gradient, pointer("pointerdown", { clientX: 10, clientY: 10 }));
+
+    expect(touchScrollBlocked()).toBe(true);
+
+    fireEvent(document, pointer("pointercancel"));
+
+    expect(touchScrollBlocked()).toBe(false);
+  });
+
+  it("unlocks when the picker unmounts mid-drag", () => {
+
+    const { hueBar, unmount } = renderPicker();
+
+    fireEvent(hueBar, pointer("pointerdown", { clientX: 50 }));
+
+    expect(touchScrollBlocked()).toBe(true);
+
+    unmount();
+
+    expect(touchScrollBlocked()).toBe(false);
   });
 });

@@ -32,6 +32,11 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
   const hueRef = React.useRef<HTMLDivElement>(null)
   const opacityRef = React.useRef<HTMLDivElement>(null)
 
+  // Ref (not state) so the scroll-lock listener sees it synchronously: it is set
+  // during pointerdown, before the gesture's first touchmove — state would only
+  // propagate after a re-render, letting the browser start scrolling in between.
+  const isDraggingRef = React.useRef(false)
+
   React.useEffect(() => {
     const parseColor = (color: string) => {
       if (color.startsWith("rgba")) {
@@ -208,6 +213,27 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     [hue, saturation, lightness, updateColor]
   )
 
+  /**
+   * Locks the view while a drag is in progress: `touch-action: none` alone is
+   * not honored consistently on mobile (notably iOS Safari), and once the
+   * browser claims the gesture for scrolling it fires pointercancel, killing
+   * the drag. Blocking `touchmove` at the document level is the mechanism
+   * every mobile browser respects — and it must be a NATIVE non-passive
+   * listener: React registers its touch listeners as passive, so
+   * `preventDefault()` inside a React handler is a no-op for scrolling.
+   * The lock engages on pointerdown (via `isDraggingRef`) and releases on
+   * pointerup/pointercancel, so the page scrolls normally between drags.
+   */
+  React.useEffect(() => {
+    const blockTouchScroll = (e: TouchEvent) => {
+      if (isDraggingRef.current && e.cancelable) e.preventDefault()
+    }
+
+    document.addEventListener("touchmove", blockTouchScroll, { passive: false })
+
+    return () => document.removeEventListener("touchmove", blockTouchScroll)
+  }, [])
+
   React.useEffect(() => {
     const isDragging = isGradientActive || isHueActive || isOpacityActive
 
@@ -222,6 +248,8 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     }
 
     const handlePointerEnd = () => {
+      isDraggingRef.current = false
+
       setIsGradientActive(false)
       setIsHueActive(false)
       setIsOpacityActive(false)
@@ -268,6 +296,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
         }}
         onPointerDown={(e) => {
           e.preventDefault()
+          isDraggingRef.current = true
           setIsGradientActive(true)
           pickGradientColor(e.clientX, e.clientY)
         }}
@@ -295,6 +324,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
         }}
         onPointerDown={(e) => {
           e.preventDefault()
+          isDraggingRef.current = true
           setIsHueActive(true)
           pickHueColor(e.clientX)
         }}
@@ -325,6 +355,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
         }}
         onPointerDown={(e) => {
           e.preventDefault()
+          isDraggingRef.current = true
           setIsOpacityActive(true)
           pickOpacityColor(e.clientX)
         }}
