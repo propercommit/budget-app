@@ -4,13 +4,20 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 import { ColorPicker } from "@/components/color-picker";
 
-/**
- * jsdom implements neither PointerEvent nor layout, so drags are simulated
- * with MouseEvent-built "pointer*" events (React dispatches on the event type
- * alone) against stubbed getBoundingClientRect geometry.
- */
-function pointer(type: string, coords: { clientX?: number; clientY?: number } = {}) {
+function mouse(type: string, coords: { clientX?: number; clientY?: number } = {}) {
   return new MouseEvent(type, { bubbles: true, cancelable: true, ...coords });
+}
+
+/**
+ * jsdom implements no TouchEvent — a plain cancelable Event carrying a
+ * `touches` array is all the picker's native touch handlers read. Returned
+ * (not just dispatched) so tests can assert `defaultPrevented`, which is how
+ * the view lock is observed.
+ */
+function touch(type: string, coords?: { clientX: number; clientY: number }) {
+  return Object.assign(new Event(type, { bubbles: true, cancelable: true }), {
+    touches: coords === undefined ? [] : [coords],
+  });
 }
 
 const RECT = {
@@ -40,30 +47,16 @@ function renderPicker() {
   return { onChange, gradient, hueBar, opacityBar, unmount };
 }
 
-/**
- * Dispatches a cancelable touchmove on the document (jsdom lacks TouchEvent,
- * a plain Event carries everything the scroll-lock listener reads) and reports
- * whether the picker blocked it — i.e. whether the view is currently locked.
- */
-function touchScrollBlocked() {
-
-  const event = new Event("touchmove", { bubbles: true, cancelable: true });
-
-  document.dispatchEvent(event);
-
-  return event.defaultPrevented;
-}
-
-describe("ColorPicker — pointer drag (mouse and touch)", () => {
-  it("picks a hue on pointerdown and keeps updating while dragging across the document", () => {
+describe("ColorPicker — mouse drag (desktop)", () => {
+  it("picks a hue on mousedown and keeps updating while dragging across the document", () => {
 
     const { onChange, hueBar } = renderPicker();
 
-    fireEvent(hueBar, pointer("pointerdown", { clientX: 50 }));
+    fireEvent(hueBar, mouse("mousedown", { clientX: 50 }));
 
     expect(onChange).toHaveBeenLastCalledWith("#00ffff");
 
-    fireEvent(document, pointer("pointermove", { clientX: 25 }));
+    fireEvent(document, mouse("mousemove", { clientX: 25 }));
 
     expect(onChange).toHaveBeenLastCalledWith("#80ff00");
 
@@ -74,11 +67,11 @@ describe("ColorPicker — pointer drag (mouse and touch)", () => {
 
     const { onChange, gradient } = renderPicker();
 
-    fireEvent(gradient, pointer("pointerdown", { clientX: 50, clientY: 50 }));
+    fireEvent(gradient, mouse("mousedown", { clientX: 50, clientY: 50 }));
 
     expect(onChange).toHaveBeenLastCalledWith("#bf4040");
 
-    fireEvent(document, pointer("pointermove", { clientX: 400, clientY: -60 }));
+    fireEvent(document, mouse("mousemove", { clientX: 400, clientY: -60 }));
 
     expect(onChange).toHaveBeenLastCalledWith("#ffffff");
   });
@@ -87,77 +80,120 @@ describe("ColorPicker — pointer drag (mouse and touch)", () => {
 
     const { onChange, opacityBar } = renderPicker();
 
-    fireEvent(opacityBar, pointer("pointerdown", { clientX: 50 }));
+    fireEvent(opacityBar, mouse("mousedown", { clientX: 50 }));
 
     expect(onChange).toHaveBeenLastCalledWith("rgba(255, 0, 0, 0.5)");
   });
 
-  it("stops updating after pointerup", () => {
+  it("stops updating after mouseup", () => {
 
     const { onChange, hueBar } = renderPicker();
 
-    fireEvent(hueBar, pointer("pointerdown", { clientX: 50 }));
-    fireEvent(document, pointer("pointerup"));
+    fireEvent(hueBar, mouse("mousedown", { clientX: 50 }));
+    fireEvent(document, mouse("mouseup"));
 
     onChange.mockClear();
-    fireEvent(document, pointer("pointermove", { clientX: 10 }));
-
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it("stops updating after pointercancel (interrupted touch drag)", () => {
-
-    const { onChange, gradient } = renderPicker();
-
-    fireEvent(gradient, pointer("pointerdown", { clientX: 10, clientY: 10 }));
-    fireEvent(document, pointer("pointercancel"));
-
-    onChange.mockClear();
-    fireEvent(document, pointer("pointermove", { clientX: 90, clientY: 90 }));
+    fireEvent(document, mouse("mousemove", { clientX: 10 }));
 
     expect(onChange).not.toHaveBeenCalled();
   });
 });
 
-describe("ColorPicker — view lock while dragging", () => {
-  it("locks touch scrolling on pointerdown and unlocks on pointerup", () => {
+describe("ColorPicker — touch drag (mobile: lock view, drag, unlock)", () => {
+  it("locks the view and picks on touchstart, follows the finger on touchmove", () => {
 
-    const { hueBar } = renderPicker();
+    const { onChange, hueBar } = renderPicker();
 
-    expect(touchScrollBlocked()).toBe(false);
+    const start = touch("touchstart", { clientX: 50, clientY: 5 });
 
-    fireEvent(hueBar, pointer("pointerdown", { clientX: 50 }));
+    fireEvent(hueBar, start);
 
-    expect(touchScrollBlocked()).toBe(true);
+    expect(start.defaultPrevented).toBe(true);
 
-    fireEvent(document, pointer("pointerup"));
+    expect(onChange).toHaveBeenLastCalledWith("#00ffff");
 
-    expect(touchScrollBlocked()).toBe(false);
+    const move = touch("touchmove", { clientX: 25, clientY: 5 });
+
+    fireEvent(hueBar, move);
+
+    expect(move.defaultPrevented).toBe(true);
+
+    expect(onChange).toHaveBeenLastCalledWith("#80ff00");
   });
 
-  it("unlocks on pointercancel", () => {
+  it("clamps touch drags past the gradient edges", () => {
 
-    const { gradient } = renderPicker();
+    const { onChange, gradient } = renderPicker();
 
-    fireEvent(gradient, pointer("pointerdown", { clientX: 10, clientY: 10 }));
+    fireEvent(gradient, touch("touchstart", { clientX: 50, clientY: 50 }));
 
-    expect(touchScrollBlocked()).toBe(true);
+    expect(onChange).toHaveBeenLastCalledWith("#bf4040");
 
-    fireEvent(document, pointer("pointercancel"));
+    fireEvent(gradient, touch("touchmove", { clientX: 400, clientY: -60 }));
 
-    expect(touchScrollBlocked()).toBe(false);
+    expect(onChange).toHaveBeenLastCalledWith("#ffffff");
   });
 
-  it("unlocks when the picker unmounts mid-drag", () => {
+  it("emits rgba when touch-dragging opacity below 100%", () => {
 
-    const { hueBar, unmount } = renderPicker();
+    const { onChange, opacityBar } = renderPicker();
 
-    fireEvent(hueBar, pointer("pointerdown", { clientX: 50 }));
+    fireEvent(opacityBar, touch("touchstart", { clientX: 50, clientY: 5 }));
 
-    expect(touchScrollBlocked()).toBe(true);
+    expect(onChange).toHaveBeenLastCalledWith("rgba(255, 0, 0, 0.5)");
+  });
+
+  it("unlocks the view on touchend — later moves are neither picked nor blocked", () => {
+
+    const { onChange, hueBar } = renderPicker();
+
+    fireEvent(hueBar, touch("touchstart", { clientX: 50, clientY: 5 }));
+    fireEvent(hueBar, touch("touchend"));
+
+    onChange.mockClear();
+
+    const move = touch("touchmove", { clientX: 10, clientY: 5 });
+
+    fireEvent(hueBar, move);
+
+    expect(move.defaultPrevented).toBe(false);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("unlocks the view on touchcancel (interrupted gesture)", () => {
+
+    const { onChange, gradient } = renderPicker();
+
+    fireEvent(gradient, touch("touchstart", { clientX: 10, clientY: 10 }));
+    fireEvent(gradient, touch("touchcancel"));
+
+    onChange.mockClear();
+
+    const move = touch("touchmove", { clientX: 90, clientY: 90 });
+
+    fireEvent(gradient, move);
+
+    expect(move.defaultPrevented).toBe(false);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("removes the native listeners on unmount", () => {
+
+    const { onChange, hueBar, unmount } = renderPicker();
+
+    fireEvent(hueBar, touch("touchstart", { clientX: 50, clientY: 5 }));
 
     unmount();
+    onChange.mockClear();
 
-    expect(touchScrollBlocked()).toBe(false);
+    const start = touch("touchstart", { clientX: 25, clientY: 5 });
+
+    hueBar.dispatchEvent(start);
+
+    expect(start.defaultPrevented).toBe(false);
+
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

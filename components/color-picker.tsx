@@ -18,6 +18,82 @@ const PRESET_COLORS = [
   "#64748b", // slate
 ]
 
+/**
+ * Wires a picker surface for touch dragging: touch-down locks the view (no
+ * scrolling anywhere for the whole gesture), moves track the finger, release
+ * unlocks. Listeners are NATIVE and non-passive on the surface element itself:
+ * React registers its touch listeners as passive (preventDefault would be a
+ * no-op), and both `touch-action: none` and a document-level blocker proved
+ * unreliable on real mobile Safari — cancelling `touchstart` at the target is
+ * the one mechanism every engine honors. Touch events keep targeting the
+ * touch-start element for the entire gesture, so the surface sees every move
+ * with no bubbling or document dependency; cancelling `touchstart` also
+ * suppresses the compatibility mouse events, so the mouse path can't
+ * double-fire. `pick` is read through a ref because its identity changes with
+ * every colour update mid-drag — the listeners attach once per mount.
+ */
+function useTouchDrag(
+  surfaceRef: React.RefObject<HTMLDivElement | null>,
+  pick: (clientX: number, clientY: number) => void,
+  setActive: (active: boolean) => void
+) {
+  const pickRef = React.useRef(pick)
+  const draggingRef = React.useRef(false)
+
+  React.useEffect(() => {
+    pickRef.current = pick
+  }, [pick])
+
+  React.useEffect(() => {
+    const surface = surfaceRef.current
+
+    if (surface === null) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      e.preventDefault()
+
+      const touch = e.touches[0]
+
+      if (touch === undefined) return
+
+      draggingRef.current = true
+
+      setActive(true)
+      pickRef.current(touch.clientX, touch.clientY)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (draggingRef.current === false) return
+
+      e.preventDefault()
+
+      const touch = e.touches[0]
+
+      if (touch === undefined) return
+
+      pickRef.current(touch.clientX, touch.clientY)
+    }
+
+    const handleTouchEnd = () => {
+      draggingRef.current = false
+
+      setActive(false)
+    }
+
+    surface.addEventListener("touchstart", handleTouchStart, { passive: false })
+    surface.addEventListener("touchmove", handleTouchMove, { passive: false })
+    surface.addEventListener("touchend", handleTouchEnd)
+    surface.addEventListener("touchcancel", handleTouchEnd)
+
+    return () => {
+      surface.removeEventListener("touchstart", handleTouchStart)
+      surface.removeEventListener("touchmove", handleTouchMove)
+      surface.removeEventListener("touchend", handleTouchEnd)
+      surface.removeEventListener("touchcancel", handleTouchEnd)
+    }
+  }, [surfaceRef, setActive])
+}
+
 export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
   const [hue, setHue] = React.useState(0)
   const [saturation, setSaturation] = React.useState(100)
@@ -31,11 +107,6 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
   const gradientRef = React.useRef<HTMLDivElement>(null)
   const hueRef = React.useRef<HTMLDivElement>(null)
   const opacityRef = React.useRef<HTMLDivElement>(null)
-
-  // Ref (not state) so the scroll-lock listener sees it synchronously: it is set
-  // during pointerdown, before the gesture's first touchmove — state would only
-  // propagate after a re-render, letting the browser start scrolling in between.
-  const isDraggingRef = React.useRef(false)
 
   React.useEffect(() => {
     const parseColor = (color: string) => {
@@ -213,33 +284,18 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
     [hue, saturation, lightness, updateColor]
   )
 
-  /**
-   * Locks the view while a drag is in progress: `touch-action: none` alone is
-   * not honored consistently on mobile (notably iOS Safari), and once the
-   * browser claims the gesture for scrolling it fires pointercancel, killing
-   * the drag. Blocking `touchmove` at the document level is the mechanism
-   * every mobile browser respects — and it must be a NATIVE non-passive
-   * listener: React registers its touch listeners as passive, so
-   * `preventDefault()` inside a React handler is a no-op for scrolling.
-   * The lock engages on pointerdown (via `isDraggingRef`) and releases on
-   * pointerup/pointercancel, so the page scrolls normally between drags.
-   */
-  React.useEffect(() => {
-    const blockTouchScroll = (e: TouchEvent) => {
-      if (isDraggingRef.current && e.cancelable) e.preventDefault()
-    }
+  useTouchDrag(gradientRef, pickGradientColor, setIsGradientActive)
 
-    document.addEventListener("touchmove", blockTouchScroll, { passive: false })
+  useTouchDrag(hueRef, pickHueColor, setIsHueActive)
 
-    return () => document.removeEventListener("touchmove", blockTouchScroll)
-  }, [])
+  useTouchDrag(opacityRef, pickOpacityColor, setIsOpacityActive)
 
   React.useEffect(() => {
     const isDragging = isGradientActive || isHueActive || isOpacityActive
 
     if (!isDragging) return
 
-    const handlePointerMove = (e: PointerEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
       if (isGradientActive) pickGradientColor(e.clientX, e.clientY)
 
       if (isHueActive) pickHueColor(e.clientX)
@@ -247,22 +303,18 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
       if (isOpacityActive) pickOpacityColor(e.clientX)
     }
 
-    const handlePointerEnd = () => {
-      isDraggingRef.current = false
-
+    const handleMouseUp = () => {
       setIsGradientActive(false)
       setIsHueActive(false)
       setIsOpacityActive(false)
     }
 
-    document.addEventListener("pointermove", handlePointerMove)
-    document.addEventListener("pointerup", handlePointerEnd)
-    document.addEventListener("pointercancel", handlePointerEnd)
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
 
     return () => {
-      document.removeEventListener("pointermove", handlePointerMove)
-      document.removeEventListener("pointerup", handlePointerEnd)
-      document.removeEventListener("pointercancel", handlePointerEnd)
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
     }
   }, [
     isGradientActive,
@@ -294,9 +346,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
             linear-gradient(to right, white, hsl(${hue}, 100%, 50%))
           `,
         }}
-        onPointerDown={(e) => {
-          e.preventDefault()
-          isDraggingRef.current = true
+        onMouseDown={(e) => {
           setIsGradientActive(true)
           pickGradientColor(e.clientX, e.clientY)
         }}
@@ -322,9 +372,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
         style={{
           background: "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
         }}
-        onPointerDown={(e) => {
-          e.preventDefault()
-          isDraggingRef.current = true
+        onMouseDown={(e) => {
           setIsHueActive(true)
           pickHueColor(e.clientX)
         }}
@@ -353,9 +401,7 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
             repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 12px 12px
           `,
         }}
-        onPointerDown={(e) => {
-          e.preventDefault()
-          isDraggingRef.current = true
+        onMouseDown={(e) => {
           setIsOpacityActive(true)
           pickOpacityColor(e.clientX)
         }}
