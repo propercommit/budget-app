@@ -38,7 +38,7 @@ import { ApiError } from "@/lib/api-error";
 import { uploadReceiptFile } from "@/lib/upload-receipt";
 // Deliberately NOT mocked: the marker lifecycle is exercised end-to-end
 // against jsdom's real localStorage.
-import { PENDING_RECEIPT_KEY_PREFIX, addPendingReceipt } from "@/lib/receipt-resume";
+import { PENDING_RECEIPT_TTL_MS, addPendingReceipt, pendingReceiptKey } from "@/lib/receipt-resume";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 import type { SpendingItem, SpendingEntry } from "@/lib/types";
@@ -75,7 +75,9 @@ const item = (over: Partial<SpendingItem> = {}): SpendingItem => ({
 
 const data = (items: SpendingItem[]) => ({ [MONTH]: items });
 
-const markerKey = (entryId: string) => `${PENDING_RECEIPT_KEY_PREFIX}${entryId}`;
+const markerKey = pendingReceiptKey;
+
+const receiptFile = () => new File(["fake-jpeg-bytes"], "receipt.jpg", { type: "image/jpeg" });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -631,7 +633,6 @@ describe("useSpending — category cascade mirrors (local state only)", () => {
 });
 
 describe("useSpending — receipt attach chain (create)", () => {
-  const receiptFile = () => new File(["fake-jpeg-bytes"], "receipt.jpg", { type: "image/jpeg" });
 
   const stubHappyChain = (file: File) => {
     vi.mocked(api.createEntry).mockResolvedValue(entry({ id: "real" }));
@@ -847,7 +848,6 @@ describe("useSpending — receipt remove chain (update)", () => {
 });
 
 describe("useSpending — receipt resume markers (chain lifecycle)", () => {
-  const receiptFile = () => new File(["fake-jpeg-bytes"], "receipt.jpg", { type: "image/jpeg" });
 
   it("arms the marker while the chain is in flight and clears it on success", async () => {
     const file = receiptFile();
@@ -1001,7 +1001,7 @@ describe("useSpending — receipt resume on mount", () => {
   it("prunes an expired marker without calling confirm", async () => {
     localStorage.setItem(
       markerKey("stale"),
-      JSON.stringify({ entryId: "stale", entryName: "Old", startedAt: Date.now() - 86_400_000 - 1_000 })
+      JSON.stringify({ entryId: "stale", entryName: "Old", startedAt: Date.now() - PENDING_RECEIPT_TTL_MS - 1_000 })
     );
 
     renderHook(() => useSpending(data([item()])));

@@ -25,6 +25,29 @@ export interface PendingReceiptMarker {
 
 export const PENDING_RECEIPT_KEY_PREFIX = "planbudget.pending-receipt.";
 
+/** The one place the marker key shape is defined — module and tests share it. */
+export function pendingReceiptKey(entryId: string): string {
+    return `${PENDING_RECEIPT_KEY_PREFIX}${entryId}`;
+}
+
+/**
+ * What a failed resume confirm means for the marker:
+ * - `forget` — the entry is gone (404); clear silently.
+ * - `keep` — transient (network, 5xx) or a token-refresh race at mount (401);
+ *   the marker stays for the next load, bounded by the TTL.
+ * - `reattach` — a definitive 4xx (409 not-uploaded, 413, 415): the upload
+ *   never finished or was reaped; only re-attaching can fix it — clear and
+ *   tell the user.
+ */
+export function resumeOutcome(status: number | null): "forget" | "keep" | "reattach" {
+
+    if (status === 404) return "forget";
+
+    if (status === null || status === 401 || status >= 500) return "keep";
+
+    return "reattach";
+}
+
 /**
  * Markers older than this are pruned unread: an orphaned object is inert by
  * design, and a "didn't finish uploading" toast about a day-old entry
@@ -52,7 +75,7 @@ export function addPendingReceipt(entryId: string, entryName: string): void {
     const marker: PendingReceiptMarker = { entryId, entryName, startedAt: Date.now() };
 
     try {
-        window.localStorage.setItem(`${PENDING_RECEIPT_KEY_PREFIX}${entryId}`, JSON.stringify(marker));
+        window.localStorage.setItem(pendingReceiptKey(entryId), JSON.stringify(marker));
     } catch (error) {
         console.error("Failed to write pending-receipt marker:", error);
     }
@@ -64,7 +87,7 @@ export function clearPendingReceipt(entryId: string): void {
     if (typeof window === "undefined") return;
 
     try {
-        window.localStorage.removeItem(`${PENDING_RECEIPT_KEY_PREFIX}${entryId}`);
+        window.localStorage.removeItem(pendingReceiptKey(entryId));
     } catch (error) {
         console.error("Failed to clear pending-receipt marker:", error);
     }

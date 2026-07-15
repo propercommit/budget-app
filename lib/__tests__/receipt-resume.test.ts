@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-    PENDING_RECEIPT_KEY_PREFIX,
     PENDING_RECEIPT_TTL_MS,
     addPendingReceipt,
     clearPendingReceipt,
+    pendingReceiptKey,
     readPendingReceipts,
+    resumeOutcome,
 } from "@/lib/receipt-resume";
+import { WELCOME_BANNER_DISMISSED_KEY } from "@/lib/first-run";
 
-const keyFor = (entryId: string) => `${PENDING_RECEIPT_KEY_PREFIX}${entryId}`;
+const keyFor = pendingReceiptKey;
 
 beforeEach(() => {
     localStorage.clear();
@@ -78,14 +80,14 @@ describe("receipt-resume markers", () => {
     });
 
     it("leaves unrelated planbudget keys untouched", () => {
-        localStorage.setItem("planbudget.welcome-banner-dismissed", "1");
+        localStorage.setItem(WELCOME_BANNER_DISMISSED_KEY, "1");
 
         addPendingReceipt("e1", "Coffee");
 
         clearPendingReceipt("e1");
 
         expect(readPendingReceipts()).toEqual([]);
-        expect(localStorage.getItem("planbudget.welcome-banner-dismissed")).toBe("1");
+        expect(localStorage.getItem(WELCOME_BANNER_DISMISSED_KEY)).toBe("1");
     });
 
     it("returns markers oldest first", () => {
@@ -98,5 +100,20 @@ describe("receipt-resume markers", () => {
         const markers = readPendingReceipts();
 
         expect(markers.map((m) => m.entryId)).toEqual(["older", "newer"]);
+    });
+});
+
+describe("resumeOutcome", () => {
+    it.each([
+        [404, "forget"],
+        [null, "keep"],
+        [401, "keep"],
+        [500, "keep"],
+        [503, "keep"],
+        [409, "reattach"],
+        [413, "reattach"],
+        [415, "reattach"],
+    ] as const)("status %s → %s", (status, expected) => {
+        expect(resumeOutcome(status)).toBe(expected);
     });
 });

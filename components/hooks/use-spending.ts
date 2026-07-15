@@ -8,7 +8,7 @@ import { applyEntry, unapplyEntry } from "@/lib/spending/math";
 import { monthLabel } from "@/lib/spending/month";
 import { uploadReceiptFile } from "@/lib/upload-receipt";
 import { type ReceiptAction } from "@/lib/receipt-file";
-import { addPendingReceipt, clearPendingReceipt, readPendingReceipts } from "@/lib/receipt-resume";
+import { addPendingReceipt, clearPendingReceipt, readPendingReceipts, resumeOutcome } from "@/lib/receipt-resume";
 import { showErrorToast } from "@/lib/toast";
 import toast from "react-hot-toast";
 
@@ -199,25 +199,16 @@ export function useSpending(initialSpendingData?: SpendingData) {
           setEntryReceiptEverywhere(marker.entryId, receiptPath);
           clearPendingReceipt(marker.entryId);
         } catch (error) {
-          const status = error instanceof ApiError ? error.status : null;
+          const outcome = resumeOutcome(error instanceof ApiError ? error.status : null);
 
-          // Entry gone (or another user's browser session) — nothing to say.
-          if (status === 404) {
-            clearPendingReceipt(marker.entryId);
-            continue;
-          }
-
-          // 401 is a token-refresh race at mount, and network/5xx are
-          // transient — keep the marker for the next load (TTL-bounded).
-          if (status === null || status === 401 || status >= 500) {
+          if (outcome === "keep") {
             console.error("Receipt resume failed, keeping marker:", error);
             continue;
           }
 
-          // Definitive 4xx: the upload never finished (409) or the object
-          // was invalid and reaped (413/415) — only re-attaching can fix it.
           clearPendingReceipt(marker.entryId);
-          toast.error(`The receipt for "${marker.entryName}" didn't finish uploading. Open the entry to attach it again.`);
+
+          if (outcome === "reattach") toast.error(`The receipt for "${marker.entryName}" didn't finish uploading. Open the entry to attach it again.`);
         }
       }
     })();
