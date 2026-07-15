@@ -11,8 +11,10 @@ interface ColorPickerProps {
 
 const PRESET_COLORS = [
   "#10b981", // green
+  "#14b8a6", // teal
   "#3b82f6", // blue
   "#a855f7", // purple
+  "#ec4899", // pink
   "#ef4444", // red
   "#f59e0b", // orange
   "#64748b", // slate
@@ -415,11 +417,12 @@ export function ColorPicker({ value, onChange, className }: ColorPickerProps) {
         />
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="flex justify-between pt-2">
         {PRESET_COLORS.map((preset) => (
           <button
             key={preset}
-            className="w-8 h-8 rounded-full border-2 border-background shadow-sm hover:scale-110 transition-transform"
+            aria-label={`Preset color ${preset}`}
+            className="w-8 h-8 shrink-0 rounded-full border-2 border-background shadow-sm hover:scale-110 transition-transform"
             style={{ backgroundColor: preset }}
             onClick={() => onChange(preset)}
           />

@@ -6,9 +6,16 @@ import { availableIcons, iconMap } from "@/lib/icon-map";
 interface IconPickerProps {
     value: string;
     onChange: (icon: string) => void;
+    /**
+     * `grid` is the category popin's redesigned layout: a two-row
+     * horizontally-scrolling grid headed by the tab row alone. The default
+     * `row` keeps the original "Icon"-labelled single-row strip used by the
+     * spending/income edit popins.
+     */
+    variant?: "row" | "grid";
 }
 
-export function IconPicker({ value, onChange }: IconPickerProps) {
+export function IconPicker({ value, onChange, variant = "row" }: IconPickerProps) {
     const [iconSource, setIconSource] = useState<"preset" | "upload">(
         value.startsWith("data:") ? "upload" : "preset"
     );
@@ -26,14 +33,16 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
 
     return (
         <div className="space-y-3">
-            <Label className="text-sm font-semibold text-foreground">Icon</Label>
-            
+            {variant === "row" && <Label className="text-sm font-semibold text-foreground">Icon</Label>}
+
             {/* Tabs */}
             <div className="flex border-b border-border">
                 <button
                     type="button"
                     onClick={() => setIconSource("preset")}
-                    className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                    className={`px-4 text-sm transition-colors border-b-2 -mb-px ${
+                        variant === "grid" ? "pb-2.5 font-semibold" : "py-2.5 font-medium"
+                    } ${
                         iconSource === "preset"
                             ? "text-foreground border-primary"
                             : "text-muted-foreground border-transparent"
@@ -55,7 +64,11 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
             </div>
             
             {iconSource === "preset" ? (
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                <div
+                    className={`gap-2 overflow-x-auto pb-2 -mx-1 px-1 ${
+                        variant === "grid" ? "grid grid-rows-2 grid-flow-col justify-start" : "flex"
+                    }`}
+                >
                     {availableIcons.map((icon) => {
                         const isSelected = value === icon.id;
                         return (

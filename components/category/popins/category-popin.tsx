@@ -61,8 +61,16 @@ export function CategoryPopin({
         <PopinWrapper
             isOpen={isOpen}
             onClose={onClose}
-            title={isCreate ? "New Category" : "Edit Category"}
             zIndex={zIndex}
+            floatingHeader={
+                <div
+                    className="inline-flex max-w-full items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold"
+                    style={{ backgroundColor: selectedColor, boxShadow: "0 2px 12px rgba(0, 0, 0, 0.12)" }}
+                >
+                    <span className="inline-flex text-lg">{iconMap[selectedIcon]}</span>
+                    <span className="truncate">{name || (isCreate ? "New Category" : "Edit Category")}</span>
+                </div>
+            }
             footer={
                 <div className="space-y-3">
                     <div className="flex gap-3">
@@ -73,7 +81,7 @@ export function CategoryPopin({
                             {isCreate ? "Create Category" : "Save Changes"}
                         </Button>
                     </div>
-                    {!isCreate && onDelete && (
+                    {!isCreate && onDelete !== undefined && (
                         <DeleteConfirmSection
                             label="Delete Category"
                             confirmMessage={CATEGORY_DELETE_WARNING}
@@ -83,44 +91,42 @@ export function CategoryPopin({
                 </div>
             }
         >
-            <div className="-mx-5 -mt-5 mb-5 flex justify-center py-4" style={{ backgroundColor: "var(--muted)" }}>
-                <div
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white font-semibold"
-                    style={{ backgroundColor: selectedColor }}
-                >
-                    <span className="text-lg">{iconMap[selectedIcon]}</span>
-                    <span>{name || "Category"}</span>
-                </div>
-            </div>
-
-            <div className="space-y-5">
+            <div className="flex flex-col gap-5">
                 <div className="space-y-2">
                     <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-                        Category Name
+                        Name
                     </label>
-                    <input
-                        ref={nameRef}
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        maxLength={30}
-                        placeholder="e.g., Transport, Food"
-                        className="w-full px-4 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
-                        style={fieldInputStyle(nameError)}
-                        {...fieldValidationProps(nameError, "category-name-error")}
-                    />
-                    {nameError
-                        ? <FieldMessage id="category-name-error">Enter a category name</FieldMessage>
-                        : (
-                            <p className="text-xs text-right" style={{ color: name.length >= 25 ? "#FF9500" : "var(--muted-foreground)" }}>
+                    <div className="relative">
+                        <input
+                            ref={nameRef}
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            maxLength={30}
+                            placeholder="e.g., Transport, Food"
+                            className="w-full pl-4 pr-16 py-3.5 rounded-xl text-base outline-none transition-all duration-200"
+                            style={fieldInputStyle(nameError)}
+                            {...fieldValidationProps(nameError, "category-name-error")}
+                        />
+                        {!nameError && (
+                            <span
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-xs pointer-events-none"
+                                style={{ color: name.length >= 25 ? "#FF9500" : "var(--muted-foreground)" }}
+                            >
                                 {name.length}/30
-                            </p>
+                            </span>
                         )}
+                    </div>
+                    {nameError && <FieldMessage id="category-name-error">Enter a category name</FieldMessage>}
+                </div>
+
+                {/* -mt-2 tightens the tab row under the name field to the
+                    design's 12px, against the stack's 20px rhythm. */}
+                <div className="-mt-2">
+                    <IconPicker value={selectedIcon} onChange={setSelectedIcon} variant="grid" />
                 </div>
 
                 <ColorPicker value={selectedColor} onChange={setSelectedColor} />
-
-                <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
             </div>
         </PopinWrapper>
     );

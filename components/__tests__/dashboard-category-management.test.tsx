@@ -161,7 +161,7 @@ describe("Dashboard — category management wiring", () => {
     fireEvent.click(screen.getByRole("button", { name: "Manage" }));
     fireEvent.click(screen.getByRole("button", { name: "Edit Groceries" }));
 
-    expect(screen.getByText("Edit Category")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Save Changes" })).toBeDefined();
 
     const nameInput = screen.getByDisplayValue("Groceries");
 
