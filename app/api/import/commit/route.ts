@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+import type { CategorizationRule, Prisma } from "@prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -202,6 +202,21 @@ async function resolveSeriesId(
   return id;
 }
 
+/**
+ * The stored rule rows a spending decision lands on — the same normalized
+ * identity (key, "spending", the fate's category) the learner bumps, so
+ * routing, stamping and bumping can never address different rows. A category
+ * correction therefore lands on its OWN identity, never on the matched rule
+ * of another category — an old pointer cannot hijack the user's correction.
+ */
+function landingRules(
+  rules: CategorizationRule[],
+  learnedKey: string,
+  categoryId: string,
+): CategorizationRule[] {
+  return rules.filter((rule) => normalizeMatchKey(rule.match) === learnedKey && rule.valueType === "spending" && rule.categoryId === categoryId);
+}
+
 /** Find-or-create of the month's incarnation at budgeted 0 (D23), cached per batch. */
 async function resolveItemId(
   tx: Prisma.TransactionClient,
@@ -330,6 +345,12 @@ export async function POST(request: Request): Promise<Response> {
       const itemCache = new Map<string, string>();
       const affectedItemIds = new Set<string>();
 
+      // Rules the planner will CREATE this batch don't exist yet to stamp
+      // inline — remember the series each identity resolved to (keyed
+      // key + category, the planner's spending identity) so the created row
+      // is born already pointing at its card.
+      const pendingCreateStamps = new Map<string, string>();
+
       for (const { tx: transaction, fate, name } of items) {
         if (!isWrittenRoute(fate)) continue;
 
@@ -360,7 +381,31 @@ export async function POST(request: Request): Promise<Response> {
         // The series is named by the same key the learner writes under (D18:
         // the confirmed token IS the merchant identity) — one owner in learn.ts.
         const learnedKey = effectiveLearnKey(transaction, fate, rules);
-        const seriesId = await resolveSeriesId(tx, user.id, category, learnedKey === null ? name : truncateName(learnedKey), seriesCache);
+        const landing = learnedKey === null ? [] : landingRules(rules, learnedKey, fate.value.categoryId);
+        const pointer = landing.find((rule) => rule.seriesId !== null)?.seriesId ?? null;
+
+        let seriesId: string;
+
+        if (pointer !== null) {
+          // A stamped rule remembers its card: route there unconditionally,
+          // whatever the series' current name or category — the user's later
+          // rename/move is ground truth (D16) — and never consult the ladder.
+          seriesId = pointer;
+        } else {
+          seriesId = await resolveSeriesId(tx, user.id, category, learnedKey === null ? name : truncateName(learnedKey), seriesCache);
+
+          // Self-healing stamp: the rule (re-)learns its card in this same
+          // transaction. The snapshot rows are patched too, so the batch's
+          // later transactions take the pointer path instead of re-stamping.
+          for (const rule of landing) {
+            await tx.categorizationRule.update({ where: { id: rule.id }, data: { seriesId } });
+
+            rule.seriesId = seriesId;
+          }
+
+          if (landing.length === 0 && learnedKey !== null) pendingCreateStamps.set(`${learnedKey}\u0000${fate.value.categoryId}`, seriesId);
+        }
+
         const itemId = await resolveItemId(tx, seriesId, transaction.date.slice(0, 7), itemCache);
 
         await tx.spendingEntry.create({
@@ -382,9 +427,14 @@ export async function POST(request: Request): Promise<Response> {
 
       for (const mutation of planRuleMutations(fatesWithTx, rules)) {
         if (mutation.op === "create") {
-          await tx.categorizationRule.create({
-            data: { userId: user.id, match: mutation.match, valueType: mutation.valueType, categoryId: mutation.categoryId },
-          });
+          // A spending rule is born already pointing at the series the batch
+          // resolved for its identity; income/exclude rules never carry a
+          // pointer.
+          const data: Prisma.CategorizationRuleUncheckedCreateInput = { userId: user.id, match: mutation.match, valueType: mutation.valueType, categoryId: mutation.categoryId };
+
+          if (mutation.valueType === "spending") data.seriesId = pendingCreateStamps.get(`${mutation.match}\u0000${mutation.categoryId}`) ?? null;
+
+          await tx.categorizationRule.create({ data });
 
           continue;
         }

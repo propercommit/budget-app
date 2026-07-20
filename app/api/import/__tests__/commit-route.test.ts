@@ -94,6 +94,7 @@ const ruleRow = (
   match,
   valueType,
   categoryId: valueType === "spending" ? FAKE_CATEGORY.id : null,
+  seriesId: null,
   useCount: 1,
   ...over,
 });
@@ -597,5 +598,211 @@ describe("POST /api/import/commit — atomic write", () => {
     for (const name of outerImportModels) {
       for (const fn of WRITE_FNS) expect((prismaMock[name] as Record<string, Mock>)[fn], `outer prisma.${name}.${fn}`).not.toHaveBeenCalled();
     }
+  });
+});
+
+// --- rule→series pointer (rename-proof routing) -----------------------------
+
+describe("POST /api/import/commit — rule→series pointer", () => {
+  it("routes via a live rule pointer without consulting the name ladder", async () => {
+    txMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: "series-pointer" }),
+    ]);
+
+    await commit([{ tx: btx(), fate: routeSpending(FAKE_CATEGORY.id) }]);
+
+    // Placement came from the pointer alone — the ladder's lookups never ran.
+    expect(txMock.budgetSeries.findFirst).not.toHaveBeenCalled();
+
+    expect(txMock.budgetSeries.create).not.toHaveBeenCalled();
+
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith({
+      where: { seriesId_month: { seriesId: "series-pointer", month: "2026-06" } },
+      update: {},
+      create: { seriesId: "series-pointer", month: "2026-06", budgeted: 0 },
+    });
+
+    expect(txMock.spendingEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ spendingItemId: "item-series-pointer|2026-06" }) }),
+    );
+  });
+
+  it("rename-proof: a renamed pointered series keeps receiving entries, no new series", async () => {
+    // The user renamed the card "MIGROS" → "Twint Migros" after the rule was
+    // stamped. Nothing in the commit consults the series name — the pointer
+    // alone places both entries, so the rename cannot split the card.
+    txMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: "series-renamed" }),
+    ]);
+
+    await commit([
+      { tx: btx({ date: "2026-06-02" }), fate: routeSpending(FAKE_CATEGORY.id) },
+      { tx: btx({ date: "2026-06-09" }), fate: routeSpending(FAKE_CATEGORY.id) },
+    ]);
+
+    expect(txMock.budgetSeries.findFirst).not.toHaveBeenCalled();
+
+    expect(txMock.budgetSeries.create).not.toHaveBeenCalled();
+
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledTimes(1);
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seriesId_month: { seriesId: "series-renamed", month: "2026-06" } } }),
+    );
+
+    expect(txMock.spendingEntry.create).toHaveBeenCalledTimes(2);
+    expect(txMock.spendingEntry.create).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({ data: expect.objectContaining({ spendingItemId: "item-series-renamed|2026-06" }) }),
+    );
+    expect(txMock.spendingEntry.create).toHaveBeenNthCalledWith(2,
+      expect.objectContaining({ data: expect.objectContaining({ spendingItemId: "item-series-renamed|2026-06" }) }),
+    );
+  });
+
+  it("pointer wins: a series moved to another category keeps its entries, rule.categoryId untouched", async () => {
+    // The card was moved to another category after stamping (PUT /api/spending
+    // updates series.categoryId; rules are untouched). The rule still stores
+    // Groceries and the review UI pre-fills it — but the entry follows the
+    // card (the user's later, deliberate move is ground truth, D16). No
+    // split, no second series, and the rule's own category is not rewritten.
+    txMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: "series-moved" }),
+    ]);
+
+    await commit([{ tx: btx(), fate: routeSpending(FAKE_CATEGORY.id) }]);
+
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seriesId_month: { seriesId: "series-moved", month: "2026-06" } } }),
+    );
+
+    expect(txMock.budgetSeries.create).not.toHaveBeenCalled();
+
+    expect(txMock.budgetSeries.update).not.toHaveBeenCalled();
+
+    // The confirmation bumps useCount — and writes nothing else to the rule.
+    expect(txMock.categorizationRule.update).not.toHaveBeenCalled();
+
+    expect(txMock.categorizationRule.updateMany).toHaveBeenCalledTimes(1);
+    expect(txMock.categorizationRule.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["rule-MIGROS-spending"] } },
+      data: { useCount: { increment: 1 } },
+    });
+  });
+
+  it("re-stamps a null pointer from the ladder inside the same transaction", async () => {
+    // The pointered series was deleted — the FK nulled the pointer. The
+    // ladder resolves a home again and the rule immediately re-learns it,
+    // atomically with the entries it placed.
+    txMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: null }),
+    ]);
+    txMock.budgetSeries.findFirst.mockResolvedValueOnce({ id: "series-back", name: "MIGROS", categoryId: FAKE_CATEGORY.id });
+
+    await commit([{ tx: btx(), fate: routeSpending(FAKE_CATEGORY.id) }]);
+
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seriesId_month: { seriesId: "series-back", month: "2026-06" } } }),
+    );
+
+    expect(txMock.categorizationRule.update).toHaveBeenCalledTimes(1);
+    expect(txMock.categorizationRule.update).toHaveBeenCalledWith({
+      where: { id: "rule-MIGROS-spending" },
+      data: { seriesId: "series-back" },
+    });
+
+    expect(prismaMock.categorizationRule.update).not.toHaveBeenCalled();
+  });
+
+  it("first-use stamp: one stamp, and the batch's second transaction takes the pointer path", async () => {
+    // Pre-pointer-era rule (seriesId never stamped). The first transaction
+    // resolves through the ladder and stamps; the second must already see
+    // the pointer in the in-memory snapshot — one stamp total, one ladder
+    // pass, both incarnations on the stamped series.
+    txMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: null }),
+    ]);
+    txMock.budgetSeries.findFirst.mockResolvedValueOnce({ id: "series-learned", name: "MIGROS", categoryId: FAKE_CATEGORY.id });
+
+    await commit([
+      { tx: btx({ date: "2026-06-02" }), fate: routeSpending(FAKE_CATEGORY.id) },
+      { tx: btx({ date: "2026-07-01" }), fate: routeSpending(FAKE_CATEGORY.id) },
+    ]);
+
+    expect(txMock.categorizationRule.update).toHaveBeenCalledTimes(1);
+    expect(txMock.categorizationRule.update).toHaveBeenCalledWith({
+      where: { id: "rule-MIGROS-spending" },
+      data: { seriesId: "series-learned" },
+    });
+
+    expect(txMock.budgetSeries.findFirst).toHaveBeenCalledTimes(1);
+
+    expect(txMock.spendingItem.upsert).toHaveBeenNthCalledWith(1,
+      expect.objectContaining({ where: { seriesId_month: { seriesId: "series-learned", month: "2026-06" } } }),
+    );
+    expect(txMock.spendingItem.upsert).toHaveBeenNthCalledWith(2,
+      expect.objectContaining({ where: { seriesId_month: { seriesId: "series-learned", month: "2026-07" } } }),
+    );
+  });
+
+  it("a rule created by this batch is born with its seriesId stamped", async () => {
+    // New merchant, user-confirmed token: the ladder creates the card and
+    // the learned rule is born already pointing at it — self-healing from
+    // birth, not on second use.
+    await commit([{ tx: btx(), fate: routeSpending(FAKE_CATEGORY.id, "MIGROS") }]);
+
+    expect(txMock.categorizationRule.create).toHaveBeenCalledWith({
+      data: {
+        userId: FAKE_USER.id,
+        match: "MIGROS",
+        valueType: "spending",
+        categoryId: FAKE_CATEGORY.id,
+        seriesId: "series-MIGROS",
+      },
+    });
+  });
+
+  it("a category correction routes by the ladder, not the old rule's pointer", async () => {
+    // The decision names a different category than the pointered rule — the
+    // old pointer must not hijack the user's correction. The correction
+    // learns a NEW row under the same key (born stamped with the corrected
+    // card); the old rule is never touched (history is history).
+    const RESTAURANTS = { id: "cat-restaurants", label: "Restaurants", icon: "utensils", color: "#FF9500", userId: FAKE_USER.id };
+
+    prismaMock.category.findMany.mockResolvedValue([RESTAURANTS]);
+    txMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: "series-groceries" }),
+    ]);
+
+    await commit([{ tx: btx(), fate: routeSpending(RESTAURANTS.id) }]);
+
+    expect(txMock.spendingItem.upsert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seriesId_month: expect.objectContaining({ seriesId: "series-groceries" }) } }),
+    );
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "MIGROS", categoryId: RESTAURANTS.id }) }),
+    );
+
+    expect(txMock.categorizationRule.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ match: "MIGROS", categoryId: RESTAURANTS.id, seriesId: "series-MIGROS" }) }),
+    );
+
+    expect(txMock.categorizationRule.update).not.toHaveBeenCalled();
+  });
+
+  it("income and exclude rules never carry a seriesId", async () => {
+    await commit([
+      { tx: btx({ direction: "credit", description: "ACME SALARY" }), fate: { kind: "route", value: { type: "income" }, learnKey: "ACME" } },
+      { tx: btx({ description: "COOP TANKSTELLE" }), fate: { kind: "alwaysExclude", learnKey: "COOP" } },
+    ]);
+
+    expect(txMock.categorizationRule.create).toHaveBeenCalledTimes(2);
+    expect(txMock.categorizationRule.create).toHaveBeenCalledWith({
+      data: { userId: FAKE_USER.id, match: "ACME", valueType: "income", categoryId: null },
+    });
+    expect(txMock.categorizationRule.create).toHaveBeenCalledWith({
+      data: { userId: FAKE_USER.id, match: "COOP", valueType: "exclude", categoryId: null },
+    });
+
+    expect(txMock.categorizationRule.update).not.toHaveBeenCalled();
   });
 });
