@@ -7,7 +7,7 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DeleteConfirmSection } from "@/components/ui/delete-confirm-section";
 import { FieldMessage, amountFieldMessage, fieldAriaProps, fieldFocusProps, fieldInputStyle, fieldValidationProps, useSubmitReveal } from "@/components/ui/field-message";
 import { useSettings } from "@/lib/settings-context";
-import { CURRENCY_SYMBOLS } from "@/lib/constants";
+import { CURRENCY_SYMBOLS, DEFAULT_INCOME_ICON } from "@/lib/constants";
 import { parseAmountToCents, centsToAmount } from "@/lib/money";
 
 interface IncomePopinProps {
@@ -22,7 +22,7 @@ interface IncomePopinProps {
 export function IncomePopin({ isOpen, onClose, onSave, onDelete, mode, initialData }: IncomePopinProps) {
     const [name, setName] = useState(initialData?.name || '');
     const [amount, setAmount] = useState(initialData?.amount === undefined ? '' : centsToAmount(initialData.amount).toString());
-    const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || 'piggy-bank');
+    const [selectedIcon, setSelectedIcon] = useState(initialData?.icon || DEFAULT_INCOME_ICON);
     const [incomeType, setIncomeType] = useState<'active' | 'passive'>(initialData?.type || 'active');
     const [startDate, setStartDate] = useState(initialData?.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '');
     const [endDate, setEndDate] = useState(initialData?.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '');
