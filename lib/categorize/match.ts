@@ -55,6 +55,15 @@ export type MatchResult =
   | { tier: "suggested"; candidates: MatchCandidate[] }
   | { tier: "unknown" };
 
+/**
+ * Canonical form of a rule's match key: trimmed and uppercased. The single
+ * definition shared by matching and learning so stored and compared keys can
+ * never drift apart.
+ */
+export function normalizeMatchKey(raw: string): string {
+  return raw.trim().toUpperCase();
+}
+
 /** A matched candidate still carrying the normalized key it matched under. */
 interface KeyedCandidate extends MatchCandidate {
   key: string;
@@ -107,7 +116,7 @@ export function matchTransaction(
   const candidates: KeyedCandidate[] = [];
 
   for (const rule of rules) {
-    const key = rule.match.trim().toUpperCase();
+    const key = normalizeMatchKey(rule.match);
 
     if (key.length === 0) continue;
 
