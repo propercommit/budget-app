@@ -93,7 +93,11 @@ function transactionError(raw: unknown): string | null {
 
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== tx.date) return "Transaction dates must be zero-padded YYYY-MM-DD";
 
-  if (typeof tx.amount !== "number" || !Number.isInteger(tx.amount) || tx.amount <= 0 || tx.amount > MAX_AMOUNT_CENTS) return "Transaction amounts must be positive integer cents";
+  // Shape only — the positivity/cap rule applies to fates that WRITE a row
+  // (checked in the batch loop). The parser admits zero-amount statement
+  // lines the review can only exclude; rejecting them here would make such
+  // files permanently uncommittable, since excluded rows are still echoed.
+  if (typeof tx.amount !== "number" || !Number.isInteger(tx.amount) || tx.amount < 0) return "Transaction amounts must be integer cents";
 
   if (tx.direction !== "debit" && tx.direction !== "credit") return 'Transaction direction must be "debit" or "credit"';
 
@@ -290,6 +294,8 @@ export async function POST(request: Request): Promise<Response> {
       let name: string | null = null;
 
       if (isWrittenRoute(fate)) {
+        if (tx.amount <= 0 || tx.amount > MAX_AMOUNT_CENTS) return NextResponse.json({ error: "Transaction amounts must be positive integer cents" }, { status: 400 });
+
         name = synthesizedName(tx, fate);
 
         if (name === null) return NextResponse.json({ error: "Text-less transactions need a learnKey to be routed" }, { status: 400 });

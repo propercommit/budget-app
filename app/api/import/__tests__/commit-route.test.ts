@@ -170,7 +170,8 @@ describe("POST /api/import/commit — auth & validation", () => {
   it.each([
     { over: { date: "2026-6-02" }, error: "Transaction dates must be zero-padded YYYY-MM-DD" },
     { over: { date: "2026-02-31" }, error: "Transaction dates must be zero-padded YYYY-MM-DD" },
-    { over: { amount: 10.5 }, error: "Transaction amounts must be positive integer cents" },
+    { over: { amount: 10.5 }, error: "Transaction amounts must be integer cents" },
+    { over: { amount: -1 }, error: "Transaction amounts must be integer cents" },
     { over: { amount: 0 }, error: "Transaction amounts must be positive integer cents" },
     { over: { amount: 10_000_000_001 }, error: "Transaction amounts must be positive integer cents" },
     { over: { direction: "transfer" }, error: 'Transaction direction must be "debit" or "credit"' },
@@ -196,6 +197,31 @@ describe("POST /api/import/commit — auth & validation", () => {
 
     expect(status).toBe(400);
     expect(body).toEqual({ error });
+  });
+
+  it("accepts zero/over-cap amounts on fates that write nothing — excluding is always a way out", async () => {
+    // The parser admits zero-amount statement lines; the review can only
+    // exclude them, and excluded rows are still echoed. Rejecting them at
+    // shape level would make such files permanently uncommittable.
+    const { status } = await readJson(
+      await commit([
+        { tx: btx({ amount: 0 }), fate: { kind: "skip" } },
+        { tx: btx({ amount: 10_000_000_001 }), fate: { kind: "alwaysExclude", learnKey: "MIGROS" } },
+      ]),
+    );
+
+    expect(status).toBe(201);
+
+    expect(txMock.spendingEntry.create).not.toHaveBeenCalled();
+  });
+
+  it("400 when a zero-amount transaction is actually routed", async () => {
+    const { status, body } = await readJson(
+      await commit([{ tx: btx({ amount: 0 }), fate: routeSpending(FAKE_CATEGORY.id, "MIGROS") }]),
+    );
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "Transaction amounts must be positive integer cents" });
   });
 
   it("400 when a debit is routed to income — direction/income consistency", async () => {
