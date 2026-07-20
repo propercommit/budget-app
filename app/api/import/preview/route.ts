@@ -1,9 +1,85 @@
 import { NextResponse } from "next/server";
+import type { CategorizationRule } from "@prisma/client";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mt940Parser, Mt940ParseError } from "@/lib/import/mt940-parser";
-import { matchTransaction } from "@/lib/categorize/match";
+import { matchTransaction, type MatchCandidate, type MatchResult } from "@/lib/categorize/match";
 import type { BankStatement, ReconciliationResult } from "@/lib/import/types";
+
+/** A pointered series' live coordinates — where entries will actually land. */
+interface EffectiveDestination {
+  seriesId: string;
+  name: string;
+  categoryId: string;
+}
+
+/**
+ * A match candidate as the preview serves it: the concrete `ruleId` (fates
+ * echo it back so confirmations bump by id — never fork by identity) and the
+ * resolved `destination` (the pointered series' CURRENT name/category, which
+ * the UI must display instead of the rule's possibly-stale category; `null`
+ * when the rule has no surviving pointer).
+ */
+interface PreviewCandidate extends MatchCandidate {
+  ruleId: string;
+  destination: EffectiveDestination | null;
+}
+
+type PreviewMatch =
+  | { tier: "confident"; candidate: PreviewCandidate }
+  | { tier: "suggested"; candidates: PreviewCandidate[] }
+  | { tier: "unknown" };
+
+/** The `budgetSeries` projection the destination lookup selects. */
+interface PointedSeries {
+  id: string;
+  name: string;
+  categoryId: string;
+}
+
+/** The candidates a match result carries, tier-agnostic. */
+function candidatesOf(match: MatchResult): MatchCandidate[] {
+
+  if (match.tier === "confident") return [match.candidate];
+
+  if (match.tier === "suggested") return match.candidates;
+
+  return [];
+}
+
+/**
+ * Attaches ruleId + resolved destination to one candidate. The stored row is
+ * looked up by id because the matcher types rules structurally — the pointer
+ * (`seriesId`) only exists on the Prisma row.
+ */
+function enrichCandidate(
+  candidate: MatchCandidate,
+  ruleById: Map<string, CategorizationRule>,
+  seriesById: Map<string, PointedSeries>,
+): PreviewCandidate {
+
+  const stored = ruleById.get(candidate.rule.id);
+  const series = stored !== undefined && stored.seriesId !== null ? seriesById.get(stored.seriesId) : undefined;
+
+  return {
+    ...candidate,
+    ruleId: candidate.rule.id,
+    destination: series === undefined ? null : { seriesId: series.id, name: series.name, categoryId: series.categoryId },
+  };
+}
+
+function enrichMatch(
+  match: MatchResult,
+  ruleById: Map<string, CategorizationRule>,
+  seriesById: Map<string, PointedSeries>,
+): PreviewMatch {
+
+  if (match.tier === "confident") return { tier: "confident", candidate: enrichCandidate(match.candidate, ruleById, seriesById) };
+
+  if (match.tier === "suggested") return { tier: "suggested", candidates: match.candidates.map((candidate) => enrichCandidate(candidate, ruleById, seriesById)) };
+
+  return match;
+}
 
 /**
  * POST /api/import/preview — pure staging (D19): parses an MT940 file, runs
@@ -41,14 +117,41 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const rules = await prisma.categorizationRule.findMany({ where: { userId: user.id } });
+    const ruleById = new Map(rules.map((rule) => [rule.id, rule]));
 
-    const transactions = statements.flatMap((statement, statementIndex) =>
+    const matched = statements.flatMap((statement, statementIndex) =>
       statement.transactions.map((tx) => ({
         tx,
         match: matchTransaction(tx, rules),
         statementIndex,
       })),
     );
+
+    // One batched load of every pointered candidate's series (never per
+    // candidate): the review UI must display the card's LIVE name/category —
+    // the rule's stored category may be stale (pointer wins).
+    const pointedSeriesIds = [
+      ...new Set(
+        matched.flatMap(({ match }) =>
+          candidatesOf(match).flatMap((candidate) => {
+            const stored = ruleById.get(candidate.rule.id);
+
+            return stored !== undefined && stored.seriesId !== null ? [stored.seriesId] : [];
+          }),
+        ),
+      ),
+    ];
+
+    const pointedSeries: PointedSeries[] = pointedSeriesIds.length > 0
+      ? await prisma.budgetSeries.findMany({
+          where: { id: { in: pointedSeriesIds }, userId: user.id },
+          select: { id: true, name: true, categoryId: true },
+        })
+      : [];
+
+    const seriesById = new Map(pointedSeries.map((series) => [series.id, series]));
+
+    const transactions = matched.map((entry) => ({ ...entry, match: enrichMatch(entry.match, ruleById, seriesById) }));
 
     return NextResponse.json({ reconciliation, transactions });
   } catch (error) {

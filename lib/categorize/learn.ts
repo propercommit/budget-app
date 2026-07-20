@@ -24,9 +24,16 @@ import {
  * One reviewed transaction's fate, as the review UI will send it:
  * route to a destination (optionally learning a user-confirmed token),
  * skip once (learns NOTHING — D20), or always exclude (learns a rule).
+ *
+ * `ruleId` marks the route as a confirmation of that concrete matched
+ * candidate: learning bumps that rule's OWN identity instead of the fate's
+ * value — whose category may be the pointer's effective one (the series'
+ * current home), which must never fork a phantom rule row under it. An
+ * explicit `learnKey` outranks `ruleId` (an edited token is an identity
+ * correction, not a confirmation).
  */
 export type Fate =
-  | { kind: "route"; value: RuleValue; learnKey?: string }
+  | { kind: "route"; value: RuleValue; learnKey?: string; ruleId?: string }
   | { kind: "skip" }
   | { kind: "alwaysExclude"; learnKey: string };
 
@@ -91,13 +98,35 @@ function identityOf(target: LearnTarget): string {
 }
 
 /**
+ * The concrete rule a route fate confirms via `ruleId`, or `null` when the
+ * fate doesn't reference one, an explicit learnKey overrides it, or the id
+ * is unknown in `rules` (the commit route 400s foreign ids before planning;
+ * an unknown id here simply learns nothing). Generic so callers holding
+ * richer rule rows (e.g. Prisma records with `seriesId`) get them back typed.
+ */
+export function confirmedRule<R extends CategorizationRuleLike>(
+  fate: Fate,
+  rules: R[],
+): R | null {
+
+  if (fate.kind !== "route" || fate.ruleId === undefined) return null;
+
+  const learnKey = fate.learnKey === undefined ? "" : normalizeMatchKey(fate.learnKey);
+
+  if (learnKey.length > 0) return null;
+
+  return rules.find((rule) => rule.id === fate.ruleId) ?? null;
+}
+
+/**
  * The single owner of "which key does this route decision learn under": the
- * explicit user-confirmed learnKey when present, else the winning matched
- * rule's key, else `null` (nothing to key on). Winning candidates all share
- * one key, so the suggested pick is key-equivalent to any other. Exported so
- * the commit endpoint names imported series with the SAME resolution — the
- * learned rule key and the series name can never drift apart (D18: the
- * confirmed token IS the merchant identity).
+ * explicit user-confirmed learnKey when present, else the confirmed rule's
+ * key (`ruleId` fates), else the winning matched rule's key, else `null`
+ * (nothing to key on). Winning candidates all share one key, so the
+ * suggested pick is key-equivalent to any other. Exported so the commit
+ * endpoint names imported series with the SAME resolution — the learned rule
+ * key and the series name can never drift apart (D18: the confirmed token IS
+ * the merchant identity).
  */
 export function effectiveLearnKey(
   tx: BankTransactionLike,
@@ -108,6 +137,10 @@ export function effectiveLearnKey(
   const learnKey = fate.learnKey === undefined ? "" : normalizeMatchKey(fate.learnKey);
 
   if (learnKey.length > 0) return learnKey;
+
+  const confirmed = confirmedRule(fate, rules);
+
+  if (confirmed !== null) return normalizeMatchKey(confirmed.match);
 
   const result = matchTransaction(tx, rules);
 
@@ -136,6 +169,13 @@ function resolveTarget(
 
     return { match: key, valueType: "exclude", categoryId: null };
   }
+
+  // A ruleId confirmation lands on the confirmed rule's OWN identity — the
+  // fate's value may carry the pointer's effective category (the series'
+  // current home), which must never fork a phantom row under it.
+  const confirmed = confirmedRule(fate, existingRules);
+
+  if (confirmed !== null) return { match: normalizeMatchKey(confirmed.match), valueType: confirmed.valueType, categoryId: confirmed.categoryId };
 
   // A confirmation lands on the existing row (bump); a correction lands on a
   // new row under the same key (create).

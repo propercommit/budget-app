@@ -58,7 +58,8 @@ model BudgetSeries {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  items      SpendingItem[]
+  items               SpendingItem[]
+  categorizationRules CategorizationRule[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -164,6 +165,8 @@ model CategorizationRule {
   valueType  RuleValueType
   categoryId String?       // required iff valueType == spending
   category   Category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  seriesId   String?       // rename-proof pointer to the card this rule routes to (spending rules only); a deleted series nulls it and the ladder re-stamps on next use
+  series     BudgetSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   useCount   Int           @default(1)
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
