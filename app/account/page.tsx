@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import { AVATARS_BUCKET, avatarFilePath } from "@/lib/avatar-storage"
-import { Download, Loader2 } from "lucide-react"
+import { Download, Loader2, Upload } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 
 import { useSettings } from "@/lib/settings-context"
@@ -22,6 +22,7 @@ import { PasswordModal } from "@/components/account/components/modals/password-m
 import { DeleteModal, DELETE_CONFIRMATION } from "@/components/account/components/modals/delete-modal"
 import { LogoutModal } from "@/components/account/components/modals/logout-modal"
 import { PickerModal } from "@/components/account/components/modals/picker-modal"
+import { ImportPopin } from "@/components/import/import-popin"
 
 // Types
 interface UserMetadata {
@@ -50,6 +51,15 @@ export default function AccountPage() {
 
     // Modal state
     const [activeModal, setActiveModal] = useState<ModalType>(null)
+
+    // Import popin state — remount-via-key so every open starts at the pick stage
+    const [isImportOpen, setIsImportOpen] = useState(false)
+    const [importKey, setImportKey] = useState(0)
+
+    const handleOpenImport = () => {
+        setImportKey((prev) => prev + 1)
+        setIsImportOpen(true)
+    }
 
     // Form state - Profile
     const [firstName, setFirstName] = useState("")
@@ -504,6 +514,13 @@ export default function AccountPage() {
 
                 <SettingsSection title="Data">
                     <SettingsRow
+                        label="Import Bank Statement"
+                        description="Upload an MT940 statement — review every transaction before anything is written"
+                        onClick={handleOpenImport}
+                        trailing={<Upload className="h-[18px] w-[18px] flex-none text-primary" strokeWidth={2} />}
+                    />
+                    <InsetDivider className="sm:ml-5" />
+                    <SettingsRow
                         label="Export Your Data"
                         description="Download all your budget data as CSV (once every 2 days)"
                         onClick={handleExport}
@@ -536,6 +553,11 @@ export default function AccountPage() {
             </main>
 
             {/* Modals */}
+            <ImportPopin
+                key={`import-${importKey}`}
+                isOpen={isImportOpen}
+                onClose={() => setIsImportOpen(false)}
+            />
             {!isGoogleUser && (
                 <>
                     <EmailModal
