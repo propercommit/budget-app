@@ -87,6 +87,7 @@ const ruleRow = (
   match,
   valueType,
   categoryId: valueType === "spending" ? "cat-groceries" : null,
+  seriesId: null,
   useCount: 1,
   ...over,
 });
@@ -98,8 +99,8 @@ type PreviewBody = {
     tx: Record<string, unknown>;
     match: {
       tier: string;
-      candidate?: { rule: { id: string }; value: unknown };
-      candidates?: Array<{ rule: { id: string }; value: unknown }>;
+      candidate?: { rule: { id: string }; value: unknown; ruleId?: string; destination?: unknown };
+      candidates?: Array<{ rule: { id: string }; value: unknown; ruleId?: string; destination?: unknown }>;
     };
     statementIndex: number;
   }>;
@@ -217,6 +218,8 @@ describe("POST /api/import/preview — categorization", () => {
       candidate: {
         rule: expect.objectContaining({ id: migros.id }),
         value: { type: "spending", categoryId: "cat-groceries" },
+        ruleId: migros.id,
+        destination: null,
       },
     });
 
@@ -227,10 +230,14 @@ describe("POST /api/import/preview — categorization", () => {
         {
           rule: expect.objectContaining({ id: coopSpending.id }),
           value: { type: "spending", categoryId: "cat-groceries" },
+          ruleId: coopSpending.id,
+          destination: null,
         },
         {
           rule: expect.objectContaining({ id: coopExclude.id }),
           value: { type: "exclude" },
+          ruleId: coopExclude.id,
+          destination: null,
         },
       ],
     });
@@ -260,6 +267,99 @@ describe("POST /api/import/preview — categorization", () => {
     expect(data.transactions[0].tx).toMatchObject({ description: "MIGROS X" });
     expect(data.transactions[1].statementIndex).toBe(1);
     expect(data.transactions[1].tx).toMatchObject({ description: "ACME PAYOUT", direction: "credit" });
+  });
+});
+
+// --- effective destinations (rule→series pointer) ---------------------------
+
+describe("POST /api/import/preview — effective destinations", () => {
+  it("pointered candidates carry the series' live coordinates from ONE batched load", async () => {
+    // Both cards were renamed/moved since their rules were stamped; the UI
+    // must display where entries will actually land — the series' current
+    // name and category, not the rule's stale copy.
+    const migros = ruleRow("MIGROS", "spending", { seriesId: "series-x" });
+    const coop = ruleRow("COOP", "spending", { seriesId: "series-y" });
+
+    prismaMock.categorizationRule.findMany.mockResolvedValue([migros, coop]);
+    prismaMock.budgetSeries.findMany.mockResolvedValue([
+      { id: "series-x", name: "Twint Migros", categoryId: "cat-restaurants" },
+      { id: "series-y", name: "Coop Pronto", categoryId: "cat-transport" },
+    ]);
+
+    const { status, body } = await readJson(
+      await POST(jsonRequest({ content: THREE_TIER_STATEMENT })),
+    );
+
+    expect(status).toBe(200);
+
+    const data = body as PreviewBody;
+    const [first, second] = data.transactions;
+
+    expect(first.match.candidate).toMatchObject({
+      ruleId: migros.id,
+      destination: { seriesId: "series-x", name: "Twint Migros", categoryId: "cat-restaurants" },
+    });
+
+    expect(second.match.candidate).toMatchObject({
+      ruleId: coop.id,
+      destination: { seriesId: "series-y", name: "Coop Pronto", categoryId: "cat-transport" },
+    });
+
+    // One batched series load, scoped to the caller — never per candidate.
+    expect(prismaMock.budgetSeries.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.budgetSeries.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["series-x", "series-y"] }, userId: FAKE_USER.id },
+      select: { id: true, name: true, categoryId: true },
+    });
+  });
+
+  it("an unpointered rule yields destination null and no series query at all", async () => {
+    const migros = ruleRow("MIGROS", "spending");
+
+    prismaMock.categorizationRule.findMany.mockResolvedValue([migros]);
+
+    const { body } = await readJson(await POST(jsonRequest({ content: TWO_STATEMENTS })));
+
+    const data = body as PreviewBody;
+
+    expect(data.transactions[0].match.candidate).toMatchObject({ ruleId: migros.id, destination: null });
+
+    expect(prismaMock.budgetSeries.findMany).not.toHaveBeenCalled();
+  });
+
+  it("suggested candidates are enriched independently", async () => {
+    const pointered = ruleRow("COOP", "spending", { useCount: 5, seriesId: "series-y" });
+    const bare = ruleRow("COOP", "exclude");
+
+    prismaMock.categorizationRule.findMany.mockResolvedValue([pointered, bare]);
+    prismaMock.budgetSeries.findMany.mockResolvedValue([
+      { id: "series-y", name: "Coop Pronto", categoryId: "cat-transport" },
+    ]);
+
+    const { body } = await readJson(await POST(jsonRequest({ content: THREE_TIER_STATEMENT })));
+
+    const data = body as PreviewBody;
+    const coopMatch = data.transactions[1].match;
+
+    expect(coopMatch.tier).toBe("suggested");
+    expect(coopMatch.candidates?.[0]).toMatchObject({
+      ruleId: pointered.id,
+      destination: { seriesId: "series-y", name: "Coop Pronto", categoryId: "cat-transport" },
+    });
+    expect(coopMatch.candidates?.[1]).toMatchObject({ ruleId: bare.id, destination: null });
+  });
+
+  it("a pointer whose series vanished mid-flight degrades to destination null", async () => {
+    prismaMock.categorizationRule.findMany.mockResolvedValue([
+      ruleRow("MIGROS", "spending", { seriesId: "series-gone" }),
+    ]);
+    prismaMock.budgetSeries.findMany.mockResolvedValue([]);
+
+    const { body } = await readJson(await POST(jsonRequest({ content: TWO_STATEMENTS })));
+
+    const data = body as PreviewBody;
+
+    expect(data.transactions[0].match.candidate).toMatchObject({ destination: null });
   });
 });
 

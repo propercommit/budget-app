@@ -789,6 +789,141 @@ describe("POST /api/import/commit — rule→series pointer", () => {
     expect(txMock.categorizationRule.update).not.toHaveBeenCalled();
   });
 
+  it("anti-fork: a ruleId confirmation under the pointer's effective category bumps once, creates nothing", async () => {
+    // The card moved to Restaurants after stamping; the preview showed that
+    // effective destination and the confirmation carries it plus the
+    // concrete ruleId. One bump on that rule, zero new rule rows, zero new
+    // series — without the ruleId, the planner's identity lookup would fork
+    // a phantom row under Restaurants and self-downgrade the MIGROS key
+    // from confident to suggested (the re-split disease at rule level).
+    const RESTAURANTS = { id: "cat-restaurants", label: "Restaurants", icon: "utensils", color: "#FF9500", userId: FAKE_USER.id };
+
+    prismaMock.category.findMany.mockResolvedValue([RESTAURANTS]);
+    prismaMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending", { seriesId: "series-x" })]);
+    txMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending", { seriesId: "series-x" })]);
+
+    const { status } = await readJson(await commit([
+      { tx: btx(), fate: { kind: "route", value: { type: "spending", categoryId: RESTAURANTS.id }, ruleId: "rule-MIGROS-spending" } },
+    ]));
+
+    expect(status).toBe(201);
+
+    // The entry follows the pointer — no ladder, no split.
+    expect(txMock.budgetSeries.findFirst).not.toHaveBeenCalled();
+
+    expect(txMock.budgetSeries.create).not.toHaveBeenCalled();
+
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seriesId_month: { seriesId: "series-x", month: "2026-06" } } }),
+    );
+
+    // One bump by concrete id, zero creates — the rule's stored category is
+    // untouched and demotes to the ladder fallback.
+    expect(txMock.categorizationRule.create).not.toHaveBeenCalled();
+
+    expect(txMock.categorizationRule.updateMany).toHaveBeenCalledTimes(1);
+    expect(txMock.categorizationRule.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["rule-MIGROS-spending"] } },
+      data: { useCount: { increment: 1 } },
+    });
+  });
+
+  it("a dead pointer re-homes to the fate's category and re-stamps the confirmed rule by id", async () => {
+    // The pointer died between preview and commit (series deleted, FK nulled
+    // it): the ladder runs in the category the user actually confirmed (the
+    // effective one from preview), and the rule re-learns the new card —
+    // never a phantom rule row.
+    const RESTAURANTS = { id: "cat-restaurants", label: "Restaurants", icon: "utensils", color: "#FF9500", userId: FAKE_USER.id };
+
+    prismaMock.category.findMany.mockResolvedValue([RESTAURANTS]);
+    prismaMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending", { seriesId: null })]);
+    txMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending", { seriesId: null })]);
+
+    await commit([
+      { tx: btx(), fate: { kind: "route", value: { type: "spending", categoryId: RESTAURANTS.id }, ruleId: "rule-MIGROS-spending" } },
+    ]);
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "MIGROS", categoryId: RESTAURANTS.id }) }),
+    );
+
+    expect(txMock.categorizationRule.create).not.toHaveBeenCalled();
+
+    expect(txMock.categorizationRule.update).toHaveBeenCalledTimes(1);
+    expect(txMock.categorizationRule.update).toHaveBeenCalledWith({
+      where: { id: "rule-MIGROS-spending" },
+      data: { seriesId: "series-MIGROS" },
+    });
+  });
+
+  it("an explicit learnKey outranks the ruleId — identity edit, not confirmation", async () => {
+    prismaMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending", { seriesId: "series-x" })]);
+    txMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending", { seriesId: "series-x" })]);
+
+    await commit([
+      { tx: btx(), fate: { kind: "route", value: { type: "spending", categoryId: FAKE_CATEGORY.id }, ruleId: "rule-MIGROS-spending", learnKey: "MIGROS ZUERICH" } },
+    ]);
+
+    // The edited token names a NEW identity: the ladder places the entry
+    // under it — the old rule's pointer must not hijack the edit...
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ seriesId_month: expect.objectContaining({ seriesId: "series-MIGROS ZUERICH" }) }) }),
+    );
+
+    // ...and a NEW rule is born stamped; the referenced rule is not bumped.
+    expect(txMock.categorizationRule.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ match: "MIGROS ZUERICH", seriesId: "series-MIGROS ZUERICH" }) }),
+    );
+
+    expect(txMock.categorizationRule.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("400 when the ruleId is not the caller's own rule", async () => {
+    prismaMock.categorizationRule.findMany.mockResolvedValue([]);
+
+    const { status, body } = await readJson(await commit([
+      { tx: btx(), fate: { kind: "route", value: { type: "spending", categoryId: FAKE_CATEGORY.id }, ruleId: "rule-foreign" } },
+    ]));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "Rule not found for one or more confirmed transactions" });
+
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("400 when the confirmed rule does not match the transaction's text", async () => {
+    prismaMock.categorizationRule.findMany.mockResolvedValue([ruleRow("COOP", "spending")]);
+
+    const { status, body } = await readJson(await commit([
+      { tx: btx(), fate: { kind: "route", value: { type: "spending", categoryId: FAKE_CATEGORY.id }, ruleId: "rule-COOP-spending" } },
+    ]));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "A confirmed rule does not match its transaction" });
+
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("400 when the confirmed rule's destination type differs from the fate's", async () => {
+    prismaMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "income")]);
+
+    const { status, body } = await readJson(await commit([
+      { tx: btx({ direction: "credit" }), fate: { kind: "route", value: { type: "spending", categoryId: FAKE_CATEGORY.id }, ruleId: "rule-MIGROS-income" } },
+    ]));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "A confirmed rule does not match its fate destination" });
+  });
+
+  it("400 on a malformed ruleId", async () => {
+    const { status, body } = await readJson(await commit([
+      { tx: btx(), fate: { kind: "route", value: { type: "spending", categoryId: FAKE_CATEGORY.id }, ruleId: 42 } },
+    ]));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "ruleId must be a non-empty string" });
+  });
+
   it("income and exclude rules never carry a seriesId", async () => {
     await commit([
       { tx: btx({ direction: "credit", description: "ACME SALARY" }), fate: { kind: "route", value: { type: "income" }, learnKey: "ACME" } },

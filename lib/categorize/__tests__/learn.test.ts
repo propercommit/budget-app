@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   planRuleMutations,
+  effectiveLearnKey,
   guessIdentityToken,
   NOISE_TOKENS,
   type FateWithTx,
@@ -188,6 +189,56 @@ describe("planRuleMutations — batch collapsing & determinism", () => {
       { op: "create", match: "ZULU", valueType: "exclude", categoryId: null },
       { op: "create", match: "ALPHA", valueType: "spending", categoryId: "cat-1" },
     ]);
+  });
+});
+
+// --- ruleId confirmations (rule→series pointer, anti-fork) ------------------
+
+describe("planRuleMutations — ruleId confirmations", () => {
+  it("a ruleId confirmation bumps the rule's OWN identity, never the fate's divergent category", () => {
+    // The rule's card moved to another category; the review UI shows the
+    // effective destination and the fate carries it. Landing on the fate's
+    // identity would create a phantom row under the new category and
+    // self-downgrade the key from confident to suggested — the anti-fork
+    // contract.
+    const existing = rule("MIGROS", "spending", { id: "rule-a", categoryId: "cat-groceries" });
+    const fates: FateWithTx[] = [
+      { tx: tx(), fate: { kind: "route", value: spend("cat-restaurants"), ruleId: "rule-a" } },
+    ];
+
+    expect(planRuleMutations(fates, [existing])).toEqual([
+      { op: "bump", match: "MIGROS", valueType: "spending", categoryId: "cat-groceries", by: 1 },
+    ]);
+  });
+
+  it("an explicit learnKey outranks the ruleId — an edited token is an identity correction", () => {
+    const existing = rule("MIGROS", "spending", { id: "rule-a", categoryId: "cat-groceries" });
+    const fates: FateWithTx[] = [
+      { tx: tx(), fate: { kind: "route", value: spend("cat-groceries"), ruleId: "rule-a", learnKey: "migros zuerich" } },
+    ];
+
+    expect(planRuleMutations(fates, [existing])).toEqual([
+      { op: "create", match: "MIGROS ZUERICH", valueType: "spending", categoryId: "cat-groceries" },
+    ]);
+  });
+
+  it("an unknown ruleId learns nothing (the commit route 400s it before planning)", () => {
+    const fates: FateWithTx[] = [
+      { tx: tx({ description: "UNMATCHED TEXT" }), fate: { kind: "route", value: spend("cat-groceries"), ruleId: "rule-ghost" } },
+    ];
+
+    expect(planRuleMutations(fates, [])).toEqual([]);
+  });
+
+  it("effectiveLearnKey resolves a ruleId fate to the confirmed rule's key, not the match winner", () => {
+    // Without the ruleId, the longer key would win the match and the series
+    // name / learn key would drift away from the confirmed rule.
+    const confirmed = rule("MIGROS", "spending", { id: "rule-a", categoryId: "cat-groceries" });
+    const longer = rule("MIGROS SUPERMARKT", "spending", { id: "rule-b", categoryId: "cat-other" });
+
+    const key = effectiveLearnKey(tx(), { kind: "route", value: spend("cat-groceries"), ruleId: "rule-a" }, [confirmed, longer]);
+
+    expect(key).toBe("MIGROS");
   });
 });
 

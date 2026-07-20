@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { ensureUser } from "@/lib/user";
 import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { DEFAULT_INCOME_ICON } from "@/lib/constants";
-import { effectiveLearnKey, planRuleMutations, type Fate, type FateWithTx } from "@/lib/categorize/learn";
-import { normalizeMatchKey, type RuleValue } from "@/lib/categorize/match";
+import { confirmedRule, effectiveLearnKey, planRuleMutations, type Fate, type FateWithTx } from "@/lib/categorize/learn";
+import { matchTransaction, normalizeMatchKey, type RuleValue } from "@/lib/categorize/match";
 
 // Constants (kept in sync with the income/entries routes' caps)
 const MAX_NAME_LENGTH = 100;
@@ -136,6 +136,8 @@ function fateError(raw: unknown, direction: "debit" | "credit"): string | null {
   if (destination.type === "income" && direction === "debit") return "A debit cannot be routed to income";
 
   if (fate.learnKey !== undefined && (typeof fate.learnKey !== "string" || fate.learnKey.length > MAX_KEY_LENGTH)) return "learnKey must be a string of at most 100 characters";
+
+  if (fate.ruleId !== undefined && (typeof fate.ruleId !== "string" || fate.ruleId.length === 0)) return "ruleId must be a non-empty string";
 
   return null;
 }
@@ -314,6 +316,40 @@ export async function POST(request: Request): Promise<Response> {
 
     const categoryById = new Map(categories.map((category) => [category.id, category]));
 
+    // ruleId validation: a confirmation must reference the caller's OWN rule,
+    // and that rule must actually match the transaction it decides and agree
+    // on the destination type — the review UI is never trusted with this.
+    // The CATEGORY may legitimately differ (the pointer's effective home).
+    const confirmations = items.flatMap((item) =>
+      item.fate.kind === "route" && item.fate.ruleId !== undefined
+        ? [{ tx: item.tx, ruleId: item.fate.ruleId, valueType: item.fate.value.type }]
+        : [],
+    );
+
+    const confirmedRuleIds = [...new Set(confirmations.map(({ ruleId }) => ruleId))];
+
+    const referencedRules = confirmedRuleIds.length > 0
+      ? await prisma.categorizationRule.findMany({ where: { id: { in: confirmedRuleIds }, userId: user.id } })
+      : [];
+
+    if (referencedRules.length !== confirmedRuleIds.length) return NextResponse.json({ error: "Rule not found for one or more confirmed transactions" }, { status: 400 });
+
+    const referencedById = new Map(referencedRules.map((rule) => [rule.id, rule]));
+
+    for (const { tx: transaction, ruleId, valueType } of confirmations) {
+      const rule = referencedById.get(ruleId);
+
+      if (rule === undefined) return NextResponse.json({ error: "Rule not found for one or more confirmed transactions" }, { status: 400 });
+
+      // Matching the single rule re-runs the full candidate filter: key in
+      // the transaction's text, direction validity, rule well-formedness.
+      const result = matchTransaction(transaction, [rule]);
+
+      if (result.tier !== "confident") return NextResponse.json({ error: "A confirmed rule does not match its transaction" }, { status: 400 });
+
+      if (result.candidate.value.type !== valueType) return NextResponse.json({ error: "A confirmed rule does not match its fate destination" }, { status: 400 });
+    }
+
     // Server-computed counts (D20's closing summary): routed = written,
     // everything else (skips, always-excludes, rule-confirmed excludes) = excluded.
     const routed = items.filter((item): item is CommitItem & { fate: WrittenRoute } => isWrittenRoute(item.fate));
@@ -381,7 +417,18 @@ export async function POST(request: Request): Promise<Response> {
         // The series is named by the same key the learner writes under (D18:
         // the confirmed token IS the merchant identity) — one owner in learn.ts.
         const learnedKey = effectiveLearnKey(transaction, fate, rules);
-        const landing = learnedKey === null ? [] : landingRules(rules, learnedKey, fate.value.categoryId);
+
+        // A ruleId confirmation lands on that concrete rule; any other
+        // decision lands on its normalized identity (key + the fate's
+        // category) — the same resolution the learner bumps, so routing,
+        // stamping and bumping can never address different rows.
+        const confirmed = confirmedRule(fate, rules);
+
+        let landing: CategorizationRule[];
+
+        if (confirmed !== null) landing = [confirmed];
+        else landing = learnedKey === null ? [] : landingRules(rules, learnedKey, fate.value.categoryId);
+
         const pointer = landing.find((rule) => rule.seriesId !== null)?.seriesId ?? null;
 
         let seriesId: string;
