@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Ban, Check, ChevronDown } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
@@ -14,7 +15,6 @@ import {
     reincludeRow,
     shortDate,
     suggestionReason,
-    textlessTx,
     toggleAccepted,
     toggleExpanded,
     undoExclude,
@@ -49,32 +49,15 @@ function rowAmountColor(row: ReviewRow): string | undefined {
     return row.tx.direction === "credit" ? CREDIT_COLOR : DEBIT_COLOR;
 }
 
-function ruleChipFor(row: ReviewRow, categories: Category[], onUpdate: RowUpdate) {
-
-    if (row.chip === null) return null;
-
-    return (
-        <RuleChipCard
-            chip={row.chip}
-            destination={row.chip.kind === "exclude" || row.dest === null ? null : destinationInfo(row.dest, categories)}
-            onSelectToken={(index) => onUpdate(row.id, (current) => chipSelectToken(current, index))}
-            onConfirm={() => onUpdate(row.id, chipConfirm)}
-            onDismiss={() => onUpdate(row.id, chipDismiss)}
-            onReopen={() => onUpdate(row.id, chipReopen)}
-        />
-    );
-}
-
 /**
  * A "Needs your decision" row: open (pill rail), resolved (check + chip +
  * Change), or tombstoned (excluded in place with Undo) — plus the learning
  * chip once decided. Rows never leave this pile; they collapse in place.
  */
-export function DecisionRow({ row, categories, onUpdate }: RowProps) {
+export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate }: RowProps) {
 
     const showPills = row.tier === "unknown" || (row.tier === "assigned" && row.expanded);
     const resolved = row.tier === "assigned" ? destinationInfo(row.dest ?? "", categories) : null;
-    const textless = textlessTx(row.tx);
 
     return (
         <div className="py-3 border-b border-muted last:border-b-0">
@@ -93,7 +76,7 @@ export function DecisionRow({ row, categories, onUpdate }: RowProps) {
 
             {showPills && (
                 <>
-                    {textless && (
+                    {row.excludeOnly && (
                         <p className="text-xs text-muted-foreground m-0 mt-2">
                             This line has no text to name an entry from — it can only be left out.
                         </p>
@@ -104,7 +87,7 @@ export function DecisionRow({ row, categories, onUpdate }: RowProps) {
                         direction={row.tx.direction}
                         selectedDest={row.dest}
                         showExcludeActions
-                        excludeOnly={textless}
+                        excludeOnly={row.excludeOnly}
                         onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
                         onLeaveOut={() => onUpdate(row.id, (current) => excludeRow(current, "once"))}
                         onAlwaysExclude={() => onUpdate(row.id, (current) => excludeRow(current, "always"))}
@@ -157,13 +140,22 @@ export function DecisionRow({ row, categories, onUpdate }: RowProps) {
                 </div>
             )}
 
-            {ruleChipFor(row, categories, onUpdate)}
+            {row.chip !== null && (
+                <RuleChipCard
+                    chip={row.chip}
+                    destination={row.chip.kind === "exclude" || row.dest === null ? null : destinationInfo(row.dest, categories)}
+                    onSelectToken={(index) => onUpdate(row.id, (current) => chipSelectToken(current, index))}
+                    onConfirm={() => onUpdate(row.id, chipConfirm)}
+                    onDismiss={() => onUpdate(row.id, chipDismiss)}
+                    onReopen={() => onUpdate(row.id, chipReopen)}
+                />
+            )}
         </div>
     );
-}
+});
 
 /** A "Suggested" row: evidence line, destination chip, advisory accept check. */
-export function SuggestedRow({ row, categories, onUpdate }: RowProps) {
+export const SuggestedRow = memo(function SuggestedRow({ row, categories, onUpdate }: RowProps) {
 
     const destination = destinationInfo(row.dest ?? "", categories);
     const reason = suggestionReason(row, (id) => destinationInfo(id, categories).label);
@@ -235,10 +227,10 @@ export function SuggestedRow({ row, categories, onUpdate }: RowProps) {
             )}
         </div>
     );
-}
+});
 
 /** A compact "Matched" row; tapping it opens the recategorize rail. */
-export function MatchedRow({ row, categories, onUpdate }: RowProps) {
+export const MatchedRow = memo(function MatchedRow({ row, categories, onUpdate }: RowProps) {
 
     const destination = destinationInfo(row.dest ?? "", categories);
 
@@ -290,10 +282,10 @@ export function MatchedRow({ row, categories, onUpdate }: RowProps) {
             )}
         </div>
     );
-}
+});
 
 /** An "Excluded" pile row with its provenance line and the Re-include escape. */
-export function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories">) {
+export const ExcludedRow = memo(function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories">) {
 
     return (
         <div className="flex items-center gap-2.5 py-2.5 border-b border-muted last:border-b-0">
@@ -319,4 +311,4 @@ export function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories">) {
             )}
         </div>
     );
-}
+});

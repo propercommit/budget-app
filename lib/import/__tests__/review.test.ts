@@ -167,6 +167,13 @@ describe("buildReviewRows", () => {
     expect(textlessTx(btx({ description: "", counterparty: "ACME AG" }))).toBe(false);
     expect(textlessTx(btx())).toBe(false);
   });
+
+  it("refuses to route an exclude-only row — the model enforces what the UI hides", () => {
+    const row = unknownRow({ description: "" });
+
+    expect(row.excludeOnly).toBe(true);
+    expect(assignDestination(row, "cat-a")).toBe(row);
+  });
 });
 
 // --- transitions ------------------------------------------------------------

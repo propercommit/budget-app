@@ -29,5 +29,5 @@ export function destinationInfo(dest: string, categories: Category[]): Destinati
 
   if (category === undefined) return { id: dest, label: "Unknown", icon: "grid", color: "#8E8E93" };
 
-  return { id: category.id, label: category.label, icon: category.icon, color: category.color };
+  return category;
 }

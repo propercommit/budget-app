@@ -15,8 +15,11 @@
  */
 
 import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
-import type { CategorizationRuleLike, RuleValue } from "@/lib/categorize/match";
-import type { Fate } from "@/lib/categorize/learn";
+import type { MatchCandidate, RuleValue } from "@/lib/categorize/match";
+import { NOISE_TOKENS, type Fate } from "@/lib/categorize/learn";
+import { MAX_AMOUNT_CENTS, MAX_FILENAME_LENGTH, MAX_LEARN_KEY_LENGTH } from "@/lib/import/limits";
+
+export { MAX_IMPORT_TRANSACTIONS } from "@/lib/import/limits";
 
 // ---------------------------------------------------------------------------
 // Wire contracts — client mirrors of the preview/commit route response shapes
@@ -34,9 +37,7 @@ export interface EffectiveDestination {
  * it names the card's CURRENT category — display and route by it, never by
  * the rule's possibly-stale `value.categoryId`.
  */
-export interface PreviewCandidate {
-  rule: CategorizationRuleLike;
-  value: RuleValue;
+export interface PreviewCandidate extends MatchCandidate {
   ruleId: string;
   destination: EffectiveDestination | null;
 }
@@ -76,12 +77,6 @@ export interface CommitResult {
 /** Sentinel destination id for "route to income" (credits only). */
 export const INCOME_DESTINATION_ID = "income";
 
-/** The commit route's batch cap — gate at pick time, not after a full review. */
-export const MAX_IMPORT_TRANSACTIONS = 1000;
-
-/** The commit route's per-entry write cap (integer cents). */
-const MAX_ROUTABLE_AMOUNT_CENTS = 10_000_000_000;
-
 export type RowTier = "unknown" | "assigned" | "suggested" | "matched" | "excluded";
 
 export type ExcludeKind = "once" | "always";
@@ -117,11 +112,16 @@ export interface ReviewRow {
   excludeKind: ExcludeKind | null;
   /** Exclude-rule confirmation target — set only on rule-excluded rows still untouched by the user. */
   excludeRuleId: string | null;
-  prevTier: RowTier | null;
-  prevDest: string | null;
+  /** Pre-exclusion standing, for Undo/Re-include; null while not excluded by the user. */
+  prev: { tier: "unknown" | "assigned"; dest: string | null } | null;
   inDecisions: boolean;
   /** Permanently excluded (unroutable amount) — no Re-include, never written. */
   locked: boolean;
+  /**
+   * Text-less line: the server can't name an entry from it, so the only legal
+   * decision is exclusion — {@link assignDestination} refuses anything else.
+   */
+  excludeOnly: boolean;
 }
 
 /**
@@ -130,7 +130,7 @@ export interface ReviewRow {
  * accepts them as echoed skips.
  */
 export function unroutableAmount(tx: BankTransaction): boolean {
-  return tx.amount <= 0 || tx.amount > MAX_ROUTABLE_AMOUNT_CENTS;
+  return tx.amount <= 0 || tx.amount > MAX_AMOUNT_CENTS;
 }
 
 /**
@@ -173,10 +173,10 @@ export function buildReviewRows(preview: PreviewResponse): ReviewRow[] {
       accepted: false,
       excludeKind: null,
       excludeRuleId: null,
-      prevTier: null,
-      prevDest: null,
+      prev: null,
       inDecisions: true,
       locked: false,
+      excludeOnly: textlessTx(entry.tx),
     };
 
     if (unroutableAmount(entry.tx)) return { ...base, tier: "excluded", excludeKind: "once", inDecisions: false, locked: true };
@@ -184,7 +184,7 @@ export function buildReviewRows(preview: PreviewResponse): ReviewRow[] {
     if (entry.match.tier === "confident") {
       const candidate = entry.match.candidate;
 
-      if (candidate.value.type === "exclude") return { ...base, tier: "excluded", excludeKind: "always", excludeRuleId: candidate.ruleId, candidates: [candidate], inDecisions: false };
+      if (candidate.value.type === "exclude") return { ...base, tier: "excluded", excludeKind: "always", excludeRuleId: candidate.ruleId, inDecisions: false };
 
       return { ...base, tier: "matched", dest: candidateDestination(candidate), candidates: [candidate], inDecisions: false };
     }
@@ -193,7 +193,7 @@ export function buildReviewRows(preview: PreviewResponse): ReviewRow[] {
       const candidates = entry.match.candidates;
       const preferred = defaultCandidate(candidates);
 
-      if (preferred === null) return { ...base, candidates };
+      if (preferred === null) return base;
 
       return { ...base, tier: "suggested", dest: candidateDestination(preferred), candidates, inDecisions: false };
     }
@@ -214,6 +214,10 @@ export function buildReviewRows(preview: PreviewResponse): ReviewRow[] {
  */
 export function assignDestination(row: ReviewRow, dest: string): ReviewRow {
 
+  // The server could never name an entry from this line — routing it would
+  // 400 the whole batch, so the model refuses just like the UI does.
+  if (row.excludeOnly) return row;
+
   if (row.tier === "unknown") return { ...row, tier: "assigned", dest, expanded: false, chip: makeChip(row.tx.description, "assign") };
 
   if (row.tier === "suggested") return { ...row, dest, accepted: true, expanded: false };
@@ -230,8 +234,7 @@ export function excludeRow(row: ReviewRow, kind: ExcludeKind): ReviewRow {
 
   return {
     ...row,
-    prevTier: row.tier,
-    prevDest: row.dest,
+    prev: { tier: row.tier === "assigned" ? "assigned" : "unknown", dest: row.dest },
     tier: "excluded",
     excludeKind: kind,
     expanded: false,
@@ -243,14 +246,15 @@ export function excludeRow(row: ReviewRow, kind: ExcludeKind): ReviewRow {
 /** Tombstone Undo: restores the row's pre-exclusion standing and drops any chip. */
 export function undoExclude(row: ReviewRow): ReviewRow {
 
+  if (row.prev === null) return row;
+
   return {
     ...row,
-    tier: row.prevTier === "assigned" ? "assigned" : "unknown",
-    dest: row.prevTier === "assigned" ? row.prevDest : row.dest,
+    tier: row.prev.tier,
+    dest: row.prev.dest,
     excludeKind: null,
     chip: null,
-    prevTier: null,
-    prevDest: null,
+    prev: null,
   };
 }
 
@@ -263,7 +267,7 @@ export function reincludeRow(row: ReviewRow): ReviewRow {
 
   if (row.locked) return row;
 
-  if (row.prevTier !== null) return undoExclude(row);
+  if (row.prev !== null) return undoExclude(row);
 
   return { ...row, tier: "unknown", dest: null, excludeKind: null, excludeRuleId: null, inDecisions: true };
 }
@@ -429,7 +433,7 @@ export function buildCommitPayload(
 
   const payload: CommitPayload = { transactions: rows.map((row) => ({ tx: row.tx, fate: fateOf(row) })) };
 
-  if (filename.length > 0) payload.filename = filename.slice(0, 255);
+  if (filename.length > 0) payload.filename = filename.slice(0, MAX_FILENAME_LENGTH);
 
   const first = reconciliation[0];
   const last = reconciliation[reconciliation.length - 1];
@@ -483,7 +487,8 @@ export function amountLabel(tx: BankTransaction): string {
 
 const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const FULL_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** Fixed en-US month names — review dates are design-fixed, not user-preference formatted. */
+export const FULL_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** "YYYY-MM-DD" → "3 Jun" — sliced from the string, so timezone-proof. */
 export function shortDate(iso: string): string {
@@ -520,12 +525,12 @@ export function periodLabel(reconciliation: ReconciliationResult[]): string | nu
 // ---------------------------------------------------------------------------
 
 /**
- * Tokens never worth pre-selecting as a learn key: generic banking/channel
- * noise (superset of the server's NOISE_TOKENS plus statement-text noise) —
+ * Tokens never worth pre-selecting as a learn key: the server's noise list
+ * (one owner — additions there propagate here) plus statement-text noise —
  * the default pick should be the merchant word, not the rail it rode in on.
  */
 export const IMPORT_STOP_TOKENS: readonly string[] = [
-  "TWINT", "PAYPAL", "SUMUP", "ONLINE", "KARTE", "GMBH", "SARL",
+  ...NOISE_TOKENS,
   "ZUERICH", "ZURICH", "GUTSCHRIFT", "BARGELDBEZUG", "BANCOMAT",
   "DAUERAUFTRAG", "RECHNUNG", "ABRECHNUNG", "UEBERTRAG", "BANKING",
   "KREDITKARTE", "MOBILE", "TICKETS", "RESTAURANT", "APOTHEKE", "BAHNHOF",
@@ -536,11 +541,11 @@ export const IMPORT_STOP_TOKENS: readonly string[] = [
 
 /**
  * Candidate learn-key tokens from the bank text: unique words of 3+ chars
- * that aren't pure numbers, first four only. Words over the server's 100-char
+ * that aren't pure numbers, first four only. Words over the server's
  * learn-key cap are dropped — offering one would 400 the commit.
  */
 export function tokensOf(description: string): string[] {
-  return [...new Set(description.split(/[\s,.\-\/]+/).filter((word) => word.length >= 3 && word.length <= 100 && !/^\d+$/.test(word)))].slice(0, 4);
+  return [...new Set(description.split(/[\s,.\-\/]+/).filter((word) => word.length >= 3 && word.length <= MAX_LEARN_KEY_LENGTH && !/^\d+$/.test(word)))].slice(0, 4);
 }
 
 /**

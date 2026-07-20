@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { Button } from "@/components/ui/button";
 import type { Category } from "@/lib/types";
 import { commitImport, getCategories, previewImport } from "@/lib/api";
 import { mt940Parser } from "@/lib/import/mt940-parser";
+import type { ReconciliationResult } from "@/lib/import/types";
 import {
     MAX_IMPORT_TRANSACTIONS,
     buildCommitPayload,
@@ -16,7 +18,6 @@ import {
     overallReconciles,
     periodLabel,
     type CommitResult,
-    type PreviewResponse,
     type ReviewRow,
 } from "@/lib/import/review";
 import { ImportPickStage, type PickedFile } from "@/components/import/import-pick-stage";
@@ -41,7 +42,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
     const [stage, setStage] = useState<ImportStage>("pick");
     const [file, setFile] = useState<PickedFile | null>(null);
     const [pickError, setPickError] = useState<string | null>(null);
-    const [preview, setPreview] = useState<PreviewResponse | null>(null);
+    const [reconciliation, setReconciliation] = useState<ReconciliationResult[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [rows, setRows] = useState<ReviewRow[]>([]);
     const [importAnyway, setImportAnyway] = useState(false);
@@ -49,7 +50,6 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
     const [commitError, setCommitError] = useState<string | null>(null);
     const [result, setResult] = useState<CommitResult | null>(null);
 
-    const reconciliation = preview !== null ? preview.reconciliation : [];
     const reconciles = overallReconciles(reconciliation);
     const open = openDecisionCount(rows);
     const confirmable = canConfirm(rows, reconciles, importAnyway);
@@ -90,7 +90,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
                 return;
             }
 
-            setPreview(staged);
+            setReconciliation(staged.reconciliation);
             setCategories(loadedCategories as Category[]);
             setRows(buildReviewRows(staged));
             setStage("review");
@@ -102,7 +102,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
 
     const handleConfirm = async () => {
 
-        if (!confirmable || committing || file === null || preview === null) return;
+        if (!confirmable || committing || file === null) return;
 
         setCommitting(true);
         setCommitError(null);
@@ -119,21 +119,23 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
         }
     };
 
-    const updateRow = (id: number, transition: (row: ReviewRow) => ReviewRow) => {
+    // Stable identity so the memoized row components only re-render for the
+    // row a tap actually changed.
+    const updateRow = useCallback((id: number, transition: (row: ReviewRow) => ReviewRow) => {
 
         // Frozen during the commit — the success receipt must describe the
         // exact rows that were written.
         if (committing) return;
 
         setRows((current) => current.map((row) => (row.id === id ? transition(row) : row)));
-    };
+    }, [committing]);
 
-    const subtitleParts =
+    const subtitle =
         stage === "pick"
-            ? ["Upload an MT940 statement to review"]
+            ? "Upload an MT940 statement to review"
             : stage === "parsing"
-                ? ["Hold on — this only takes a moment"]
-                : [file?.name ?? null, periodLabel(reconciliation), `${rows.length} transactions`].filter((part): part is string => part !== null);
+                ? "Hold on — this only takes a moment"
+                : [file?.name ?? null, periodLabel(reconciliation), `${rows.length} transactions`].filter((part): part is string => part !== null).join(" · ");
 
     const reviewHelper =
         commitError !== null
@@ -186,7 +188,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
             isOpen={isOpen}
             onClose={handleClose}
             title={stage === "pick" || stage === "parsing" ? "Import bank statement" : "Review import"}
-            subtitle={subtitleParts.join(" · ")}
+            subtitle={subtitle}
             footer={footer}
         >
             {stage === "pick" && (
@@ -206,7 +208,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
 
             {stage === "parsing" && (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 animate-in fade-in duration-200">
-                    <div className="w-10 h-10 rounded-full border-[3px] border-muted animate-spin" style={{ borderTopColor: "var(--primary)" }} />
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" strokeWidth={2} />
                     <p className="text-[15px] font-semibold text-foreground m-0 mt-2">Reading {file?.name}…</p>
                     <p className="text-[13px] text-muted-foreground m-0 text-center">Parsing MT940 · matching your rules · reconciling balances</p>
                 </div>

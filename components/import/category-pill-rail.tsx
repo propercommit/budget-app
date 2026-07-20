@@ -3,7 +3,7 @@
 import { Ban, MinusCircle } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { iconMap } from "@/lib/icon-map";
-import { INCOME_DESTINATION } from "@/components/import/destination";
+import { INCOME_DESTINATION, type DestinationInfo } from "@/components/import/destination";
 
 interface CategoryPillRailProps {
     categories: Category[];
@@ -39,9 +39,8 @@ export function CategoryPillRail({
     onAlwaysExclude,
 }: CategoryPillRailProps) {
 
-    const routable = direction === "credit"
-        ? [INCOME_DESTINATION, ...categories.map((category) => ({ id: category.id, label: category.label, icon: category.icon, color: category.color }))]
-        : categories.map((category) => ({ id: category.id, label: category.label, icon: category.icon, color: category.color }));
+    // Category is structurally a DestinationInfo already — no re-shaping.
+    const routable: DestinationInfo[] = direction === "credit" ? [INCOME_DESTINATION, ...categories] : categories;
 
     const destinations = excludeOnly ? [] : routable;
 

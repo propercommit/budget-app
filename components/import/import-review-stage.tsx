@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertTriangle, Check, ChevronDown } from "lucide-react";
+import { FormBanner } from "@/components/ui/form-banner";
 import type { Category } from "@/lib/types";
 import type { ReconciliationResult } from "@/lib/import/types";
 import {
@@ -135,54 +136,40 @@ export function ImportReviewStage({
             </div>
 
             {allMatched && (
-                <div
-                    role="status"
-                    className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 mb-3.5"
-                    style={{ backgroundColor: "rgba(52, 199, 89, 0.1)", border: "1px solid rgba(52, 199, 89, 0.3)" }}
-                >
-                    <span className="flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0 mt-0.5" style={{ backgroundColor: "#34C759" }}>
-                        <Check className="size-3 text-white" strokeWidth={3} />
-                    </span>
-                    <p className="text-sm font-medium leading-relaxed m-0" style={{ color: "#1F7A38" }}>
+                <div className="mb-3.5">
+                    <FormBanner variant="success">
                         All {rows.length} transactions matched automatically — glance through and confirm.
-                    </p>
+                    </FormBanner>
                 </div>
             )}
 
             {failing !== null && (
-                <div
-                    role="status"
-                    className="rounded-xl px-3.5 py-3 mb-3.5"
-                    style={{ backgroundColor: "rgba(255, 149, 0, 0.09)", border: "1px solid rgba(255, 149, 0, 0.3)" }}
-                >
-                    <div className="flex items-start gap-2.5">
-                        <AlertTriangle className="size-4 flex-shrink-0 mt-0.5" style={{ color: "#FF9500" }} strokeWidth={2.4} />
-                        <p className="text-sm font-medium leading-relaxed m-0" style={{ color: "#A05A00" }}>
-                            {reconcileWarnText(failing)}
-                        </p>
-                    </div>
+                <div className="mb-3.5">
+                    <FormBanner variant="warning">
+                        {reconcileWarnText(failing)}
 
-                    <button
-                        type="button"
-                        role="checkbox"
-                        aria-checked={importAnyway}
-                        onClick={() => onImportAnywayChange(!importAnyway)}
-                        className="flex items-center gap-2.5 mt-1.5 ml-6 min-h-11 bg-transparent border-none px-0 cursor-pointer"
-                    >
-                        <span
-                            className="w-5 h-5 rounded-md flex items-center justify-center transition-all duration-150 flex-shrink-0"
-                            style={
-                                importAnyway
-                                    ? { backgroundColor: "#FF9500", border: "1.5px solid #FF9500" }
-                                    : { backgroundColor: "var(--card)", border: "1.5px solid rgba(160, 90, 0, 0.4)" }
-                            }
+                        <button
+                            type="button"
+                            role="checkbox"
+                            aria-checked={importAnyway}
+                            onClick={() => onImportAnywayChange(!importAnyway)}
+                            className="flex items-center gap-2.5 mt-1.5 min-h-11 bg-transparent border-none px-0 cursor-pointer"
                         >
-                            {importAnyway && <Check className="size-3.5 text-white" strokeWidth={3} />}
-                        </span>
-                        <span className="text-[13px] font-semibold" style={{ color: "#A05A00" }}>
-                            Import anyway — I’ll sort it out manually
-                        </span>
-                    </button>
+                            <span
+                                className="w-5 h-5 rounded-md flex items-center justify-center transition-all duration-150 flex-shrink-0"
+                                style={
+                                    importAnyway
+                                        ? { backgroundColor: "#FF9500", border: "1.5px solid #FF9500" }
+                                        : { backgroundColor: "var(--card)", border: "1.5px solid rgba(160, 90, 0, 0.4)" }
+                                }
+                            >
+                                {importAnyway && <Check className="size-3.5 text-white" strokeWidth={3} />}
+                            </span>
+                            <span className="text-[13px] font-semibold" style={{ color: "var(--banner-warning-text)" }}>
+                                Import anyway — I’ll sort it out manually
+                            </span>
+                        </button>
+                    </FormBanner>
                 </div>
             )}
 

@@ -2,7 +2,7 @@
 
 import { Check, Sparkles } from "lucide-react";
 import type { Category } from "@/lib/types";
-import { learnedRules, type CommitResult, type ReviewRow } from "@/lib/import/review";
+import { FULL_MONTHS, learnedRules, type CommitResult, type ReviewRow } from "@/lib/import/review";
 import { destinationInfo } from "@/components/import/destination";
 
 interface ImportSuccessStageProps {
@@ -10,8 +10,6 @@ interface ImportSuccessStageProps {
     result: CommitResult;
     categories: Category[];
 }
-
-const FULL_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** "June 2026" (or "May – June 2026") from the imported rows' entry dates. */
 function importedMonthsLabel(rows: ReviewRow[]): string | null {

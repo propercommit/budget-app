@@ -8,13 +8,12 @@ import { updateSpentAmount } from "@/lib/spending/update-spent";
 import { DEFAULT_INCOME_ICON } from "@/lib/constants";
 import { confirmedRule, effectiveLearnKey, planRuleMutations, type Fate, type FateWithTx } from "@/lib/categorize/learn";
 import { matchTransaction, normalizeMatchKey, type RuleValue } from "@/lib/categorize/match";
+import { MAX_AMOUNT_CENTS, MAX_FILENAME_LENGTH, MAX_IMPORT_TRANSACTIONS, MAX_LEARN_KEY_LENGTH } from "@/lib/import/limits";
 
-// Constants (kept in sync with the income/entries routes' caps)
+// Constants (kept in sync with the income/entries routes' caps). The batch/
+// amount/key/filename caps live in lib/import/limits.ts because the review
+// client gates on the same numbers — one owner so the two can never drift.
 const MAX_NAME_LENGTH = 100;
-const MAX_KEY_LENGTH = 100;
-const MAX_FILENAME_LENGTH = 255;
-const MAX_TRANSACTIONS = 1000; // one statement is at most a few hundred rows; the cap bounds the transaction's work
-const MAX_AMOUNT_CENTS = 10_000_000_000; // = 100,000,000.00 major units; amounts are integer cents
 const DATE_REGEX = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 // Sequential round-trips scale with batch size; the Prisma default of 5s is
 // too tight for a full statement over the pooled connection.
@@ -120,7 +119,7 @@ function fateError(raw: unknown, direction: "debit" | "credit"): string | null {
   if (fate.kind === "skip") return null;
 
   if (fate.kind === "alwaysExclude") {
-    if (typeof fate.learnKey !== "string" || fate.learnKey.trim().length === 0 || fate.learnKey.length > MAX_KEY_LENGTH) return "Always-exclude fates must carry a non-empty learnKey";
+    if (typeof fate.learnKey !== "string" || fate.learnKey.trim().length === 0 || fate.learnKey.length > MAX_LEARN_KEY_LENGTH) return "Always-exclude fates must carry a non-empty learnKey";
 
     return null;
   }
@@ -139,7 +138,7 @@ function fateError(raw: unknown, direction: "debit" | "credit"): string | null {
 
   if (destination.type === "income" && direction === "debit") return "A debit cannot be routed to income";
 
-  if (fate.learnKey !== undefined && (typeof fate.learnKey !== "string" || fate.learnKey.length > MAX_KEY_LENGTH)) return "learnKey must be a string of at most 100 characters";
+  if (fate.learnKey !== undefined && (typeof fate.learnKey !== "string" || fate.learnKey.length > MAX_LEARN_KEY_LENGTH)) return "learnKey must be a string of at most 100 characters";
 
   if (fate.ruleId !== undefined && (typeof fate.ruleId !== "string" || fate.ruleId.length === 0)) return "ruleId must be a non-empty string";
 
@@ -267,7 +266,7 @@ export async function POST(request: Request): Promise<Response> {
 
     if (!Array.isArray(rawTransactions) || rawTransactions.length === 0) return NextResponse.json({ error: "Transactions must be a non-empty array" }, { status: 400 });
 
-    if (rawTransactions.length > MAX_TRANSACTIONS) return NextResponse.json({ error: "At most 1000 transactions per import" }, { status: 400 });
+    if (rawTransactions.length > MAX_IMPORT_TRANSACTIONS) return NextResponse.json({ error: "At most 1000 transactions per import" }, { status: 400 });
 
     const filename = body.filename;
 

@@ -22,7 +22,7 @@ interface ImportPickStageProps {
 async function decodeFile(file: File): Promise<PickedFile> {
 
     const content = await file.text();
-    const kb = file.size > 0 ? Math.max(1, Math.round(file.size / 1024)) : 1;
+    const kb = Math.max(1, Math.round(file.size / 1024));
 
     return { name: file.name, kb, content };
 }

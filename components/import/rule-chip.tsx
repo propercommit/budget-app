@@ -14,13 +14,10 @@ interface RuleChipCardProps {
     onReopen: () => void;
 }
 
-const chipShell = (status: RuleChip["status"]): { className: string; style?: React.CSSProperties } => {
-
-    if (status === "open") return { className: "bg-primary/5 border-primary/20" };
-
-    if (status === "confirmed") return { className: "", style: { backgroundColor: "rgba(52, 199, 89, 0.08)", borderColor: "rgba(52, 199, 89, 0.25)" } };
-
-    return { className: "bg-muted border-border" };
+const CHIP_SHELL: Record<RuleChip["status"], { className: string; style?: React.CSSProperties }> = {
+    open: { className: "bg-primary/5 border-primary/20" },
+    confirmed: { className: "", style: { backgroundColor: "rgba(52, 199, 89, 0.08)", borderColor: "rgba(52, 199, 89, 0.25)" } },
+    dismissed: { className: "bg-muted border-border" },
 };
 
 /**
@@ -32,7 +29,7 @@ const chipShell = (status: RuleChip["status"]): { className: string; style?: Rea
 export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDismiss, onReopen }: RuleChipCardProps) {
 
     const token = chip.tokens[chip.selected] ?? "";
-    const shell = chipShell(chip.status);
+    const shell = CHIP_SHELL[chip.status];
 
     return (
         <div
