@@ -7,6 +7,7 @@ import type { Category } from "@/lib/types";
 import { commitImport, getCategories, previewImport } from "@/lib/api";
 import { mt940Parser } from "@/lib/import/mt940-parser";
 import {
+    MAX_IMPORT_TRANSACTIONS,
     buildCommitPayload,
     buildReviewRows,
     canConfirm,
@@ -53,6 +54,15 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
     const open = openDecisionCount(rows);
     const confirmable = canConfirm(rows, reconciles, importAnyway);
 
+    // While the commit is in flight, closing would hide a write that still
+    // completes server-side — and the success receipt with it.
+    const handleClose = () => {
+
+        if (committing) return;
+
+        onClose();
+    };
+
     const handleContinue = async () => {
 
         if (file === null) return;
@@ -70,6 +80,12 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
 
             if (staged.transactions.length === 0) {
                 setPickError("No transactions found in this statement.");
+                setStage("pick");
+                return;
+            }
+
+            if (staged.transactions.length > MAX_IMPORT_TRANSACTIONS) {
+                setPickError(`This file has ${staged.transactions.length} transactions — the limit is ${MAX_IMPORT_TRANSACTIONS} per import. Split the statement and import it in parts.`);
                 setStage("pick");
                 return;
             }
@@ -104,6 +120,11 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
     };
 
     const updateRow = (id: number, transition: (row: ReviewRow) => ReviewRow) => {
+
+        // Frozen during the commit — the success receipt must describe the
+        // exact rows that were written.
+        if (committing) return;
+
         setRows((current) => current.map((row) => (row.id === id ? transition(row) : row)));
     };
 
@@ -142,7 +163,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
                     </Button>
                 ) : (
                     <div className="flex gap-3">
-                        <Button variant="secondary" className="flex-1" onClick={onClose}>
+                        <Button variant="secondary" className="flex-1" disabled={committing} onClick={handleClose}>
                             Cancel
                         </Button>
 
@@ -163,13 +184,24 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
     return (
         <PopinWrapper
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={stage === "pick" || stage === "parsing" ? "Import bank statement" : "Review import"}
             subtitle={subtitleParts.join(" · ")}
             footer={footer}
         >
             {stage === "pick" && (
-                <ImportPickStage file={file} error={pickError} onPick={setFile} onRemove={() => setFile(null)} />
+                <ImportPickStage
+                    file={file}
+                    error={pickError}
+                    onPick={(picked) => {
+                        setFile(picked);
+                        setPickError(null);
+                    }}
+                    onRemove={() => {
+                        setFile(null);
+                        setPickError(null);
+                    }}
+                />
             )}
 
             {stage === "parsing" && (

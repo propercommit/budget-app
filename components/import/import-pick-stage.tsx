@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Upload, X } from "lucide-react";
 
 /** The picked statement file, decoded — content stays client-side until Continue. */
@@ -29,13 +29,28 @@ async function decodeFile(file: File): Promise<PickedFile> {
 
 /**
  * The file-pick body: dashed dropzone (click or drag), the selected-file
- * card, and the local-parsing privacy note. Errors from a failed staging
- * round-trip render inline under the picker.
+ * card, and the nothing-written-until-confirm note. Errors from a failed
+ * staging round-trip render inline under the picker.
  */
 export function ImportPickStage({ file, error, onPick, onRemove }: ImportPickStageProps) {
 
     const inputRef = useRef<HTMLInputElement>(null);
     const [dragging, setDragging] = useState(false);
+
+    // A drop that misses the dashed zone must not navigate the tab to the
+    // file — suppress the browser default everywhere while picking. The
+    // zone's own onDrop still fires (preventDefault doesn't stop handling).
+    useEffect(() => {
+        const prevent = (event: DragEvent) => event.preventDefault();
+
+        window.addEventListener("dragover", prevent);
+        window.addEventListener("drop", prevent);
+
+        return () => {
+            window.removeEventListener("dragover", prevent);
+            window.removeEventListener("drop", prevent);
+        };
+    }, []);
 
     const handleFiles = async (list: FileList | null) => {
 
@@ -87,13 +102,13 @@ export function ImportPickStage({ file, error, onPick, onRemove }: ImportPickSta
                             : { borderColor: "var(--border)", backgroundColor: "transparent" }
                     }
                 >
-                    <span className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <span className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-muted-foreground pointer-events-none">
                         <Upload className="size-6" strokeWidth={2} />
                     </span>
-                    <span className="text-[15px] font-semibold text-foreground mt-1.5">
+                    <span className="text-[15px] font-semibold text-foreground mt-1.5 pointer-events-none">
                         {dragging ? "Drop it here" : "Drop your bank statement here"}
                     </span>
-                    <span className="text-[13px] text-muted-foreground text-center">
+                    <span className="text-[13px] text-muted-foreground text-center pointer-events-none">
                         MT940 statement (.mt940, .sta) · or <span className="text-primary font-semibold">click to browse</span>
                     </span>
                 </button>
@@ -136,7 +151,7 @@ export function ImportPickStage({ file, error, onPick, onRemove }: ImportPickSta
             )}
 
             <p className="text-xs text-muted-foreground/80 leading-relaxed m-0 mt-3.5 px-1">
-                The statement is parsed locally. You’ll review every transaction — nothing is written to your budget until you confirm.
+                You’ll review every transaction — nothing is written to your budget until you confirm.
             </p>
         </div>
     );

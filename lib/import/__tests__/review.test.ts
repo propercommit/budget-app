@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { ReconciliationResult } from "@/lib/import/types";
+import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
 import {
   INCOME_DESTINATION_ID,
   amountLabel,
@@ -26,6 +26,7 @@ import {
   sectionsOf,
   shortDate,
   suggestionReason,
+  textlessTx,
   tokensOf,
   toggleAccepted,
   undoExclude,
@@ -36,10 +37,10 @@ import {
 
 // --- fixtures ---------------------------------------------------------------
 
-const btx = (over: Record<string, unknown> = {}) => ({
+const btx = (over: Partial<BankTransaction> = {}): BankTransaction => ({
   date: "2026-06-03",
   amount: 5430, // integer cents
-  direction: "debit" as const,
+  direction: "debit",
   description: "TWINT MIGROS ONLINE",
   externalId: "REF001",
   ...over,
@@ -63,7 +64,7 @@ const preview = (
   reconciliation: ReconciliationResult[] = [],
 ): PreviewResponse => ({ reconciliation, transactions });
 
-const unknownRow = (over: Record<string, unknown> = {}): ReviewRow =>
+const unknownRow = (over: Partial<BankTransaction> = {}): ReviewRow =>
   buildReviewRows(preview([{ tx: btx(over), match: { tier: "unknown" }, statementIndex: 0 }]))[0];
 
 const reconciled = (over: Partial<ReconciliationResult> = {}): ReconciliationResult => ({
@@ -144,6 +145,27 @@ describe("buildReviewRows", () => {
     expect(row.tier).toBe("unknown");
     expect(row.dest).toBeNull();
     expect(row.inDecisions).toBe(true);
+  });
+
+  it("locks unroutable amounts into the excluded pile — no re-include, echoed as a skip", () => {
+    // The commit route refuses to WRITE zero/over-cap amounts; born-locked
+    // exclusion is the only state the server accepts for them.
+    const [zero] = buildReviewRows(preview([{ tx: btx({ amount: 0 }), match: { tier: "unknown" }, statementIndex: 0 }]));
+
+    expect(zero.tier).toBe("excluded");
+    expect(zero.locked).toBe(true);
+    expect(reincludeRow(zero)).toBe(zero);
+    expect(buildCommitPayload([zero], "f.mt940", []).transactions[0].fate).toEqual({ kind: "skip" });
+
+    const [overCap] = buildReviewRows(preview([{ tx: btx({ amount: 10_000_000_001 }), match: { tier: "unknown" }, statementIndex: 0 }]));
+
+    expect(overCap.locked).toBe(true);
+  });
+
+  it("flags text-less transactions the server could never name", () => {
+    expect(textlessTx(btx({ description: "  " }))).toBe(true);
+    expect(textlessTx(btx({ description: "", counterparty: "ACME AG" }))).toBe(false);
+    expect(textlessTx(btx())).toBe(false);
   });
 });
 
@@ -434,6 +456,10 @@ describe("learn-key tokens", () => {
 
   it("splits on the design's separators", () => {
     expect(tokensOf("COOP-PRONTO/ZUERICH,HB.WEST")).toEqual(["COOP", "PRONTO", "ZUERICH", "WEST"]);
+  });
+
+  it("never offers a token over the server's 100-char learn-key cap", () => {
+    expect(tokensOf(`${"X".repeat(101)} MIGROS`)).toEqual(["MIGROS"]);
   });
 
   it("pre-selects the first non-noise token, falling back to the first", () => {

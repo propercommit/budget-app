@@ -164,6 +164,8 @@ export function ImportReviewStage({
 
                     <button
                         type="button"
+                        role="checkbox"
+                        aria-checked={importAnyway}
                         onClick={() => onImportAnywayChange(!importAnyway)}
                         className="flex items-center gap-2.5 mt-1.5 ml-6 min-h-11 bg-transparent border-none px-0 cursor-pointer"
                     >

@@ -14,6 +14,7 @@ import {
     reincludeRow,
     shortDate,
     suggestionReason,
+    textlessTx,
     toggleAccepted,
     toggleExpanded,
     undoExclude,
@@ -35,6 +36,11 @@ interface RowProps {
 const CREDIT_COLOR = "#34C759";
 
 const DEBIT_COLOR = "#FF3B30";
+
+/** Row title with a fallback for lines the bank sent without any text. */
+function rowTitle(row: ReviewRow): string {
+    return row.tx.description.trim() || row.tx.counterparty?.trim() || "(no description)";
+}
 
 function rowAmountColor(row: ReviewRow): string | undefined {
 
@@ -68,12 +74,13 @@ export function DecisionRow({ row, categories, onUpdate }: RowProps) {
 
     const showPills = row.tier === "unknown" || (row.tier === "assigned" && row.expanded);
     const resolved = row.tier === "assigned" ? destinationInfo(row.dest ?? "", categories) : null;
+    const textless = textlessTx(row.tx);
 
     return (
         <div className="py-3 border-b border-muted last:border-b-0">
             <div className="flex items-baseline justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-semibold text-foreground truncate m-0">{row.tx.description}</p>
+                    <p className="text-[15px] font-semibold text-foreground truncate m-0">{rowTitle(row)}</p>
                     <p className="text-xs text-muted-foreground m-0 mt-0.5">{shortDate(row.tx.date)}</p>
                 </div>
                 <span
@@ -85,15 +92,24 @@ export function DecisionRow({ row, categories, onUpdate }: RowProps) {
             </div>
 
             {showPills && (
-                <CategoryPillRail
-                    categories={categories}
-                    direction={row.tx.direction}
-                    selectedDest={row.dest}
-                    showExcludeActions
-                    onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
-                    onLeaveOut={() => onUpdate(row.id, (current) => excludeRow(current, "once"))}
-                    onAlwaysExclude={() => onUpdate(row.id, (current) => excludeRow(current, "always"))}
-                />
+                <>
+                    {textless && (
+                        <p className="text-xs text-muted-foreground m-0 mt-2">
+                            This line has no text to name an entry from — it can only be left out.
+                        </p>
+                    )}
+
+                    <CategoryPillRail
+                        categories={categories}
+                        direction={row.tx.direction}
+                        selectedDest={row.dest}
+                        showExcludeActions
+                        excludeOnly={textless}
+                        onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
+                        onLeaveOut={() => onUpdate(row.id, (current) => excludeRow(current, "once"))}
+                        onAlwaysExclude={() => onUpdate(row.id, (current) => excludeRow(current, "always"))}
+                    />
+                </>
             )}
 
             {row.tier === "assigned" && !row.expanded && resolved !== null && (
@@ -114,6 +130,7 @@ export function DecisionRow({ row, categories, onUpdate }: RowProps) {
 
                     <button
                         type="button"
+                        aria-expanded={row.expanded}
                         onClick={() => onUpdate(row.id, toggleExpanded)}
                         className="h-11 sm:h-7 px-3 rounded-full bg-muted text-xs font-semibold text-muted-foreground transition-all active:scale-95"
                     >
@@ -170,6 +187,7 @@ export function SuggestedRow({ row, categories, onUpdate }: RowProps) {
 
                     <button
                         type="button"
+                        aria-expanded={row.expanded}
                         onClick={() => onUpdate(row.id, toggleExpanded)}
                         className="inline-flex items-center gap-1.5 h-11 sm:h-[30px] px-2.5 rounded-full text-[13px] font-semibold mt-1.5 transition-all active:scale-95"
                         style={
@@ -192,6 +210,7 @@ export function SuggestedRow({ row, categories, onUpdate }: RowProps) {
                     <button
                         type="button"
                         aria-label="Confirm suggestion"
+                        aria-pressed={row.accepted}
                         onClick={() => onUpdate(row.id, toggleAccepted)}
                         className="w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
                         style={
@@ -227,6 +246,7 @@ export function MatchedRow({ row, categories, onUpdate }: RowProps) {
         <div className="border-b border-muted last:border-b-0">
             <button
                 type="button"
+                aria-expanded={row.expanded}
                 onClick={() => onUpdate(row.id, toggleExpanded)}
                 className="flex items-center gap-2.5 w-full py-2.5 text-left"
             >
@@ -280,7 +300,7 @@ export function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories">) {
             <Ban className="size-4 flex-shrink-0" style={{ color: "#8E8E93" }} strokeWidth={2} />
 
             <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-medium text-muted-foreground truncate">{row.tx.description}</span>
+                <span className="block text-[13px] font-medium text-muted-foreground truncate">{rowTitle(row)}</span>
                 <span className="block text-[11px] text-muted-foreground/80">
                     {shortDate(row.tx.date)} · {row.excludeKind === "always" ? "Rule: always skipped" : "Left out this import only"}
                 </span>
@@ -288,13 +308,15 @@ export function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories">) {
 
             <span className="text-[13px] font-medium tabular-nums text-muted-foreground flex-shrink-0">{amountLabel(row.tx)}</span>
 
-            <button
-                type="button"
-                onClick={() => onUpdate(row.id, reincludeRow)}
-                className="h-11 sm:h-7 px-3 rounded-full bg-muted text-xs font-semibold text-primary flex-shrink-0 transition-all active:scale-95"
-            >
-                Re-include
-            </button>
+            {!row.locked && (
+                <button
+                    type="button"
+                    onClick={() => onUpdate(row.id, reincludeRow)}
+                    className="h-11 sm:h-7 px-3 rounded-full bg-muted text-xs font-semibold text-primary flex-shrink-0 transition-all active:scale-95"
+                >
+                    Re-include
+                </button>
+            )}
         </div>
     );
 }

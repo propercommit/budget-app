@@ -12,6 +12,8 @@ interface CategoryPillRailProps {
     selectedDest: string | null;
     /** Adds the trailing "Leave out" / "Always exclude" pills (decision rows only). */
     showExcludeActions: boolean;
+    /** Hides every destination pill — for rows the server would refuse to route (text-less lines). */
+    excludeOnly?: boolean;
     onPick: (dest: string) => void;
     onLeaveOut?: () => void;
     onAlwaysExclude?: () => void;
@@ -31,14 +33,17 @@ export function CategoryPillRail({
     direction,
     selectedDest,
     showExcludeActions,
+    excludeOnly = false,
     onPick,
     onLeaveOut,
     onAlwaysExclude,
 }: CategoryPillRailProps) {
 
-    const destinations = direction === "credit"
+    const routable = direction === "credit"
         ? [INCOME_DESTINATION, ...categories.map((category) => ({ id: category.id, label: category.label, icon: category.icon, color: category.color }))]
         : categories.map((category) => ({ id: category.id, label: category.label, icon: category.icon, color: category.color }));
+
+    const destinations = excludeOnly ? [] : routable;
 
     return (
         <div

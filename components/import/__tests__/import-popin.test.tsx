@@ -224,6 +224,49 @@ describe("ImportPopin", () => {
         expect(screen.getByRole("button", { name: "Confirm import (2)" })).toBeEnabled();
     });
 
+    it("rejects an oversized file at the pick gate, before any review work", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: Array.from({ length: 1001 }, (_, index) => ({
+                tx: { date: "2026-06-03", amount: 100, direction: "debit" as const, description: `TX ${index}` },
+                match: { tier: "unknown" as const },
+                statementIndex: 0,
+            })),
+        });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+
+        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("the limit is 1000 per import");
+        expect(screen.queryByText("Needs your decision")).toBeNull();
+    });
+
+    it("offers only exclusion for a text-less line the server could never name", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [
+                { tx: { date: "2026-06-03", amount: 900, direction: "debit", description: "" }, match: { tier: "unknown" }, statementIndex: 0 },
+            ],
+        });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        expect(screen.getByText("(no description)")).toBeInTheDocument();
+        expect(screen.getByText("This line has no text to name an entry from — it can only be left out.")).toBeInTheDocument();
+        expect(screen.queryByRole("radio")).toBeNull();
+        expect(screen.getByRole("button", { name: "Leave out" })).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Leave out" }));
+
+        expect(screen.getByRole("button", { name: "Confirm import (0)" })).toBeEnabled();
+    });
+
     it("keeps the review open and surfaces the server error when the commit fails", async () => {
         vi.mocked(api.commitImport).mockRejectedValue(new Error("A budget line name collision prevented this import — please retry"));
 

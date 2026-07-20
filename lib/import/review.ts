@@ -76,6 +76,12 @@ export interface CommitResult {
 /** Sentinel destination id for "route to income" (credits only). */
 export const INCOME_DESTINATION_ID = "income";
 
+/** The commit route's batch cap — gate at pick time, not after a full review. */
+export const MAX_IMPORT_TRANSACTIONS = 1000;
+
+/** The commit route's per-entry write cap (integer cents). */
+const MAX_ROUTABLE_AMOUNT_CENTS = 10_000_000_000;
+
 export type RowTier = "unknown" | "assigned" | "suggested" | "matched" | "excluded";
 
 export type ExcludeKind = "once" | "always";
@@ -114,6 +120,26 @@ export interface ReviewRow {
   prevTier: RowTier | null;
   prevDest: string | null;
   inDecisions: boolean;
+  /** Permanently excluded (unroutable amount) — no Re-include, never written. */
+  locked: boolean;
+}
+
+/**
+ * True when the commit route would refuse to WRITE this transaction (zero or
+ * over-cap amount). Such rows are born excluded and locked — the server still
+ * accepts them as echoed skips.
+ */
+export function unroutableAmount(tx: BankTransaction): boolean {
+  return tx.amount <= 0 || tx.amount > MAX_ROUTABLE_AMOUNT_CENTS;
+}
+
+/**
+ * True when the transaction carries no text the server could name an entry
+ * from — routing it without a learned key would 400 the whole batch, so the
+ * review only offers exclusion for these.
+ */
+export function textlessTx(tx: BankTransaction): boolean {
+  return tx.description.trim().length === 0 && (tx.counterparty ?? "").trim().length === 0;
 }
 
 /** The effective destination id a candidate routes to; null for exclude rules. */
@@ -150,7 +176,10 @@ export function buildReviewRows(preview: PreviewResponse): ReviewRow[] {
       prevTier: null,
       prevDest: null,
       inDecisions: true,
+      locked: false,
     };
+
+    if (unroutableAmount(entry.tx)) return { ...base, tier: "excluded", excludeKind: "once", inDecisions: false, locked: true };
 
     if (entry.match.tier === "confident") {
       const candidate = entry.match.candidate;
@@ -231,6 +260,8 @@ export function undoExclude(row: ReviewRow): ReviewRow {
  * fresh unknown (its exclude rule is no longer being confirmed).
  */
 export function reincludeRow(row: ReviewRow): ReviewRow {
+
+  if (row.locked) return row;
 
   if (row.prevTier !== null) return undoExclude(row);
 
@@ -499,14 +530,17 @@ export const IMPORT_STOP_TOKENS: readonly string[] = [
   "DAUERAUFTRAG", "RECHNUNG", "ABRECHNUNG", "UEBERTRAG", "BANKING",
   "KREDITKARTE", "MOBILE", "TICKETS", "RESTAURANT", "APOTHEKE", "BAHNHOF",
   "LOHN", "PRAEMIE", "VERSICHERUNG", "SPARKONTO", "CITY", "BUDGET",
+  "JANUAR", "FEBRUAR", "MAERZ", "APRIL", "MAI", "JUNI",
+  "JULI", "AUGUST", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DEZEMBER",
 ];
 
 /**
  * Candidate learn-key tokens from the bank text: unique words of 3+ chars
- * that aren't pure numbers, first four only.
+ * that aren't pure numbers, first four only. Words over the server's 100-char
+ * learn-key cap are dropped — offering one would 400 the commit.
  */
 export function tokensOf(description: string): string[] {
-  return [...new Set(description.split(/[\s,.\-\/]+/).filter((word) => word.length >= 3 && !/^\d+$/.test(word)))].slice(0, 4);
+  return [...new Set(description.split(/[\s,.\-\/]+/).filter((word) => word.length >= 3 && word.length <= 100 && !/^\d+$/.test(word)))].slice(0, 4);
 }
 
 /**
