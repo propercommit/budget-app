@@ -278,9 +278,7 @@ describe("POST /api/import/preview — no writes, ever (D19)", () => {
     for (const [name, model] of Object.entries(prismaMock)) {
       if (name === "$transaction") continue;
 
-      for (const fn of WRITE_FNS) {
-        expect((model as Record<string, Mock>)[fn], `${name}.${fn}`).not.toHaveBeenCalled();
-      }
+      for (const fn of WRITE_FNS) expect((model as Record<string, Mock>)[fn], `${name}.${fn}`).not.toHaveBeenCalled();
     }
   });
 });

@@ -5,34 +5,10 @@ import {
   NOISE_TOKENS,
   type FateWithTx,
 } from "@/lib/categorize/learn";
-import type {
-  BankTransactionLike,
-  CategorizationRuleLike,
-  RuleValue,
-} from "@/lib/categorize/match";
+import type { BankTransactionLike, RuleValue } from "@/lib/categorize/match";
+import { rule, tx } from "./helpers";
 
 // --- helpers --------------------------------------------------------------
-
-let seq = 0;
-
-const rule = (
-  match: string,
-  valueType: CategorizationRuleLike["valueType"],
-  over: Partial<CategorizationRuleLike> = {},
-): CategorizationRuleLike => ({
-  id: `r${++seq}`,
-  match,
-  valueType,
-  categoryId: valueType === "spending" ? "cat-1" : null,
-  useCount: 1,
-  ...over,
-});
-
-const tx = (over: Partial<BankTransactionLike> = {}): BankTransactionLike => ({
-  description: "MIGROS SUPERMARKT ZUERICH",
-  direction: "debit",
-  ...over,
-});
 
 const spend = (categoryId: string): RuleValue => ({ type: "spending", categoryId });
 

@@ -17,23 +17,14 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const user = await getAuthenticatedUser();
 
-    if (user === null) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (user === null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = await request.json();
-    const content: unknown = body.content;
+    const body = (await request.json()) as Record<string, unknown>;
+    const content = body.content;
 
-    if (typeof content !== "string" || content.trim().length === 0) {
-      return NextResponse.json({ error: "Content must be a non-empty string" }, { status: 400 });
-    }
+    if (typeof content !== "string" || content.trim().length === 0) return NextResponse.json({ error: "Content must be a non-empty string" }, { status: 400 });
 
-    if (!mt940Parser.canParse(content)) {
-      return NextResponse.json(
-        { error: "Unrecognized statement format (expected MT940)" },
-        { status: 422 },
-      );
-    }
+    if (!mt940Parser.canParse(content)) return NextResponse.json({ error: "Unrecognized statement format (expected MT940)" }, { status: 422 });
 
     // Parse before touching the DB — a malformed file must answer 422 with
     // the parser's own message and cost nothing else.
@@ -44,9 +35,7 @@ export async function POST(request: Request): Promise<Response> {
       statements = mt940Parser.parseStatements(content);
       reconciliation = mt940Parser.reconcile(content);
     } catch (error) {
-      if (error instanceof Mt940ParseError) {
-        return NextResponse.json({ error: error.message }, { status: 422 });
-      }
+      if (error instanceof Mt940ParseError) return NextResponse.json({ error: error.message }, { status: 422 });
 
       throw error;
     }

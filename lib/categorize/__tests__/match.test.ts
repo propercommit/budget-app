@@ -1,34 +1,6 @@
 import { describe, it, expect } from "vitest";
-import {
-  matchTransaction,
-  type BankTransactionLike,
-  type CategorizationRuleLike,
-} from "@/lib/categorize/match";
-
-// --- helpers --------------------------------------------------------------
-
-// Ids only need to be unique; tests that assert deterministic ordering pass
-// explicit ids via `over`.
-let seq = 0;
-
-const rule = (
-  match: string,
-  valueType: CategorizationRuleLike["valueType"],
-  over: Partial<CategorizationRuleLike> = {},
-): CategorizationRuleLike => ({
-  id: `r${++seq}`,
-  match,
-  valueType,
-  categoryId: valueType === "spending" ? "cat-1" : null,
-  useCount: 1,
-  ...over,
-});
-
-const tx = (over: Partial<BankTransactionLike> = {}): BankTransactionLike => ({
-  description: "MIGROS SUPERMARKT ZUERICH",
-  direction: "debit",
-  ...over,
-});
+import { matchTransaction } from "@/lib/categorize/match";
+import { rule, tx } from "./helpers";
 
 // --- haystack construction ------------------------------------------------
 

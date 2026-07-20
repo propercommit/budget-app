@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { FAKE_USER, jsonRequest, readJson } from "../../__tests__/helpers";
 import { DEFAULT_INCOME_ICON } from "@/lib/constants";
 import type { Fate } from "@/lib/categorize/learn";
@@ -167,6 +168,7 @@ describe("POST /api/import/commit — auth & validation", () => {
 
   it.each([
     { over: { date: "2026-6-02" }, error: "Transaction dates must be zero-padded YYYY-MM-DD" },
+    { over: { date: "2026-02-31" }, error: "Transaction dates must be zero-padded YYYY-MM-DD" },
     { over: { amount: 10.5 }, error: "Transaction amounts must be positive integer cents" },
     { over: { amount: 0 }, error: "Transaction amounts must be positive integer cents" },
     { over: { amount: 10_000_000_001 }, error: "Transaction amounts must be positive integer cents" },
@@ -202,6 +204,31 @@ describe("POST /api/import/commit — auth & validation", () => {
 
     expect(status).toBe(400);
     expect(body).toEqual({ error: "A debit cannot be routed to income" });
+  });
+
+  it("400 when the batch exceeds the transaction cap", async () => {
+    const oversized = Array.from({ length: 1001 }, () => ({ tx: btx(), fate: { kind: "skip" } }));
+
+    const { status, body } = await readJson(await commit(oversized));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "At most 1000 transactions per import" });
+  });
+
+  it("409 when a series create hits a name-collision race (P2002)", async () => {
+    const p2002 = new PrismaClientKnownRequestError("Unique constraint failed", {
+      code: "P2002",
+      clientVersion: "6",
+    });
+
+    txMock.budgetSeries.create.mockRejectedValue(p2002);
+
+    const { status, body } = await readJson(
+      await commit([{ tx: btx(), fate: routeSpending(FAKE_CATEGORY.id, "MIGROS") }]),
+    );
+
+    expect(status).toBe(409);
+    expect(body).toEqual({ error: "A budget line name collision prevented this import — please retry" });
   });
 
   it("400 when a text-less transaction is routed without a learnKey", async () => {
@@ -509,14 +536,12 @@ describe("POST /api/import/commit — atomic write", () => {
 
     expect(txMock.categorizationRule.create).not.toHaveBeenCalled();
 
+    // Bumps of pre-existing rows resolve to concrete ids: the read side
+    // compared normalized keys, so the write side must not re-filter on the
+    // raw stored string (an un-normalized stored key would silently no-op).
     expect(txMock.categorizationRule.updateMany).toHaveBeenCalledTimes(1);
     expect(txMock.categorizationRule.updateMany).toHaveBeenCalledWith({
-      where: {
-        userId: FAKE_USER.id,
-        match: "MIGROS",
-        valueType: "spending",
-        categoryId: FAKE_CATEGORY.id,
-      },
+      where: { id: { in: ["rule-MIGROS-spending"] } },
       data: { useCount: { increment: 2 } },
     });
   });
@@ -570,12 +595,7 @@ describe("POST /api/import/commit — atomic write", () => {
     ] as const;
 
     for (const name of outerImportModels) {
-      for (const fn of WRITE_FNS) {
-        expect(
-          (prismaMock[name] as Record<string, Mock>)[fn],
-          `outer prisma.${name}.${fn}`,
-        ).not.toHaveBeenCalled();
-      }
+      for (const fn of WRITE_FNS) expect((prismaMock[name] as Record<string, Mock>)[fn], `outer prisma.${name}.${fn}`).not.toHaveBeenCalled();
     }
   });
 });
