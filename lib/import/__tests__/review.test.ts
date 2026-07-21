@@ -268,14 +268,14 @@ describe("row transitions", () => {
     const named = chipSetSeriesName(assigned, "  Courses Migros  ");
 
     expect(named.chip?.seriesName).toBe("Courses Migros");
-    expect(chipCardName(named.chip ?? { kind: "assign", tokens: [], selected: 0, status: "open" })).toBe("Courses Migros");
+    expect(named.chip === null ? null : chipCardName(named.chip)).toBe("Courses Migros");
 
     expect(chipSetSeriesName(named, "   ").chip?.seriesName).toBeUndefined();
 
     // Typing the selected token itself is not an edit — no redundant name.
     expect(chipSetSeriesName(named, "MIGROS").chip?.seriesName).toBeUndefined();
 
-    expect(chipCardName(assigned.chip ?? { kind: "assign", tokens: [], selected: 0, status: "open" })).toBe("MIGROS");
+    expect(assigned.chip === null ? null : chipCardName(assigned.chip)).toBe("MIGROS");
   });
 
   it("toggleAccepted flips the advisory check", () => {

@@ -434,6 +434,10 @@ export async function POST(request: Request): Promise<Response> {
         const learnedKey = effectiveLearnKey(transaction, fate, rules);
         const customName = fate.value.type === "spending" && fate.seriesName !== undefined ? truncateName(fate.seriesName.trim()) : null;
 
+        // The card-name priority ladder, top to bottom: the user's chosen
+        // name, the learned key, the synthesized bank text.
+        const cardName = customName ?? (learnedKey === null ? name : truncateName(learnedKey));
+
         // A ruleId confirmation lands on that concrete rule; any other
         // decision lands on its normalized identity (key + the fate's
         // category) — the same resolution the learner bumps, so routing,
@@ -455,7 +459,7 @@ export async function POST(request: Request): Promise<Response> {
           // rename/move is ground truth (D16) — and never consult the ladder.
           seriesId = pointer;
         } else {
-          seriesId = await resolveSeriesId(tx, user.id, category, customName ?? (learnedKey === null ? name : truncateName(learnedKey)), seriesCache);
+          seriesId = await resolveSeriesId(tx, user.id, category, cardName, seriesCache);
 
           // Self-healing stamp: the rule (re-)learns its card in this same
           // transaction. The snapshot rows are patched too, so the batch's

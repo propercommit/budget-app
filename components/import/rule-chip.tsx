@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, Pencil, X } from "lucide-react";
-import { chipCardName, type RuleChip } from "@/lib/import/review";
+import { INCOME_DESTINATION_ID, chipCardName, type RuleChip } from "@/lib/import/review";
 import type { DestinationInfo } from "@/components/import/destination";
 
 interface RuleChipCardProps {
@@ -34,6 +34,13 @@ export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDi
     const token = chip.tokens[chip.selected] ?? "";
     const shell = CHIP_SHELL[chip.status];
 
+    // The custom-name suffix only speaks where the commit will honor it —
+    // income rows are named server-side, never from seriesName.
+    const customSuffix =
+        chip.seriesName !== undefined && destination !== null && destination.id !== INCOME_DESTINATION_ID
+            ? ` as “${chip.seriesName}”`
+            : "";
+
     // null = not editing; the draft commits on Enter/blur, Escape discards.
     const [nameDraft, setNameDraft] = useState<string | null>(null);
 
@@ -60,7 +67,7 @@ export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDi
                         )}
                     </p>
 
-                    {chip.kind === "assign" && destination !== null && (
+                    {chip.kind === "assign" && destination !== null && destination.id !== INCOME_DESTINATION_ID && (
                         <div className="flex items-center gap-1.5 mt-1.5 text-[13px] text-muted-foreground">
                             {nameDraft !== null ? (
                                 <input
@@ -149,7 +156,7 @@ export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDi
                             ? "No rule learned for this one"
                             : chip.kind === "exclude"
                                 ? `Will always skip ${token}`
-                                : `Will auto-categorize ${token} → ${destination?.label ?? ""}${chip.seriesName === undefined ? "" : ` as “${chip.seriesName}”`}`}
+                                : `Will auto-categorize ${token} → ${destination?.label ?? ""}${customSuffix}`}
                         {chip.status === "confirmed" && chip.cascaded !== undefined && chip.cascaded > 0 && (
                             <span className="text-muted-foreground"> · applied to {chip.cascaded} more transaction{chip.cascaded === 1 ? "" : "s"}</span>
                         )}

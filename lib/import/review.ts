@@ -400,18 +400,22 @@ export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewR
       return dest === null ? row : { ...assignDestination(row, dest), chip: sharedChip };
     }
 
-    // Same confirmed token means ONE card by construction — keep every
-    // sibling chip's display name in step, so a rename before a re-save
-    // can never fork the card.
+    // Same confirmed token AND same destination means ONE card by
+    // construction — keep those chips' display names in step, so a rename
+    // before a re-save can never fork the card. Same token routed to a
+    // DIFFERENT category is a different card whose name is not ours to touch.
+    const rowChip = row.chip;
+
     const sibling =
       cascadable &&
       chip.kind === "assign" &&
-      row.chip !== null &&
-      row.chip.kind === "assign" &&
-      row.chip.status === "confirmed" &&
-      normalizeMatchKey(row.chip.tokens[row.chip.selected] ?? "") === key;
+      row.dest === dest &&
+      rowChip !== null &&
+      rowChip.kind === "assign" &&
+      rowChip.status === "confirmed" &&
+      normalizeMatchKey(rowChip.tokens[rowChip.selected] ?? "") === key;
 
-    if (sibling && row.chip !== null && row.chip.seriesName !== chip.seriesName) return withChip(row, { seriesName: chip.seriesName });
+    if (sibling && rowChip.seriesName !== chip.seriesName) return withChip(row, { seriesName: chip.seriesName });
 
     return row;
   });

@@ -232,7 +232,7 @@ export const SuggestedRow = memo(function SuggestedRow({ row, categories, onUpda
                     selectedDest={row.dest}
                     showExcludeActions={false}
                     onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
-                        onCreateCategory={() => onRequestNewCategory(row.id)}
+                    onCreateCategory={() => onRequestNewCategory(row.id)}
                 />
             )}
         </div>

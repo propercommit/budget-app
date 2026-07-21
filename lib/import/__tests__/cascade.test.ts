@@ -5,6 +5,7 @@ import {
   buildCommitPayload,
   buildReviewRows,
   cascadeChipConfirm,
+  chipConfirm,
   chipReopen,
   chipSetSeriesName,
   excludeRow,
@@ -254,6 +255,22 @@ describe("cascadeChipConfirm — one decision applies to all matching unknowns",
 
     expect(fateOfRow(again, 0)).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB", seriesName: "Train" });
     expect(fateOfRow(again, 1)).toEqual(fateOfRow(again, 0));
+  });
+
+  it("the name sync is destination-scoped — same token in another category keeps its own name", () => {
+    // Same token routed to two categories is two distinct cards; a rename on
+    // one must neither wipe nor overwrite the other's name.
+    const rows = unknownRows(
+      btx({ description: "TWINT SBB EASYRIDE" }),
+      btx({ description: "SBB CFF FFS BILLETT" }),
+    );
+
+    const groceries = chipConfirm(chipSetSeriesName(assignDestination(rows[1], "cat-groceries"), "Migros Card"));
+    const source = chipSetSeriesName(assignDestination(rows[0], "cat-transport"), "Train");
+    const out = cascadeChipConfirm([source, groceries], source.id);
+
+    expect(out[1].chip?.seriesName).toBe("Migros Card");
+    expect(out[0].chip?.seriesName).toBe("Train");
   });
 
   it("cascaded rows stay individually correctable — no un-cascade", () => {

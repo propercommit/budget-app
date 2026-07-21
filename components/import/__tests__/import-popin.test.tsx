@@ -16,6 +16,8 @@ vi.mock("@/lib/toast", () => ({
 import * as api from "@/lib/api";
 import { showErrorToast } from "@/lib/toast";
 import { ImportPopin } from "@/components/import/import-popin";
+import type { PreviewResponse } from "@/lib/import/review";
+import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
 
 // jsdom lacks ResizeObserver, which CategoryPopin's pickers observe on mount.
 beforeAll(() => {
@@ -25,8 +27,6 @@ beforeAll(() => {
         disconnect() {}
     };
 });
-import type { PreviewResponse } from "@/lib/import/review";
-import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -395,7 +395,7 @@ describe("ImportPopin — session cascade", () => {
         expect(fates[1]).toEqual({ kind: "alwaysExclude", learnKey: "VISECA" });
     });
 
-    it("names the card from the chip — five SBB rows named 'Train' share one seriesName", async () => {
+    it("names the card from the chip — every swept SBB row shares one seriesName", async () => {
         vi.mocked(api.previewImport).mockResolvedValue({
             reconciliation: [reconciled()],
             transactions: [
@@ -572,6 +572,48 @@ describe("ImportPopin — inline category creation", () => {
         });
     });
 
+    it("the '+ New category' pill is frozen while a commit is in flight", async () => {
+        let releaseCommit: (value: unknown) => void = () => {};
+
+        vi.mocked(api.commitImport).mockImplementation(
+            () => new Promise((resolve) => { releaseCommit = resolve; }) as never,
+        );
+
+        await reviewWithUnknowns("TWINT SBB EASYRIDE");
+
+        fireEvent.click(screen.getByRole("radio", { name: "Transport" }));
+
+        // Reopen the rail so the pill is on screen while committing.
+        fireEvent.click(screen.getByRole("button", { name: "Change" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Confirm import (1)" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "+ New category" }));
+
+        expect(screen.queryByText("New Category")).toBeNull();
+
+        releaseCommit({ importId: "i1", counts: { total: 1, imported: 1, excluded: 0, spending: 1, income: 0 } });
+
+        await screen.findByText("1 entries imported");
+    });
+
+    it("income destinations get no naming line — the server names income rows itself", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [unknownTx("ACME CORP SALARY", { direction: "credit" })],
+        });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        fireEvent.click(screen.getByRole("radio", { name: "Income" }));
+
+        expect(screen.queryByText(/will appear as/)).toBeNull();
+        expect(screen.queryByRole("button", { name: "Rename card" })).toBeNull();
+    });
+
     it("cancel changes nothing", async () => {
         await reviewWithUnknowns("TWINT SBB EASYRIDE");
 
@@ -602,7 +644,7 @@ describe("ImportPopin — inline category creation", () => {
         fireEvent.click(screen.getByRole("button", { name: "Create Category" }));
 
         // Row 0 resolved with Perso; row 1 (still open) now offers Perso too.
-        await waitFor(() => expect(screen.getAllByRole("radio", { name: "Perso" })).toHaveLength(1));
+        await screen.findByRole("radio", { name: "Perso" });
 
         expect(screen.getByText("1 left")).toBeInTheDocument();
     });

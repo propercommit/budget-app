@@ -151,9 +151,13 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
     const [categoryPopinKey, setCategoryPopinKey] = useState(0);
 
     const requestNewCategory = useCallback((id: number) => {
+
+        // Frozen during the commit, like every other mutation channel.
+        if (committing) return;
+
         setCategoryPopinKey((prev) => prev + 1);
         setCreatingCategoryFor(id);
-    }, []);
+    }, [committing]);
 
     const handleCreateCategory = async (data: { name: string; icon: string; color: string }) => {
 
@@ -167,9 +171,12 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
             const created: Category = await createCategory({ label: data.name, icon: data.icon, color: data.color });
 
             // Visible to every row's rail from here on; the initiating row
-            // auto-selects it through the ordinary pick channel.
+            // auto-selects it through the ordinary pick channel — but never
+            // after the review has been committed (the success receipt must
+            // keep describing the exact rows that were written).
             setCategories((current) => [...current, created]);
-            updateRow(rowId, (row) => assignDestination(row, created.id));
+
+            if (stage === "review") updateRow(rowId, (row) => assignDestination(row, created.id));
         } catch (error) {
             // Post-close failure — the toast lane; the review stays untouched.
             showErrorToast(error instanceof Error ? error.message : "Couldn't create the category");
@@ -231,64 +238,64 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
 
     return (
         <>
-        <PopinWrapper
-            isOpen={isOpen}
-            onClose={handleClose}
-            title={stage === "pick" || stage === "parsing" ? "Import bank statement" : "Review import"}
-            subtitle={subtitle}
-            footer={footer}
-        >
-            {stage === "pick" && (
-                <ImportPickStage
-                    file={file}
-                    error={pickError}
-                    onPick={(picked) => {
-                        setFile(picked);
-                        setPickError(null);
-                    }}
-                    onRemove={() => {
-                        setFile(null);
-                        setPickError(null);
-                    }}
-                />
-            )}
+            <PopinWrapper
+                isOpen={isOpen}
+                onClose={handleClose}
+                title={stage === "pick" || stage === "parsing" ? "Import bank statement" : "Review import"}
+                subtitle={subtitle}
+                footer={footer}
+            >
+                {stage === "pick" && (
+                    <ImportPickStage
+                        file={file}
+                        error={pickError}
+                        onPick={(picked) => {
+                            setFile(picked);
+                            setPickError(null);
+                        }}
+                        onRemove={() => {
+                            setFile(null);
+                            setPickError(null);
+                        }}
+                    />
+                )}
 
-            {stage === "parsing" && (
-                <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 animate-in fade-in duration-200">
-                    <Loader2 className="w-10 h-10 animate-spin text-primary" strokeWidth={2} />
-                    <p className="text-[15px] font-semibold text-foreground m-0 mt-2">Reading {file?.name}…</p>
-                    <p className="text-[13px] text-muted-foreground m-0 text-center">Parsing MT940 · matching your rules · reconciling balances</p>
-                </div>
-            )}
+                {stage === "parsing" && (
+                    <div className="flex flex-col items-center justify-center gap-3 px-6 py-14 animate-in fade-in duration-200">
+                        <Loader2 className="w-10 h-10 animate-spin text-primary" strokeWidth={2} />
+                        <p className="text-[15px] font-semibold text-foreground m-0 mt-2">Reading {file?.name}…</p>
+                        <p className="text-[13px] text-muted-foreground m-0 text-center">Parsing MT940 · matching your rules · reconciling balances</p>
+                    </div>
+                )}
 
-            {stage === "review" && (
-                <ImportReviewStage
-                    rows={rows}
-                    categories={categories}
-                    reconciliation={reconciliation}
-                    importAnyway={importAnyway}
-                    onImportAnywayChange={setImportAnyway}
-                    onUpdate={updateRow}
-                    onConfirmChip={confirmChip}
-                    onRequestNewCategory={requestNewCategory}
-                />
-            )}
+                {stage === "review" && (
+                    <ImportReviewStage
+                        rows={rows}
+                        categories={categories}
+                        reconciliation={reconciliation}
+                        importAnyway={importAnyway}
+                        onImportAnywayChange={setImportAnyway}
+                        onUpdate={updateRow}
+                        onConfirmChip={confirmChip}
+                        onRequestNewCategory={requestNewCategory}
+                    />
+                )}
 
-            {stage === "success" && result !== null && (
-                <ImportSuccessStage rows={rows} result={result} categories={categories} />
-            )}
-        </PopinWrapper>
+                {stage === "success" && result !== null && (
+                    <ImportSuccessStage rows={rows} result={result} categories={categories} />
+                )}
+            </PopinWrapper>
 
-        {/* Stacked above the review sheet — house pattern: zIndex one level
-            up, remount-per-open key so the form starts fresh every time. */}
-        <CategoryPopin
-            key={`import-category-${categoryPopinKey}`}
-            isOpen={creatingCategoryFor !== null}
-            onClose={() => setCreatingCategoryFor(null)}
-            onSave={(data) => void handleCreateCategory(data)}
-            mode="create"
-            zIndex={60}
-        />
+            {/* Stacked above the review sheet — house pattern: zIndex one level
+                up, remount-per-open key so the form starts fresh every time. */}
+            <CategoryPopin
+                key={`import-category-${categoryPopinKey}`}
+                isOpen={creatingCategoryFor !== null}
+                onClose={() => setCreatingCategoryFor(null)}
+                onSave={(data) => void handleCreateCategory(data)}
+                mode="create"
+                zIndex={60}
+            />
         </>
     );
 }
