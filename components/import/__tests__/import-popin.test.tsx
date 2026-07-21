@@ -1,15 +1,30 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("@/lib/api", () => ({
     previewImport: vi.fn(),
     commitImport: vi.fn(),
     getCategories: vi.fn(),
+    createCategory: vi.fn(),
+}));
+
+vi.mock("@/lib/toast", () => ({
+    showErrorToast: vi.fn(),
 }));
 
 import * as api from "@/lib/api";
+import { showErrorToast } from "@/lib/toast";
 import { ImportPopin } from "@/components/import/import-popin";
+
+// jsdom lacks ResizeObserver, which CategoryPopin's pickers observe on mount.
+beforeAll(() => {
+    globalThis.ResizeObserver = class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    };
+});
 import type { PreviewResponse } from "@/lib/import/review";
 import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
 
@@ -507,5 +522,107 @@ describe("ImportPopin — session cascade", () => {
 
         expect(fates[0]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB" });
         expect(fates[1]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, ruleId: "rule-sbb" });
+    });
+});
+
+// --- inline category creation ------------------------------------------------
+
+describe("ImportPopin — inline category creation", () => {
+    const NEW_CATEGORY = { id: "cat-new", label: "Perso", icon: "shopping-cart", color: "#007AFF" };
+
+    const reviewWithUnknowns = async (...descriptions: string[]) => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: descriptions.map((description) => unknownTx(description)),
+        });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+    };
+
+    it("creates through the front door, auto-selects for the initiating row, and commits its id", async () => {
+        vi.mocked(api.createCategory).mockResolvedValue(structuredClone(NEW_CATEGORY));
+        vi.mocked(api.commitImport).mockResolvedValue({ importId: "i1", counts: { total: 1, imported: 1, excluded: 0, spending: 1, income: 0 } });
+
+        await reviewWithUnknowns("TWINT SBB EASYRIDE");
+
+        fireEvent.click(screen.getByRole("button", { name: "+ New category" }));
+
+        // The existing CategoryPopin, stacked above the review.
+        expect(await screen.findByText("New Category")).toBeInTheDocument();
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Transport, Food"), { target: { value: "Perso" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Create Category" }));
+
+        await waitFor(() => expect(api.createCategory).toHaveBeenCalledWith({ label: "Perso", icon: "shopping-cart", color: "#007AFF" }));
+
+        // Auto-selected for the initiating row: resolved with the new category.
+        await screen.findByText("All done ✓");
+
+        fireEvent.click(screen.getByRole("button", { name: "Confirm import (1)" }));
+
+        await waitFor(() => expect(api.commitImport).toHaveBeenCalledTimes(1));
+
+        expect(vi.mocked(api.commitImport).mock.calls[0][0].transactions[0].fate).toMatchObject({
+            kind: "route",
+            value: { type: "spending", categoryId: "cat-new" },
+        });
+    });
+
+    it("cancel changes nothing", async () => {
+        await reviewWithUnknowns("TWINT SBB EASYRIDE");
+
+        fireEvent.click(screen.getByRole("button", { name: "+ New category" }));
+
+        await screen.findByText("New Category");
+
+        // Two Cancels are on screen while stacked — the CategoryPopin's is
+        // the last in DOM order.
+        fireEvent.click(screen.getAllByRole("button", { name: "Cancel" }).at(-1) as HTMLElement);
+
+        expect(api.createCategory).not.toHaveBeenCalled();
+        expect(screen.getByText("1 left")).toBeInTheDocument();
+        expect(screen.queryByText("New Category")).toBeNull();
+    });
+
+    it("a created category is visible to every other row's picker in the session", async () => {
+        vi.mocked(api.createCategory).mockResolvedValue(structuredClone(NEW_CATEGORY));
+
+        await reviewWithUnknowns("TWINT SBB EASYRIDE", "MIGROS ZUERICH");
+
+        fireEvent.click(screen.getAllByRole("button", { name: "+ New category" })[0]);
+
+        await screen.findByText("New Category");
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Transport, Food"), { target: { value: "Perso" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Create Category" }));
+
+        // Row 0 resolved with Perso; row 1 (still open) now offers Perso too.
+        await waitFor(() => expect(screen.getAllByRole("radio", { name: "Perso" })).toHaveLength(1));
+
+        expect(screen.getByText("1 left")).toBeInTheDocument();
+    });
+
+    it("a failed create surfaces as a toast and leaves the review untouched", async () => {
+        vi.mocked(api.createCategory).mockRejectedValue(new Error("You already have a category with this name"));
+
+        await reviewWithUnknowns("TWINT SBB EASYRIDE");
+
+        fireEvent.click(screen.getByRole("button", { name: "+ New category" }));
+
+        await screen.findByText("New Category");
+
+        fireEvent.change(screen.getByPlaceholderText("e.g., Transport, Food"), { target: { value: "Food" } });
+
+        fireEvent.click(screen.getByRole("button", { name: "Create Category" }));
+
+        await waitFor(() => expect(showErrorToast).toHaveBeenCalledWith("You already have a category with this name"));
+
+        expect(screen.getByText("1 left")).toBeInTheDocument();
+        expect(screen.queryByRole("radio", { name: "Food" })).not.toBeNull(); // the pre-existing Food pill, unchanged
     });
 });

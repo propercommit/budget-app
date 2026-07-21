@@ -31,6 +31,8 @@ interface RowProps {
     row: ReviewRow;
     categories: Category[];
     onUpdate: RowUpdate;
+    /** Opens the stacked CategoryPopin, remembering which row asked. */
+    onRequestNewCategory: (id: number) => void;
 }
 
 interface DecisionRowProps extends RowProps {
@@ -59,7 +61,7 @@ function rowAmountColor(row: ReviewRow): string | undefined {
  * Change), or tombstoned (excluded in place with Undo) — plus the learning
  * chip once decided. Rows never leave this pile; they collapse in place.
  */
-export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate, onConfirmChip }: DecisionRowProps) {
+export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate, onConfirmChip, onRequestNewCategory }: DecisionRowProps) {
 
     const showPills = row.tier === "unknown" || (row.tier === "assigned" && row.expanded);
     const resolved = row.tier === "assigned" ? destinationInfo(row.dest ?? "", categories) : null;
@@ -94,6 +96,7 @@ export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate
                         showExcludeActions
                         excludeOnly={row.excludeOnly}
                         onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
+                        onCreateCategory={() => onRequestNewCategory(row.id)}
                         onLeaveOut={() => onUpdate(row.id, (current) => excludeRow(current, "once"))}
                         onAlwaysExclude={() => onUpdate(row.id, (current) => excludeRow(current, "always"))}
                     />
@@ -161,7 +164,7 @@ export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate
 });
 
 /** A "Suggested" row: evidence line, destination chip, advisory accept check. */
-export const SuggestedRow = memo(function SuggestedRow({ row, categories, onUpdate }: RowProps) {
+export const SuggestedRow = memo(function SuggestedRow({ row, categories, onUpdate, onRequestNewCategory }: RowProps) {
 
     const destination = destinationInfo(row.dest ?? "", categories);
     const reason = suggestionReason(row, (id) => destinationInfo(id, categories).label);
@@ -229,6 +232,7 @@ export const SuggestedRow = memo(function SuggestedRow({ row, categories, onUpda
                     selectedDest={row.dest}
                     showExcludeActions={false}
                     onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
+                        onCreateCategory={() => onRequestNewCategory(row.id)}
                 />
             )}
         </div>
@@ -236,7 +240,7 @@ export const SuggestedRow = memo(function SuggestedRow({ row, categories, onUpda
 });
 
 /** A compact "Matched" row; tapping it opens the recategorize rail. */
-export const MatchedRow = memo(function MatchedRow({ row, categories, onUpdate }: RowProps) {
+export const MatchedRow = memo(function MatchedRow({ row, categories, onUpdate, onRequestNewCategory }: RowProps) {
 
     const destination = destinationInfo(row.dest ?? "", categories);
 
@@ -283,6 +287,7 @@ export const MatchedRow = memo(function MatchedRow({ row, categories, onUpdate }
                         selectedDest={row.dest}
                         showExcludeActions={false}
                         onPick={(dest) => onUpdate(row.id, (current) => assignDestination(current, dest))}
+                        onCreateCategory={() => onRequestNewCategory(row.id)}
                     />
                 </div>
             )}
@@ -291,7 +296,7 @@ export const MatchedRow = memo(function MatchedRow({ row, categories, onUpdate }
 });
 
 /** An "Excluded" pile row with its provenance line and the Re-include escape. */
-export const ExcludedRow = memo(function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories">) {
+export const ExcludedRow = memo(function ExcludedRow({ row, onUpdate }: Omit<RowProps, "categories" | "onRequestNewCategory">) {
 
     return (
         <div className="flex items-center gap-2.5 py-2.5 border-b border-muted last:border-b-0">

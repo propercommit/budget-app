@@ -5,11 +5,14 @@ import { Loader2 } from "lucide-react";
 import { PopinWrapper } from "@/components/ui/popin-wrapper";
 import { Button } from "@/components/ui/button";
 import type { Category } from "@/lib/types";
-import { commitImport, getCategories, previewImport } from "@/lib/api";
+import { commitImport, createCategory, getCategories, previewImport } from "@/lib/api";
+import { showErrorToast } from "@/lib/toast";
+import { CategoryPopin } from "@/components/category/popins/category-popin";
 import { mt940Parser } from "@/lib/import/mt940-parser";
 import type { ReconciliationResult } from "@/lib/import/types";
 import {
     MAX_IMPORT_TRANSACTIONS,
+    assignDestination,
     buildCommitPayload,
     buildReviewRows,
     canConfirm,
@@ -141,6 +144,38 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
         setRows((current) => cascadeChipConfirm(current, id));
     }, [committing]);
 
+    // Inline category creation: the stacked CategoryPopin (house pattern —
+    // zIndex above the open popin, remount-per-open key), creating through
+    // the normal categories route; import never invents taxonomy itself.
+    const [creatingCategoryFor, setCreatingCategoryFor] = useState<number | null>(null);
+    const [categoryPopinKey, setCategoryPopinKey] = useState(0);
+
+    const requestNewCategory = useCallback((id: number) => {
+        setCategoryPopinKey((prev) => prev + 1);
+        setCreatingCategoryFor(id);
+    }, []);
+
+    const handleCreateCategory = async (data: { name: string; icon: string; color: string }) => {
+
+        const rowId = creatingCategoryFor;
+
+        setCreatingCategoryFor(null);
+
+        if (rowId === null) return;
+
+        try {
+            const created: Category = await createCategory({ label: data.name, icon: data.icon, color: data.color });
+
+            // Visible to every row's rail from here on; the initiating row
+            // auto-selects it through the ordinary pick channel.
+            setCategories((current) => [...current, created]);
+            updateRow(rowId, (row) => assignDestination(row, created.id));
+        } catch (error) {
+            // Post-close failure — the toast lane; the review stays untouched.
+            showErrorToast(error instanceof Error ? error.message : "Couldn't create the category");
+        }
+    };
+
     const subtitle =
         stage === "pick"
             ? "Upload an MT940 statement to review"
@@ -195,6 +230,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
         );
 
     return (
+        <>
         <PopinWrapper
             isOpen={isOpen}
             onClose={handleClose}
@@ -234,6 +270,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
                     onImportAnywayChange={setImportAnyway}
                     onUpdate={updateRow}
                     onConfirmChip={confirmChip}
+                    onRequestNewCategory={requestNewCategory}
                 />
             )}
 
@@ -241,5 +278,17 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
                 <ImportSuccessStage rows={rows} result={result} categories={categories} />
             )}
         </PopinWrapper>
+
+        {/* Stacked above the review sheet — house pattern: zIndex one level
+            up, remount-per-open key so the form starts fresh every time. */}
+        <CategoryPopin
+            key={`import-category-${categoryPopinKey}`}
+            isOpen={creatingCategoryFor !== null}
+            onClose={() => setCreatingCategoryFor(null)}
+            onSave={(data) => void handleCreateCategory(data)}
+            mode="create"
+            zIndex={60}
+        />
+        </>
     );
 }
