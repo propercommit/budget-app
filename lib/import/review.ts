@@ -15,7 +15,7 @@
  */
 
 import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
-import type { MatchCandidate, RuleValue } from "@/lib/categorize/match";
+import { buildHaystack, normalizeMatchKey, type MatchCandidate, type RuleValue } from "@/lib/categorize/match";
 import { NOISE_TOKENS, type Fate } from "@/lib/categorize/learn";
 import { MAX_AMOUNT_CENTS, MAX_FILENAME_LENGTH, MAX_LEARN_KEY_LENGTH } from "@/lib/import/limits";
 
@@ -91,6 +91,8 @@ export interface RuleChip {
   tokens: string[];
   selected: number;
   status: "open" | "confirmed" | "dismissed";
+  /** How many other unknowns this confirm cascaded to — feeds the receipt line. */
+  cascaded?: number;
 }
 
 /**
@@ -310,6 +312,55 @@ export function chipDismiss(row: ReviewRow): ReviewRow {
 /** Reopens a settled chip (done-state Undo). */
 export function chipReopen(row: ReviewRow): ReviewRow {
   return withChip(row, { status: "open" });
+}
+
+/**
+ * Session cascade (EL-D18 convergence — the "three Migros" case): confirming
+ * row `sourceId`'s learning chip also resolves every OTHER remaining ❓
+ * unknown whose haystack contains the confirmed key — same destination (or
+ * always-exclude), and an already-confirmed chip carrying the SAME token, so
+ * the fates come out identical and the engine's batch collapsing produces
+ * one rule and one card. Matching uses the matcher's own haystack and key
+ * normalization; suggested/matched rows are never touched (they carry
+ * server-side rule context a session decision must not silently override),
+ * skips never cascade (no chip to confirm), and cascaded rows stay ordinary
+ * rows — individually correctable, honestly counted, no un-cascade. The
+ * source chip is stamped with the cascade count for the receipt line.
+ */
+export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewRow[] {
+
+  const source = rows.find((row) => row.id === sourceId);
+
+  if (source === undefined || source.chip === null) return rows;
+
+  const chip = source.chip;
+  const token = chip.tokens[chip.selected] ?? "";
+  const key = normalizeMatchKey(token);
+
+  // An assign chip on a row without a destination has nothing to cascade;
+  // an empty key mirrors the engine's empty-key guard.
+  const cascadable = key.length > 0 && (chip.kind === "exclude" || source.dest !== null);
+
+  const targets = new Set(
+    !cascadable
+      ? []
+      : rows
+          .filter((row) => row.id !== sourceId && row.tier === "unknown" && buildHaystack(row.tx).includes(key))
+          .map((row) => row.id),
+  );
+
+  const sharedChip: RuleChip = { kind: chip.kind, tokens: [token], selected: 0, status: "confirmed" };
+
+  return rows.map((row) => {
+
+    if (row.id === sourceId) return withChip(chipConfirm(row), { cascaded: targets.size });
+
+    if (!targets.has(row.id)) return row;
+
+    if (chip.kind === "exclude") return { ...excludeRow(row, "always"), chip: sharedChip };
+
+    return { ...assignDestination(row, source.dest ?? ""), chip: sharedChip };
+  });
 }
 
 // ---------------------------------------------------------------------------
