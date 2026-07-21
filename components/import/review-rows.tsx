@@ -7,7 +7,6 @@ import { iconMap } from "@/lib/icon-map";
 import {
     amountLabel,
     assignDestination,
-    chipConfirm,
     chipDismiss,
     chipReopen,
     chipSelectToken,
@@ -33,6 +32,11 @@ interface RowProps {
     onUpdate: RowUpdate;
 }
 
+interface DecisionRowProps extends RowProps {
+    /** Save-rule handler — cascades the decision across matching unknowns. */
+    onConfirmChip: (id: number) => void;
+}
+
 const CREDIT_COLOR = "#34C759";
 
 const DEBIT_COLOR = "#FF3B30";
@@ -54,7 +58,7 @@ function rowAmountColor(row: ReviewRow): string | undefined {
  * Change), or tombstoned (excluded in place with Undo) — plus the learning
  * chip once decided. Rows never leave this pile; they collapse in place.
  */
-export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate }: RowProps) {
+export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate, onConfirmChip }: DecisionRowProps) {
 
     const showPills = row.tier === "unknown" || (row.tier === "assigned" && row.expanded);
     const resolved = row.tier === "assigned" ? destinationInfo(row.dest ?? "", categories) : null;
@@ -145,7 +149,7 @@ export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate
                     chip={row.chip}
                     destination={row.chip.kind === "exclude" || row.dest === null ? null : destinationInfo(row.dest, categories)}
                     onSelectToken={(index) => onUpdate(row.id, (current) => chipSelectToken(current, index))}
-                    onConfirm={() => onUpdate(row.id, chipConfirm)}
+                    onConfirm={() => onConfirmChip(row.id)}
                     onDismiss={() => onUpdate(row.id, chipDismiss)}
                     onReopen={() => onUpdate(row.id, chipReopen)}
                 />

@@ -283,3 +283,147 @@ describe("ImportPopin", () => {
         expect(screen.getByRole("button", { name: "Confirm import (2)" })).toBeInTheDocument();
     });
 });
+
+// --- session cascade (one decision applies to all matching unknowns) --------
+
+const unknownTx = (description: string, over: Record<string, unknown> = {}) => ({
+    tx: { date: "2026-06-03", amount: 900, direction: "debit" as const, description, ...over },
+    match: { tier: "unknown" as const },
+    statementIndex: 0,
+});
+
+describe("ImportPopin — session cascade", () => {
+    it("one confirm resolves every matching unknown (5-SBB case), corrections stay per-row", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [
+                unknownTx("TWINT SBB EASYRIDE"),
+                unknownTx("SBB CFF FFS BILLETT ZUERICH"),
+                unknownTx("sbb mobile tickets"),
+                unknownTx("PAYMENT 4711", { counterparty: "SBB AG" }),
+                unknownTx("MIGROS ZUERICH"),
+            ],
+        });
+        vi.mocked(api.commitImport).mockResolvedValue({ importId: "i1", counts: { total: 5, imported: 4, excluded: 1, spending: 4, income: 0 } });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        // One decision on the first SBB row…
+        fireEvent.click(screen.getAllByRole("radio", { name: "Transport" })[0]);
+
+        fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+
+        // …and the receipt says it swept the other three (incl. the
+        // counterparty-only match), counts staying honest.
+        expect(screen.getByText(/applied to 3 more transactions/)).toBeInTheDocument();
+        expect(screen.getByText("4 of 5 resolved")).toBeInTheDocument();
+        expect(screen.getByText("1 left")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Confirm import (5)" })).toBeDisabled();
+
+        // Correcting ONE cascaded row affects that row only (no un-cascade).
+        fireEvent.click(screen.getAllByRole("button", { name: "Change" })[1]);
+
+        fireEvent.click(screen.getAllByRole("radio", { name: "Food" })[0]);
+
+        // Resolve the unrelated MIGROS row and commit.
+        fireEvent.click(screen.getByRole("button", { name: "Leave out" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Confirm import (4)" }));
+
+        await screen.findByText("4 entries imported");
+
+        const fates = vi.mocked(api.commitImport).mock.calls[0][0].transactions.map((entry) => entry.fate);
+
+        expect(fates[0]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB" });
+        expect(fates[1]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-food" }, learnKey: "SBB" });
+        expect(fates[2]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB" });
+        expect(fates[3]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB" });
+        expect(fates[4]).toEqual({ kind: "skip" });
+    });
+
+    it("always-exclude sweeps every matching unknown into the excluded pile", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [
+                unknownTx("VISECA KREDITKARTE ABRECHNUNG"),
+                unknownTx("VISECA CARD SERVICES"),
+            ],
+        });
+        vi.mocked(api.commitImport).mockResolvedValue({ importId: "i1", counts: { total: 2, imported: 0, excluded: 2, spending: 0, income: 0 } });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        fireEvent.click(screen.getAllByRole("button", { name: "Always exclude" })[0]);
+
+        fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+
+        expect(screen.getByText(/applied to 1 more transaction\b/)).toBeInTheDocument();
+        expect(screen.getByText("2 of 2 resolved · 2 excluded")).toBeInTheDocument();
+
+        const confirm = screen.getByRole("button", { name: "Confirm import (0)" });
+
+        expect(confirm).toBeEnabled();
+
+        fireEvent.click(confirm);
+
+        await waitFor(() => expect(api.commitImport).toHaveBeenCalledTimes(1));
+
+        const fates = vi.mocked(api.commitImport).mock.calls[0][0].transactions.map((entry) => entry.fate);
+
+        expect(fates[0]).toEqual({ kind: "alwaysExclude", learnKey: "VISECA" });
+        expect(fates[1]).toEqual({ kind: "alwaysExclude", learnKey: "VISECA" });
+    });
+
+    it("never cascades into suggested rows — they keep their server-rule confirmation", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [
+                unknownTx("TWINT SBB EASYRIDE"),
+                {
+                    tx: { date: "2026-06-05", amount: 340, direction: "debit" as const, description: "SBB HALBTAX ABO" },
+                    match: {
+                        tier: "suggested" as const,
+                        candidates: [{
+                            rule: { id: "rule-sbb", match: "SBB", valueType: "spending" as const, categoryId: "cat-transport", useCount: 9 },
+                            value: { type: "spending" as const, categoryId: "cat-transport" },
+                            ruleId: "rule-sbb",
+                            destination: null,
+                        }],
+                    },
+                    statementIndex: 0,
+                },
+            ],
+        });
+        vi.mocked(api.commitImport).mockResolvedValue({ importId: "i1", counts: { total: 2, imported: 2, excluded: 0, spending: 2, income: 0 } });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        fireEvent.click(screen.getByRole("radio", { name: "Transport" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+
+        // Nothing to sweep — the only other SBB row is a suggestion, which
+        // stays in its section, untouched and unaccepted.
+        expect(screen.queryByText(/applied to/)).toBeNull();
+        expect(screen.getByText("tap ✓ to confirm")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Confirm suggestion" })).toHaveAttribute("aria-pressed", "false");
+
+        fireEvent.click(screen.getByRole("button", { name: "Confirm import (2)" }));
+
+        await waitFor(() => expect(api.commitImport).toHaveBeenCalledTimes(1));
+
+        const fates = vi.mocked(api.commitImport).mock.calls[0][0].transactions.map((entry) => entry.fate);
+
+        expect(fates[0]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB" });
+        expect(fates[1]).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, ruleId: "rule-sbb" });
+    });
+});
