@@ -10,6 +10,7 @@ import {
     chipDismiss,
     chipReopen,
     chipSelectToken,
+    chipSetSeriesName,
     excludeRow,
     reincludeRow,
     shortDate,
@@ -152,6 +153,7 @@ export const DecisionRow = memo(function DecisionRow({ row, categories, onUpdate
                     onConfirm={() => onConfirmChip(row.id)}
                     onDismiss={() => onUpdate(row.id, chipDismiss)}
                     onReopen={() => onUpdate(row.id, chipReopen)}
+                    onSetSeriesName={(name) => onUpdate(row.id, (current) => chipSetSeriesName(current, name))}
                 />
             )}
         </div>

@@ -8,10 +8,12 @@ import {
   buildReviewRows,
   candidateDestination,
   canConfirm,
+  chipCardName,
   chipConfirm,
   chipDismiss,
   chipReopen,
   chipSelectToken,
+  chipSetSeriesName,
   confirmCount,
   excludeRow,
   firstFailing,
@@ -260,6 +262,22 @@ describe("row transitions", () => {
     expect(chipSelectToken(assigned, 99).chip?.selected).toBe(assigned.chip?.selected);
   });
 
+  it("chipSetSeriesName sets a custom card name; empty or token-equal input falls back", () => {
+    const assigned = assignDestination(unknownRow(), "cat-a"); // selected token: MIGROS
+
+    const named = chipSetSeriesName(assigned, "  Courses Migros  ");
+
+    expect(named.chip?.seriesName).toBe("Courses Migros");
+    expect(chipCardName(named.chip ?? { kind: "assign", tokens: [], selected: 0, status: "open" })).toBe("Courses Migros");
+
+    expect(chipSetSeriesName(named, "   ").chip?.seriesName).toBeUndefined();
+
+    // Typing the selected token itself is not an edit — no redundant name.
+    expect(chipSetSeriesName(named, "MIGROS").chip?.seriesName).toBeUndefined();
+
+    expect(chipCardName(assigned.chip ?? { kind: "assign", tokens: [], selected: 0, status: "open" })).toBe("MIGROS");
+  });
+
   it("toggleAccepted flips the advisory check", () => {
     const suggested = buildReviewRows(preview([{ tx: btx(), match: { tier: "suggested", candidates: [candidate({ type: "spending", categoryId: "cat-a" })] }, statementIndex: 0 }]))[0];
 
@@ -366,6 +384,27 @@ describe("fates", () => {
     const row = chipDismiss(assignDestination(unknownRow(), "cat-a"));
 
     expect(fateFor(row)).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-a" } });
+  });
+
+  it("a custom card name rides the fate alongside the learnKey — and survives dismissal", () => {
+    const named = chipSetSeriesName(assignDestination(unknownRow(), "cat-a"), "Courses Migros");
+
+    expect(fateFor(chipConfirm(named))).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-a" }, learnKey: "MIGROS", seriesName: "Courses Migros" });
+
+    // Dismissed rule question, named card: nothing learned, name kept.
+    expect(fateFor(chipDismiss(named))).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-a" }, seriesName: "Courses Migros" });
+  });
+
+  it("an unedited chip sends no seriesName key at all", () => {
+    const fate = fateFor(chipConfirm(assignDestination(unknownRow(), "cat-a")));
+
+    expect(fate).not.toHaveProperty("seriesName");
+  });
+
+  it("income fates never carry a seriesName even if a chip was named", () => {
+    const row = chipSetSeriesName(assignDestination(unknownRow({ direction: "credit" }), INCOME_DESTINATION_ID), "My Salary");
+
+    expect(fateFor(chipConfirm(row))).toEqual({ kind: "route", value: { type: "income" }, learnKey: "MIGROS" });
   });
 
   it("an income assignment routes to income", () => {

@@ -380,6 +380,88 @@ describe("ImportPopin — session cascade", () => {
         expect(fates[1]).toEqual({ kind: "alwaysExclude", learnKey: "VISECA" });
     });
 
+    it("names the card from the chip — five SBB rows named 'Train' share one seriesName", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [
+                unknownTx("TWINT SBB EASYRIDE"),
+                unknownTx("SBB CFF FFS BILLETT"),
+                unknownTx("sbb mobile tickets"),
+            ],
+        });
+        vi.mocked(api.commitImport).mockResolvedValue({ importId: "i1", counts: { total: 3, imported: 3, excluded: 0, spending: 3, income: 0 } });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        fireEvent.click(screen.getAllByRole("radio", { name: "Transport" })[0]);
+
+        // The naming line pre-fills from the selected token; the pencil turns
+        // it into an input.
+        expect(screen.getByText(/will appear as/)).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Rename card" }));
+
+        const input = screen.getByRole("textbox", { name: "Card name" });
+
+        expect(input).toHaveValue("SBB");
+
+        fireEvent.change(input, { target: { value: "Train" } });
+
+        fireEvent.keyDown(input, { key: "Enter" });
+
+        fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Confirm import (3)" }));
+
+        await waitFor(() => expect(api.commitImport).toHaveBeenCalledTimes(1));
+
+        const fates = vi.mocked(api.commitImport).mock.calls[0][0].transactions.map((entry) => entry.fate);
+
+        for (const fate of fates) expect(fate).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB", seriesName: "Train" });
+    });
+
+    it("an unedited name sends no seriesName; an emptied edit falls back to the token", async () => {
+        vi.mocked(api.previewImport).mockResolvedValue({
+            reconciliation: [reconciled()],
+            transactions: [unknownTx("TWINT SBB EASYRIDE")],
+        });
+        vi.mocked(api.commitImport).mockResolvedValue({ importId: "i1", counts: { total: 1, imported: 1, excluded: 0, spending: 1, income: 0 } });
+
+        render(<ImportPopin isOpen onClose={vi.fn()} />);
+
+        await pickFile(MT940_CONTENT);
+        await continueToReview();
+
+        fireEvent.click(screen.getByRole("radio", { name: "Transport" }));
+
+        // Edit, then empty the input: the name falls back to the token —
+        // the UI cannot produce an invalid fate.
+        fireEvent.click(screen.getByRole("button", { name: "Rename card" }));
+
+        const input = screen.getByRole("textbox", { name: "Card name" });
+
+        fireEvent.change(input, { target: { value: "   " } });
+
+        fireEvent.keyDown(input, { key: "Enter" });
+
+        expect(screen.getByText(/will appear as/)).toBeInTheDocument();
+
+        // Fallback happened: both the question line and the naming line show
+        // the token again.
+        expect(screen.getAllByText("SBB", { selector: "b" })).toHaveLength(2);
+
+        fireEvent.click(screen.getByRole("button", { name: "Save rule" }));
+
+        fireEvent.click(screen.getByRole("button", { name: "Confirm import (1)" }));
+
+        await waitFor(() => expect(api.commitImport).toHaveBeenCalledTimes(1));
+
+        expect(vi.mocked(api.commitImport).mock.calls[0][0].transactions[0].fate).not.toHaveProperty("seriesName");
+    });
+
     it("never cascades into suggested rows — they keep their server-rule confirmation", async () => {
         vi.mocked(api.previewImport).mockResolvedValue({
             reconciliation: [reconciled()],

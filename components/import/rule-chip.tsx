@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, X } from "lucide-react";
-import type { RuleChip } from "@/lib/import/review";
+import { useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
+import { chipCardName, type RuleChip } from "@/lib/import/review";
 import type { DestinationInfo } from "@/components/import/destination";
 
 interface RuleChipCardProps {
@@ -12,6 +13,8 @@ interface RuleChipCardProps {
     onConfirm: () => void;
     onDismiss: () => void;
     onReopen: () => void;
+    /** Commits a custom card name; empty input falls back to the token. */
+    onSetSeriesName: (name: string) => void;
 }
 
 const CHIP_SHELL: Record<RuleChip["status"], { className: string; style?: React.CSSProperties }> = {
@@ -26,10 +29,21 @@ const CHIP_SHELL: Record<RuleChip["status"], { className: string; style?: React.
  * token picker and save/dismiss buttons; settles into a one-line receipt with
  * an Undo.
  */
-export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDismiss, onReopen }: RuleChipCardProps) {
+export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDismiss, onReopen, onSetSeriesName }: RuleChipCardProps) {
 
     const token = chip.tokens[chip.selected] ?? "";
     const shell = CHIP_SHELL[chip.status];
+
+    // null = not editing; the draft commits on Enter/blur, Escape discards.
+    const [nameDraft, setNameDraft] = useState<string | null>(null);
+
+    const commitDraft = () => {
+
+        if (nameDraft === null) return;
+
+        onSetSeriesName(nameDraft);
+        setNameDraft(null);
+    };
 
     return (
         <div
@@ -45,6 +59,43 @@ export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDi
                             <>Auto-categorize <b>{token}</b> → <b style={{ color: destination?.color }}>{destination?.label}</b> next time?</>
                         )}
                     </p>
+
+                    {chip.kind === "assign" && destination !== null && (
+                        <div className="flex items-center gap-1.5 mt-1.5 text-[13px] text-muted-foreground">
+                            {nameDraft !== null ? (
+                                <input
+                                    autoFocus
+                                    aria-label="Card name"
+                                    value={nameDraft}
+                                    maxLength={100}
+                                    onChange={(event) => setNameDraft(event.target.value)}
+                                    onBlur={commitDraft}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter") commitDraft();
+
+                                        if (event.key === "Escape") setNameDraft(null);
+                                    }}
+                                    className="flex-1 min-w-0 h-11 sm:h-8 px-2.5 rounded-xl border border-border bg-card text-[13px] text-foreground outline-none focus:border-primary"
+                                />
+                            ) : (
+                                <>
+                                    <span className="min-w-0 truncate">
+                                        will appear as <b className="text-foreground">{chipCardName(chip)}</b> in{" "}
+                                        <b style={{ color: destination.color }}>{destination.label}</b>
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        aria-label="Rename card"
+                                        onClick={() => setNameDraft(chipCardName(chip))}
+                                        className="w-11 h-11 sm:w-7 sm:h-7 rounded-full flex items-center justify-center flex-shrink-0 text-muted-foreground transition-all active:scale-[0.92] hover:bg-muted"
+                                    >
+                                        <Pencil className="size-3.5" strokeWidth={2} />
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                         {chip.tokens.map((candidate, index) => (
@@ -98,7 +149,7 @@ export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDi
                             ? "No rule learned for this one"
                             : chip.kind === "exclude"
                                 ? `Will always skip ${token}`
-                                : `Will auto-categorize ${token} → ${destination?.label ?? ""}`}
+                                : `Will auto-categorize ${token} → ${destination?.label ?? ""}${chip.seriesName === undefined ? "" : ` as “${chip.seriesName}”`}`}
                         {chip.status === "confirmed" && chip.cascaded !== undefined && chip.cascaded > 0 && (
                             <span className="text-muted-foreground"> · applied to {chip.cascaded} more transaction{chip.cascaded === 1 ? "" : "s"}</span>
                         )}
