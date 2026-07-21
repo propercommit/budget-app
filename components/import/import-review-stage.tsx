@@ -24,6 +24,8 @@ interface ImportReviewStageProps {
     onUpdate: RowUpdate;
     /** Save-rule handler — cascades the decision across matching unknowns. */
     onConfirmChip: (id: number) => void;
+    /** Opens the stacked CategoryPopin for the row that asked. */
+    onRequestNewCategory: (id: number) => void;
 }
 
 function SectionHeader({
@@ -79,6 +81,7 @@ export function ImportReviewStage({
     onImportAnywayChange,
     onUpdate,
     onConfirmChip,
+    onRequestNewCategory,
 }: ImportReviewStageProps) {
 
     const sections = sectionsOf(rows);
@@ -190,7 +193,7 @@ export function ImportReviewStage({
                     />
 
                     {sections.decisions.map((row) => (
-                        <DecisionRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} onConfirmChip={onConfirmChip} />
+                        <DecisionRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} onConfirmChip={onConfirmChip} onRequestNewCategory={onRequestNewCategory} />
                     ))}
                 </section>
             )}
@@ -206,7 +209,7 @@ export function ImportReviewStage({
                     />
 
                     {sections.suggested.map((row) => (
-                        <SuggestedRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} />
+                        <SuggestedRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} onRequestNewCategory={onRequestNewCategory} />
                     ))}
                 </section>
             )}
@@ -230,7 +233,7 @@ export function ImportReviewStage({
 
                     {matchedOpen &&
                         sections.matched.map((row) => (
-                            <MatchedRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} />
+                            <MatchedRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} onRequestNewCategory={onRequestNewCategory} />
                         ))}
                 </section>
             )}

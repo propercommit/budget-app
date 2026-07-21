@@ -31,9 +31,14 @@ import {
  * current home), which must never fork a phantom rule row under it. An
  * explicit `learnKey` outranks `ruleId` (an edited token is an identity
  * correction, not a confirmation).
+ *
+ * `seriesName` (spending routes only) is the display name for the card the
+ * ladder creates — display-only by construction: the rule never learns from
+ * it, and `learnKey` stays the ONE matching key. "Match on MIGROS, appear
+ * as Courses Migros."
  */
 export type Fate =
-  | { kind: "route"; value: RuleValue; learnKey?: string; ruleId?: string }
+  | { kind: "route"; value: RuleValue; learnKey?: string; ruleId?: string; seriesName?: string }
   | { kind: "skip" }
   | { kind: "alwaysExclude"; learnKey: string };
 

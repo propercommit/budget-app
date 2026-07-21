@@ -5,7 +5,9 @@ import {
   buildCommitPayload,
   buildReviewRows,
   cascadeChipConfirm,
+  chipConfirm,
   chipReopen,
+  chipSetSeriesName,
   excludeRow,
   sectionsOf,
   type PreviewCandidate,
@@ -222,6 +224,53 @@ describe("cascadeChipConfirm — one decision applies to all matching unknowns",
 
     expect(again[0].chip?.status).toBe("confirmed");
     expect(again[0].chip?.cascaded).toBe(2);
+  });
+
+  it("cascaded fates carry the source's custom card name — one name, one card", () => {
+    const rows = unknownRows(
+      btx({ description: "TWINT SBB EASYRIDE" }),
+      btx({ description: "SBB CFF FFS BILLETT" }),
+    );
+
+    const source = chipSetSeriesName(assignDestination(rows[0], "cat-transport"), "Train");
+    const out = cascadeChipConfirm([source, rows[1]], source.id);
+
+    expect(fateOfRow(out, 0)).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB", seriesName: "Train" });
+    expect(fateOfRow(out, 1)).toEqual(fateOfRow(out, 0));
+  });
+
+  it("re-saving after a rename keeps every same-token confirmed chip on one name", () => {
+    // Undo → rename → Save again must not fork the card: same confirmed
+    // token means ONE card by construction, so display names stay in step.
+    const rows = unknownRows(
+      btx({ description: "TWINT SBB EASYRIDE" }),
+      btx({ description: "SBB CFF FFS BILLETT" }),
+    );
+
+    const source = assignDestination(rows[0], "cat-transport");
+    const swept = cascadeChipConfirm([source, rows[1]], source.id);
+
+    const renamed = swept.map((row) => (row.id === source.id ? chipSetSeriesName(chipReopen(row), "Train") : row));
+    const again = cascadeChipConfirm(renamed, source.id);
+
+    expect(fateOfRow(again, 0)).toEqual({ kind: "route", value: { type: "spending", categoryId: "cat-transport" }, learnKey: "SBB", seriesName: "Train" });
+    expect(fateOfRow(again, 1)).toEqual(fateOfRow(again, 0));
+  });
+
+  it("the name sync is destination-scoped — same token in another category keeps its own name", () => {
+    // Same token routed to two categories is two distinct cards; a rename on
+    // one must neither wipe nor overwrite the other's name.
+    const rows = unknownRows(
+      btx({ description: "TWINT SBB EASYRIDE" }),
+      btx({ description: "SBB CFF FFS BILLETT" }),
+    );
+
+    const groceries = chipConfirm(chipSetSeriesName(assignDestination(rows[1], "cat-groceries"), "Migros Card"));
+    const source = chipSetSeriesName(assignDestination(rows[0], "cat-transport"), "Train");
+    const out = cascadeChipConfirm([source, groceries], source.id);
+
+    expect(out[1].chip?.seriesName).toBe("Migros Card");
+    expect(out[0].chip?.seriesName).toBe("Train");
   });
 
   it("cascaded rows stay individually correctable — no un-cascade", () => {

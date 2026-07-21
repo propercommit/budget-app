@@ -967,3 +967,115 @@ describe("POST /api/import/commit — rule→series pointer", () => {
     expect(txMock.categorizationRule.update).not.toHaveBeenCalled();
   });
 });
+
+// --- seriesName: custom card names split from the matching key --------------
+
+describe("POST /api/import/commit — seriesName", () => {
+  const spendingWithName = (seriesName: unknown, learnKey?: string): Record<string, unknown> => ({
+    kind: "route",
+    value: { type: "spending", categoryId: FAKE_CATEGORY.id },
+    ...(learnKey === undefined ? {} : { learnKey }),
+    seriesName,
+  });
+
+  it("names the created series from seriesName while the rule learns the learnKey", async () => {
+    await commit([{ tx: btx(), fate: spendingWithName("  Courses Migros  ", "MIGROS") }]);
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "Courses Migros" }) }),
+    );
+
+    // The rule learns ONLY the matching key — the display name never leaks
+    // into the rule table, and the born-stamp points at the custom-named card.
+    expect(txMock.categorizationRule.create).toHaveBeenCalledTimes(1);
+    expect(txMock.categorizationRule.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ match: "MIGROS", seriesId: "series-Courses Migros" }) }),
+    );
+  });
+
+  it("outranks the matched rule key too — custom name, bump on the matched rule", async () => {
+    txMock.categorizationRule.findMany.mockResolvedValue([ruleRow("MIGROS", "spending")]);
+
+    await commit([{ tx: btx(), fate: spendingWithName("Courses Migros") }]);
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "Courses Migros" }) }),
+    );
+
+    expect(txMock.categorizationRule.create).not.toHaveBeenCalled();
+    expect(txMock.categorizationRule.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { useCount: { increment: 1 } } }),
+    );
+  });
+
+  it("converges identical custom names in one batch onto one series", async () => {
+    await commit([
+      { tx: btx({ date: "2026-06-02" }), fate: spendingWithName("Courses Migros", "MIGROS") },
+      { tx: btx({ date: "2026-07-01" }), fate: spendingWithName("Courses Migros", "MIGROS") },
+    ]);
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledTimes(1);
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("reuses an existing series with the custom name across imports", async () => {
+    txMock.budgetSeries.findFirst.mockResolvedValueOnce({ id: "series-existing", name: "Courses Migros", categoryId: FAKE_CATEGORY.id });
+
+    await commit([{ tx: btx(), fate: spendingWithName("Courses Migros", "MIGROS") }]);
+
+    expect(txMock.budgetSeries.create).not.toHaveBeenCalled();
+    expect(txMock.spendingItem.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ seriesId_month: expect.objectContaining({ seriesId: "series-existing" }) }) }),
+    );
+  });
+
+  it("applies the collision fallback ladder to a custom name", async () => {
+    txMock.budgetSeries.findFirst
+      .mockResolvedValueOnce(null) // custom name not in this category
+      .mockResolvedValueOnce({ id: "series-other", name: "Courses Migros", categoryId: "cat-other" }) // taken elsewhere
+      .mockResolvedValueOnce(null); // fallback name free
+
+    await commit([{ tx: btx(), fate: spendingWithName("Courses Migros", "MIGROS") }]);
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "Courses Migros — Groceries" }) }),
+    );
+  });
+
+  it("names the card without learning anything when no learnKey accompanies it", async () => {
+    await commit([{ tx: btx({ description: "SOMETHING NEW 123" }), fate: spendingWithName("Courses Migros") }]);
+
+    expect(txMock.budgetSeries.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ name: "Courses Migros" }) }),
+    );
+
+    expect(txMock.categorizationRule.create).not.toHaveBeenCalled();
+    expect(txMock.categorizationRule.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { seriesName: "   ", error: "seriesName must be a non-empty string of at most 100 characters" },
+    { seriesName: "X".repeat(101), error: "seriesName must be a non-empty string of at most 100 characters" },
+    { seriesName: 42, error: "seriesName must be a non-empty string of at most 100 characters" },
+  ])("400 on an invalid seriesName ($seriesName)", async ({ seriesName, error }) => {
+    const { status, body } = await readJson(await commit([{ tx: btx(), fate: spendingWithName(seriesName) }]));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error });
+  });
+
+  it("400 when a non-spending fate carries a seriesName — no silent ignore", async () => {
+    const cases: { tx: Record<string, unknown>; fate: Record<string, unknown> }[] = [
+      { tx: btx({ direction: "credit" }), fate: { kind: "route", value: { type: "income" }, seriesName: "My Salary" } },
+      { tx: btx(), fate: { kind: "route", value: { type: "exclude" }, seriesName: "Nope" } },
+      { tx: btx(), fate: { kind: "alwaysExclude", learnKey: "MIGROS", seriesName: "Nope" } },
+    ];
+
+    for (const wrapper of cases) {
+      const { status, body } = await readJson(await commit([wrapper]));
+
+      expect(status).toBe(400);
+      expect(body).toEqual({ error: "Only spending routes can carry a seriesName" });
+    }
+  });
+});

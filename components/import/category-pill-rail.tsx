@@ -17,6 +17,8 @@ interface CategoryPillRailProps {
     onPick: (dest: string) => void;
     onLeaveOut?: () => void;
     onAlwaysExclude?: () => void;
+    /** Adds the trailing "+ New category" pill — inline creation through the normal route. */
+    onCreateCategory?: () => void;
 }
 
 const PILL_CLASSES =
@@ -37,6 +39,7 @@ export function CategoryPillRail({
     onPick,
     onLeaveOut,
     onAlwaysExclude,
+    onCreateCategory,
 }: CategoryPillRailProps) {
 
     // Category is structurally a DestinationInfo already — no re-shaping.
@@ -75,6 +78,16 @@ export function CategoryPillRail({
                     </button>
                 );
             })}
+
+            {onCreateCategory !== undefined && !excludeOnly && (
+                <button
+                    type="button"
+                    onClick={onCreateCategory}
+                    className={`${PILL_CLASSES} text-primary bg-primary/5 border border-dashed border-primary/40`}
+                >
+                    + New category
+                </button>
+            )}
 
             {showExcludeActions && (
                 <>

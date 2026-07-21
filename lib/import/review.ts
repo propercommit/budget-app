@@ -93,6 +93,12 @@ export interface RuleChip {
   status: "open" | "confirmed" | "dismissed";
   /** How many other unknowns this confirm cascaded to — feeds the receipt line. */
   cascaded?: number;
+  /**
+   * User-chosen card display name (assign chips only) — display-only by
+   * construction: the tokens keep owning the matching key. Unset while the
+   * name simply follows the selected token.
+   */
+  seriesName?: string;
 }
 
 /**
@@ -314,6 +320,27 @@ export function chipReopen(row: ReviewRow): ReviewRow {
   return withChip(row, { status: "open" });
 }
 
+/** The card name a chip currently implies: the custom name, else the selected token. */
+export function chipCardName(chip: RuleChip): string {
+  return chip.seriesName ?? chip.tokens[chip.selected] ?? "";
+}
+
+/**
+ * Sets or clears the chip's custom card name. An empty input — or typing the
+ * selected token itself — is not an edit: the name falls back to following
+ * the tokens, and the fate carries no redundant `seriesName`.
+ */
+export function chipSetSeriesName(row: ReviewRow, raw: string): ReviewRow {
+
+  if (row.chip === null) return row;
+
+  const name = raw.trim();
+
+  if (name.length === 0 || name === (row.chip.tokens[row.chip.selected] ?? "")) return withChip(row, { seriesName: undefined });
+
+  return withChip(row, { seriesName: name });
+}
+
 /**
  * Session cascade (EL-D18 convergence — the "three Migros" case): confirming
  * row `sourceId`'s learning chip also resolves every OTHER remaining
@@ -359,19 +386,38 @@ export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewR
           .map((row) => row.id),
   );
 
-  const sharedChip: RuleChip = { kind: chip.kind, tokens: [token], selected: 0, status: "confirmed" };
+  const sharedChip: RuleChip = { kind: chip.kind, tokens: [token], selected: 0, status: "confirmed", seriesName: chip.seriesName };
 
   return rows.map((row) => {
 
     if (row.id === sourceId) return withChip(row, { status: "confirmed", cascaded: (chip.cascaded ?? 0) + targets.size });
 
-    if (!targets.has(row.id)) return row;
+    if (targets.has(row.id)) {
+      if (chip.kind === "exclude") return { ...excludeRow(row, "always"), chip: sharedChip };
 
-    if (chip.kind === "exclude") return { ...excludeRow(row, "always"), chip: sharedChip };
+      // Unreachable when dest is null (targets is empty then) — stated
+      // explicitly instead of smuggling a sentinel destination.
+      return dest === null ? row : { ...assignDestination(row, dest), chip: sharedChip };
+    }
 
-    // Unreachable when dest is null (targets is empty then) — stated
-    // explicitly instead of smuggling a sentinel destination.
-    return dest === null ? row : { ...assignDestination(row, dest), chip: sharedChip };
+    // Same confirmed token AND same destination means ONE card by
+    // construction — keep those chips' display names in step, so a rename
+    // before a re-save can never fork the card. Same token routed to a
+    // DIFFERENT category is a different card whose name is not ours to touch.
+    const rowChip = row.chip;
+
+    const sibling =
+      cascadable &&
+      chip.kind === "assign" &&
+      row.dest === dest &&
+      rowChip !== null &&
+      rowChip.kind === "assign" &&
+      rowChip.status === "confirmed" &&
+      normalizeMatchKey(rowChip.tokens[rowChip.selected] ?? "") === key;
+
+    if (sibling && rowChip.seriesName !== chip.seriesName) return withChip(row, { seriesName: chip.seriesName });
+
+    return row;
   });
 }
 
@@ -484,8 +530,16 @@ function fateOf(row: ReviewRow): Fate {
 
   if (row.tier === "assigned") {
     const learnKey = confirmedLearnKey(row);
+    const fate: Extract<Fate, { kind: "route" }> = { kind: "route", value };
 
-    return learnKey === null ? { kind: "route", value } : { kind: "route", value, learnKey };
+    if (learnKey !== null) fate.learnKey = learnKey;
+
+    // The custom card name rides spending fates only (the server rejects it
+    // elsewhere) and survives a dismissed rule question — naming the card
+    // and learning a rule are separate deliberate acts.
+    if (value.type === "spending" && row.chip !== null && row.chip.kind === "assign" && row.chip.seriesName !== undefined) fate.seriesName = row.chip.seriesName;
+
+    return fate;
   }
 
   // Suggested/matched: keeping a candidate's effective destination CONFIRMS
