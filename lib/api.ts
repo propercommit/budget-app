@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api-error";
+import type { CommitPayload, CommitResult, PreviewResponse } from "@/lib/import/review";
 
 const USER_ID = "temp-user";
 
@@ -292,6 +293,31 @@ export async function getReceiptUrl(entryId: string): Promise<{ url: string }> {
 export async function deleteReceipt(entryId: string): Promise<void> {
   await fetchAPI(`/api/entries/${entryId}/receipt`, {
     method: "DELETE",
+  });
+}
+
+// ============ IMPORT ============
+
+/**
+ * Stages an MT940 file for review: server-side parse + rule matching +
+ * reconciliation. Pure read — nothing is written until {@link commitImport}.
+ */
+export async function previewImport(content: string): Promise<PreviewResponse> {
+  return fetchAPI("/api/import/preview", {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+/**
+ * Commits a reviewed import as one atomic batch — every transaction with its
+ * fate. A 409 means a rare series-name collision; the transaction rolled
+ * back, so retrying the same payload is safe.
+ */
+export async function commitImport(payload: CommitPayload): Promise<CommitResult> {
+  return fetchAPI("/api/import/commit", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
 
