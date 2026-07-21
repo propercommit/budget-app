@@ -37,7 +37,7 @@ interface CommitItem {
 }
 
 /** A route fate that writes a row — income or spending, never exclude. */
-type WrittenRoute = { kind: "route"; value: Exclude<RuleValue, { type: "exclude" }>; learnKey?: string };
+type WrittenRoute = { kind: "route"; value: Exclude<RuleValue, { type: "exclude" }>; learnKey?: string; seriesName?: string };
 
 /**
  * The one definition of "this decision writes a row" — it anchors D20's
@@ -121,6 +121,8 @@ function fateError(raw: unknown, direction: "debit" | "credit"): string | null {
   if (fate.kind === "alwaysExclude") {
     if (typeof fate.learnKey !== "string" || fate.learnKey.trim().length === 0 || fate.learnKey.length > MAX_LEARN_KEY_LENGTH) return "Always-exclude fates must carry a non-empty learnKey";
 
+    if (fate.seriesName !== undefined) return "Only spending routes can carry a seriesName";
+
     return null;
   }
 
@@ -141,6 +143,12 @@ function fateError(raw: unknown, direction: "debit" | "credit"): string | null {
   if (fate.learnKey !== undefined && (typeof fate.learnKey !== "string" || fate.learnKey.length > MAX_LEARN_KEY_LENGTH)) return "learnKey must be a string of at most 100 characters";
 
   if (fate.ruleId !== undefined && (typeof fate.ruleId !== "string" || fate.ruleId.length === 0)) return "ruleId must be a non-empty string";
+
+  if (fate.seriesName !== undefined) {
+    if (destination.type !== "spending") return "Only spending routes can carry a seriesName";
+
+    if (typeof fate.seriesName !== "string" || fate.seriesName.trim().length === 0 || fate.seriesName.length > MAX_NAME_LENGTH) return "seriesName must be a non-empty string of at most 100 characters";
+  }
 
   return null;
 }
@@ -420,8 +428,11 @@ export async function POST(request: Request): Promise<Response> {
         if (category === undefined) throw new Error(`category ${fate.value.categoryId} vanished mid-commit`);
 
         // The series is named by the same key the learner writes under (D18:
-        // the confirmed token IS the merchant identity) — one owner in learn.ts.
+        // the confirmed token IS the merchant identity) — one owner in
+        // learn.ts. A user-chosen seriesName outranks it for DISPLAY only:
+        // the ladder names the card from it, the rule never learns from it.
         const learnedKey = effectiveLearnKey(transaction, fate, rules);
+        const customName = fate.value.type === "spending" && fate.seriesName !== undefined ? truncateName(fate.seriesName.trim()) : null;
 
         // A ruleId confirmation lands on that concrete rule; any other
         // decision lands on its normalized identity (key + the fate's
@@ -444,7 +455,7 @@ export async function POST(request: Request): Promise<Response> {
           // rename/move is ground truth (D16) — and never consult the ladder.
           seriesId = pointer;
         } else {
-          seriesId = await resolveSeriesId(tx, user.id, category, learnedKey === null ? name : truncateName(learnedKey), seriesCache);
+          seriesId = await resolveSeriesId(tx, user.id, category, customName ?? (learnedKey === null ? name : truncateName(learnedKey)), seriesCache);
 
           // Self-healing stamp: the rule (re-)learns its card in this same
           // transaction. The snapshot rows are patched too, so the batch's
