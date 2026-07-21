@@ -11,7 +11,7 @@ vi.mock("@/lib/api", () => ({
 import * as api from "@/lib/api";
 import { ImportPopin } from "@/components/import/import-popin";
 import type { PreviewResponse } from "@/lib/import/review";
-import type { ReconciliationResult } from "@/lib/import/types";
+import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -286,7 +286,7 @@ describe("ImportPopin", () => {
 
 // --- session cascade (one decision applies to all matching unknowns) --------
 
-const unknownTx = (description: string, over: Record<string, unknown> = {}) => ({
+const unknownTx = (description: string, over: Partial<BankTransaction> = {}) => ({
     tx: { date: "2026-06-03", amount: 900, direction: "debit" as const, description, ...over },
     match: { tier: "unknown" as const },
     statementIndex: 0,

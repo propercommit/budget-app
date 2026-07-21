@@ -316,7 +316,7 @@ export function chipReopen(row: ReviewRow): ReviewRow {
 
 /**
  * Session cascade (EL-D18 convergence — the "three Migros" case): confirming
- * row `sourceId`'s learning chip also resolves every OTHER remaining ❓
+ * row `sourceId`'s learning chip also resolves every OTHER remaining
  * unknown whose haystack contains the confirmed key — same destination (or
  * always-exclude), and an already-confirmed chip carrying the SAME token, so
  * the fates come out identical and the engine's batch collapsing produces
@@ -325,7 +325,8 @@ export function chipReopen(row: ReviewRow): ReviewRow {
  * server-side rule context a session decision must not silently override),
  * skips never cascade (no chip to confirm), and cascaded rows stay ordinary
  * rows — individually correctable, honestly counted, no un-cascade. The
- * source chip is stamped with the cascade count for the receipt line.
+ * source chip accumulates the cascade count for the receipt line (so an
+ * Undo + re-confirm can't erase what an earlier sweep already did).
  */
 export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewRow[] {
 
@@ -336,16 +337,25 @@ export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewR
   const chip = source.chip;
   const token = chip.tokens[chip.selected] ?? "";
   const key = normalizeMatchKey(token);
+  const dest = chip.kind === "exclude" ? null : source.dest;
 
   // An assign chip on a row without a destination has nothing to cascade;
   // an empty key mirrors the engine's empty-key guard.
-  const cascadable = key.length > 0 && (chip.kind === "exclude" || source.dest !== null);
+  const cascadable = key.length > 0 && (chip.kind === "exclude" || dest !== null);
 
   const targets = new Set(
     !cascadable
       ? []
       : rows
-          .filter((row) => row.id !== sourceId && row.tier === "unknown" && buildHaystack(row.tx).includes(key))
+          .filter(
+            (row) =>
+              row.id !== sourceId &&
+              row.tier === "unknown" &&
+              // D6: a debit can never BE income — an income sweep skips
+              // debits (every other layer enforces this; so must the cascade).
+              !(dest === INCOME_DESTINATION_ID && row.tx.direction === "debit") &&
+              buildHaystack(row.tx).includes(key),
+          )
           .map((row) => row.id),
   );
 
@@ -353,13 +363,15 @@ export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewR
 
   return rows.map((row) => {
 
-    if (row.id === sourceId) return withChip(chipConfirm(row), { cascaded: targets.size });
+    if (row.id === sourceId) return withChip(row, { status: "confirmed", cascaded: (chip.cascaded ?? 0) + targets.size });
 
     if (!targets.has(row.id)) return row;
 
     if (chip.kind === "exclude") return { ...excludeRow(row, "always"), chip: sharedChip };
 
-    return { ...assignDestination(row, source.dest ?? ""), chip: sharedChip };
+    // Unreachable when dest is null (targets is empty then) — stated
+    // explicitly instead of smuggling a sentinel destination.
+    return dest === null ? row : { ...assignDestination(row, dest), chip: sharedChip };
   });
 }
 
@@ -414,15 +426,29 @@ export interface LearnedRule {
   dest: string | null;
 }
 
-/** The rules this batch will learn: one per confirmed chip, in row order. */
+/**
+ * The rules this batch will learn, in row order, deduped by rule identity
+ * (normalized key + destination) — a cascade stamps the same confirmed chip
+ * on every swept row, but the engine collapses those into ONE rule, and the
+ * receipt must say what the engine will actually do.
+ */
 export function learnedRules(rows: ReviewRow[]): LearnedRule[] {
+
+  const seen = new Set<string>();
 
   return rows.flatMap((row) => {
     const token = confirmedLearnKey(row);
 
     if (token === null) return [];
 
-    return [{ token, dest: row.chip !== null && row.chip.kind === "exclude" ? null : row.dest }];
+    const dest = row.chip !== null && row.chip.kind === "exclude" ? null : row.dest;
+    const identity = `${normalizeMatchKey(token)}\u0000${dest ?? ""}`;
+
+    if (seen.has(identity)) return [];
+
+    seen.add(identity);
+
+    return [{ token, dest }];
   });
 }
 

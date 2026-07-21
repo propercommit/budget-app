@@ -5,6 +5,7 @@ import {
   buildCommitPayload,
   buildReviewRows,
   cascadeChipConfirm,
+  chipReopen,
   excludeRow,
   sectionsOf,
   type PreviewCandidate,
@@ -180,6 +181,47 @@ describe("cascadeChipConfirm — one decision applies to all matching unknowns",
 
     expect(out[1].tier).toBe("unknown");
     expect(out[1].excludeOnly).toBe(true);
+  });
+
+  it("an income sweep skips debit rows — a debit can never BE income (D6)", () => {
+    const rows = unknownRows(
+      btx({ description: "ACME CORP SALARY", direction: "credit" }),
+      btx({ description: "ACME CORP BONUS", direction: "credit" }),
+      btx({ description: "ACME CANTEEN LUNCH", direction: "debit" }),
+    );
+
+    const source = assignDestination(rows[0], "income");
+    const out = cascadeChipConfirm([source, ...rows.slice(1)], source.id);
+
+    expect(out[1].tier).toBe("assigned");
+    expect(out[1].dest).toBe("income");
+
+    // The debit stays an open decision — the cascade never creates a state
+    // the UI itself refuses (the Income pill is hidden for debits).
+    expect(out[2].tier).toBe("unknown");
+    expect(out[0].chip?.cascaded).toBe(1);
+  });
+
+  it("undo + re-confirm accumulates the receipt count instead of clobbering it", () => {
+    const rows = unknownRows(
+      btx({ description: "SBB EASYRIDE" }),
+      btx({ description: "SBB BILLETT" }),
+      btx({ description: "SBB HALBTAX" }),
+    );
+
+    const source = assignDestination(rows[0], "cat-transport");
+    const swept = cascadeChipConfirm([source, ...rows.slice(1)], source.id);
+
+    expect(swept[0].chip?.cascaded).toBe(2);
+
+    // Undo the source receipt, then save again: the other rows are already
+    // resolved, so the second sweep finds nothing — but the receipt keeps
+    // saying what the first sweep did.
+    const reopened = swept.map((row) => (row.id === source.id ? chipReopen(row) : row));
+    const again = cascadeChipConfirm(reopened, source.id);
+
+    expect(again[0].chip?.status).toBe("confirmed");
+    expect(again[0].chip?.cascaded).toBe(2);
   });
 
   it("cascaded rows stay individually correctable — no un-cascade", () => {

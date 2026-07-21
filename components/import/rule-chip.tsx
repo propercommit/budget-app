@@ -93,7 +93,7 @@ export function RuleChipCard({ chip, destination, onSelectToken, onConfirm, onDi
                         <X className="size-4 text-muted-foreground flex-shrink-0" strokeWidth={2.4} />
                     )}
 
-                    <span className={`text-[13px] font-medium flex-1 min-w-0 ${chip.status === "confirmed" ? "" : "text-muted-foreground truncate"}`} style={chip.status === "confirmed" ? { color: "#1F7A38" } : undefined}>
+                    <span className={`text-[13px] font-medium flex-1 min-w-0 ${chip.status === "confirmed" && chip.cascaded !== undefined && chip.cascaded > 0 ? "break-words" : "truncate"} ${chip.status === "confirmed" ? "" : "text-muted-foreground"}`} style={chip.status === "confirmed" ? { color: "#1F7A38" } : undefined}>
                         {chip.status === "dismissed"
                             ? "No rule learned for this one"
                             : chip.kind === "exclude"

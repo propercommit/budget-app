@@ -306,6 +306,18 @@ describe("sections & gating", () => {
       { token: "MIGROS", dest: null },
     ]);
   });
+
+  it("dedupes identical learned rules — a cascade must not multiply the receipt", () => {
+    const source = chipConfirm(assignDestination(unknownRow(), "cat-a"));
+    const sharedChip = { kind: "assign" as const, tokens: ["MIGROS"], selected: 0, status: "confirmed" as const };
+    const swept = { ...assignDestination(unknownRow(), "cat-a"), chip: sharedChip };
+    const corrected = { ...swept, dest: "cat-b" };
+
+    expect(learnedRules([source, swept, corrected])).toEqual([
+      { token: "MIGROS", dest: "cat-a" },
+      { token: "MIGROS", dest: "cat-b" },
+    ]);
+  });
 });
 
 // --- fates ------------------------------------------------------------------
