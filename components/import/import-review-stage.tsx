@@ -22,6 +22,8 @@ interface ImportReviewStageProps {
     importAnyway: boolean;
     onImportAnywayChange: (value: boolean) => void;
     onUpdate: RowUpdate;
+    /** Save-rule handler — cascades the decision across matching unknowns. */
+    onConfirmChip: (id: number) => void;
 }
 
 function SectionHeader({
@@ -76,6 +78,7 @@ export function ImportReviewStage({
     importAnyway,
     onImportAnywayChange,
     onUpdate,
+    onConfirmChip,
 }: ImportReviewStageProps) {
 
     const sections = sectionsOf(rows);
@@ -187,7 +190,7 @@ export function ImportReviewStage({
                     />
 
                     {sections.decisions.map((row) => (
-                        <DecisionRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} />
+                        <DecisionRow key={row.id} row={row} categories={categories} onUpdate={onUpdate} onConfirmChip={onConfirmChip} />
                     ))}
                 </section>
             )}

@@ -13,6 +13,7 @@ import {
     buildCommitPayload,
     buildReviewRows,
     canConfirm,
+    cascadeChipConfirm,
     confirmCount,
     openDecisionCount,
     overallReconciles,
@@ -130,6 +131,16 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
         setRows((current) => current.map((row) => (row.id === id ? transition(row) : row)));
     }, [committing]);
 
+    // Saving a rule cascades the decision across every matching unknown in
+    // the same state update (EL-D18 convergence) — one decision, one rule,
+    // one card. All counts and the Confirm gate re-derive from the rows.
+    const confirmChip = useCallback((id: number) => {
+
+        if (committing) return;
+
+        setRows((current) => cascadeChipConfirm(current, id));
+    }, [committing]);
+
     const subtitle =
         stage === "pick"
             ? "Upload an MT940 statement to review"
@@ -222,6 +233,7 @@ export function ImportPopin({ isOpen, onClose }: ImportPopinProps) {
                     importAnyway={importAnyway}
                     onImportAnywayChange={setImportAnyway}
                     onUpdate={updateRow}
+                    onConfirmChip={confirmChip}
                 />
             )}
 

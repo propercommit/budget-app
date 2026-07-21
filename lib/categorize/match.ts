@@ -71,9 +71,11 @@ interface KeyedCandidate extends MatchCandidate {
 
 /**
  * Uppercased search text: description plus counterparty, space-joined so a
- * key can never match across the boundary between the two fields.
+ * key can never match across the boundary between the two fields. Exported
+ * as the ONE haystack definition — the review popin's session cascade must
+ * match exactly what this matcher matches.
  */
-function buildHaystack(tx: BankTransactionLike): string {
+export function buildHaystack(tx: BankTransactionLike): string {
 
   const counterparty = tx.counterparty === undefined ? "" : ` ${tx.counterparty}`;
 

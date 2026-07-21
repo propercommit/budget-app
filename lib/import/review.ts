@@ -15,7 +15,7 @@
  */
 
 import type { BankTransaction, ReconciliationResult } from "@/lib/import/types";
-import type { MatchCandidate, RuleValue } from "@/lib/categorize/match";
+import { buildHaystack, normalizeMatchKey, type MatchCandidate, type RuleValue } from "@/lib/categorize/match";
 import { NOISE_TOKENS, type Fate } from "@/lib/categorize/learn";
 import { MAX_AMOUNT_CENTS, MAX_FILENAME_LENGTH, MAX_LEARN_KEY_LENGTH } from "@/lib/import/limits";
 
@@ -91,6 +91,8 @@ export interface RuleChip {
   tokens: string[];
   selected: number;
   status: "open" | "confirmed" | "dismissed";
+  /** How many other unknowns this confirm cascaded to — feeds the receipt line. */
+  cascaded?: number;
 }
 
 /**
@@ -312,6 +314,67 @@ export function chipReopen(row: ReviewRow): ReviewRow {
   return withChip(row, { status: "open" });
 }
 
+/**
+ * Session cascade (EL-D18 convergence — the "three Migros" case): confirming
+ * row `sourceId`'s learning chip also resolves every OTHER remaining
+ * unknown whose haystack contains the confirmed key — same destination (or
+ * always-exclude), and an already-confirmed chip carrying the SAME token, so
+ * the fates come out identical and the engine's batch collapsing produces
+ * one rule and one card. Matching uses the matcher's own haystack and key
+ * normalization; suggested/matched rows are never touched (they carry
+ * server-side rule context a session decision must not silently override),
+ * skips never cascade (no chip to confirm), and cascaded rows stay ordinary
+ * rows — individually correctable, honestly counted, no un-cascade. The
+ * source chip accumulates the cascade count for the receipt line (so an
+ * Undo + re-confirm can't erase what an earlier sweep already did).
+ */
+export function cascadeChipConfirm(rows: ReviewRow[], sourceId: number): ReviewRow[] {
+
+  const source = rows.find((row) => row.id === sourceId);
+
+  if (source === undefined || source.chip === null) return rows;
+
+  const chip = source.chip;
+  const token = chip.tokens[chip.selected] ?? "";
+  const key = normalizeMatchKey(token);
+  const dest = chip.kind === "exclude" ? null : source.dest;
+
+  // An assign chip on a row without a destination has nothing to cascade;
+  // an empty key mirrors the engine's empty-key guard.
+  const cascadable = key.length > 0 && (chip.kind === "exclude" || dest !== null);
+
+  const targets = new Set(
+    !cascadable
+      ? []
+      : rows
+          .filter(
+            (row) =>
+              row.id !== sourceId &&
+              row.tier === "unknown" &&
+              // D6: a debit can never BE income — an income sweep skips
+              // debits (every other layer enforces this; so must the cascade).
+              !(dest === INCOME_DESTINATION_ID && row.tx.direction === "debit") &&
+              buildHaystack(row.tx).includes(key),
+          )
+          .map((row) => row.id),
+  );
+
+  const sharedChip: RuleChip = { kind: chip.kind, tokens: [token], selected: 0, status: "confirmed" };
+
+  return rows.map((row) => {
+
+    if (row.id === sourceId) return withChip(row, { status: "confirmed", cascaded: (chip.cascaded ?? 0) + targets.size });
+
+    if (!targets.has(row.id)) return row;
+
+    if (chip.kind === "exclude") return { ...excludeRow(row, "always"), chip: sharedChip };
+
+    // Unreachable when dest is null (targets is empty then) — stated
+    // explicitly instead of smuggling a sentinel destination.
+    return dest === null ? row : { ...assignDestination(row, dest), chip: sharedChip };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sections, progress & gating
 // ---------------------------------------------------------------------------
@@ -363,15 +426,29 @@ export interface LearnedRule {
   dest: string | null;
 }
 
-/** The rules this batch will learn: one per confirmed chip, in row order. */
+/**
+ * The rules this batch will learn, in row order, deduped by rule identity
+ * (normalized key + destination) — a cascade stamps the same confirmed chip
+ * on every swept row, but the engine collapses those into ONE rule, and the
+ * receipt must say what the engine will actually do.
+ */
 export function learnedRules(rows: ReviewRow[]): LearnedRule[] {
+
+  const seen = new Set<string>();
 
   return rows.flatMap((row) => {
     const token = confirmedLearnKey(row);
 
     if (token === null) return [];
 
-    return [{ token, dest: row.chip !== null && row.chip.kind === "exclude" ? null : row.dest }];
+    const dest = row.chip !== null && row.chip.kind === "exclude" ? null : row.dest;
+    const identity = `${normalizeMatchKey(token)}\u0000${dest ?? ""}`;
+
+    if (seen.has(identity)) return [];
+
+    seen.add(identity);
+
+    return [{ token, dest }];
   });
 }
 
