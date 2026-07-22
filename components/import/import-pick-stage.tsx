@@ -52,9 +52,7 @@ export function ImportPickStage({ file, error, onPick, onRemove }: ImportPickSta
         };
     }, []);
 
-    const handleFiles = async (list: FileList | null) => {
-
-        const picked = list?.[0];
+    const handleFile = async (picked: File | undefined) => {
 
         if (picked === undefined) return;
 
@@ -69,12 +67,15 @@ export function ImportPickStage({ file, error, onPick, onRemove }: ImportPickSta
                 accept=".mt940,.sta,.940,.txt"
                 className="hidden"
                 onChange={(event) => {
-                    const files = event.target.files;
+                    // The File must be extracted BEFORE the value reset: the
+                    // input's FileList is live, and the reset empties it in
+                    // place (a captured File survives, the list does not).
+                    const picked = event.target.files?.[0];
 
                     // Reset so re-selecting the same file re-fires onChange.
                     event.target.value = "";
 
-                    void handleFiles(files);
+                    void handleFile(picked);
                 }}
             />
 
@@ -93,7 +94,7 @@ export function ImportPickStage({ file, error, onPick, onRemove }: ImportPickSta
                     onDrop={(event) => {
                         event.preventDefault();
                         setDragging(false);
-                        void handleFiles(event.dataTransfer.files);
+                        void handleFile(event.dataTransfer.files[0]);
                     }}
                     className="w-full flex flex-col items-center justify-center gap-2.5 px-6 py-11 rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer"
                     style={
