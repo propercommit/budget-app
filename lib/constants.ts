@@ -56,3 +56,10 @@ export const DATE_FORMAT_FULL_TOKENS: Record<DateFormat, string> = {
 
 /** Shared by every category-delete affordance so the warning never drifts. */
 export const CATEGORY_DELETE_WARNING = "Are you sure? This will delete all spending items in this category. This cannot be undone.";
+
+/**
+ * Default icon for a newly created income source — the add popin's initial
+ * selection and the icon synthesized for imported income rows. One owner so
+ * the two paths can never drift.
+ */
+export const DEFAULT_INCOME_ICON = "piggy-bank";

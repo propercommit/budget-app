@@ -15,10 +15,12 @@ model User {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   
-  categories    Category[]
-  budgetSeries  BudgetSeries[]
-  IncomeSources IncomeSource[]
-  settings      UserSettings?
+  categories          Category[]
+  budgetSeries        BudgetSeries[]
+  IncomeSources       IncomeSource[]
+  settings            UserSettings?
+  categorizationRules CategorizationRule[]
+  imports             Import[]
 }
 
 model Category {
@@ -32,7 +34,8 @@ model Category {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  budgetSeries BudgetSeries[]
+  budgetSeries        BudgetSeries[]
+  categorizationRules CategorizationRule[]
 
   @@unique([userId, label])
   @@index([userId])
@@ -55,7 +58,8 @@ model BudgetSeries {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  items      SpendingItem[]
+  items               SpendingItem[]
+  categorizationRules CategorizationRule[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -94,7 +98,10 @@ model IncomeSource {
   endDate   DateTime?
   note      String?  @db.VarChar(500)
   month     String
-  
+  bankRef   String?  // the source statement's own reference for the imported transaction (parser externalId)
+  importId  String?
+  import    Import?  @relation(fields: [importId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -119,6 +126,9 @@ model SpendingEntry {
   receiptSizeBytes Int?      // authoritative object size, written only by the receipt confirm step; drives the 50 MB/user cap
   link             String?
   date             DateTime  @default(now())
+  bankRef          String?   // the source statement's own reference for the imported transaction (parser externalId)
+  importId         String?
+  import           Import?   @relation(fields: [importId], references: [id], onDelete: SetNull)
   spendingItemId   String
   spendingItem     SpendingItem  @relation(fields: [spendingItemId], references: [id], onDelete: Cascade)
   @@index([spendingItemId])
@@ -133,4 +143,53 @@ model UserSettings {
   darkMode   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+enum RuleValueType {
+  income
+  spending
+  exclude
+}
+
+// A learned categorization rule: case-insensitive substring key → destination
+// (income / a spending category / exclusion). Several rows may share one match
+// key — one row per destination, each carrying a use count. Confidence derives
+// from row cardinality: exactly one row for a matching key → confident;
+// several → suggested (highest count pre-filled). A deleted category cascades
+// away its rules — consistent with the app's global-cascade semantics.
+model CategorizationRule {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match      String        // stored uppercase/trimmed; substring key
+  valueType  RuleValueType
+  categoryId String?       // required iff valueType == spending
+  category   Category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  seriesId   String?       // rename-proof pointer to the card this rule routes to (spending rules only); a deleted series nulls it and the ladder re-stamps on next use
+  series     BudgetSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  useCount   Int           @default(1)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([userId, match, valueType, categoryId])
+  @@index([userId, match])
+}
+
+// One executed statement import — provenance for the entries it wrote (D21).
+// Deleting an Import detaches its entries (SetNull) rather than deleting them;
+// rollback is a future explicit feature, never a cascade.
+model Import {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importedAt     DateTime @default(now())
+  filename       String?
+  statementStart String?  // "YYYY-MM-DD" — the statement's opening-balance date when present (the parser exposes no explicit period)
+  statementEnd   String?  // "YYYY-MM-DD" — the statement's closing-balance date when present
+  totalCount     Int      // transactions in the file
+  importedCount  Int      // routed entries written
+  excludedCount  Int
+
+  spendingEntries SpendingEntry[]
+  incomeSources   IncomeSource[]
 }
