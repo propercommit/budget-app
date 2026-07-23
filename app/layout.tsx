@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PlanBudget",
-  description: "Take control of your finances",
+  description: "Personal budgeting made for Switzerland — plan monthly category budgets, track spending, and import bank statements (MT940).",
 };
 
 export default function RootLayout({
